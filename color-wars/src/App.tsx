@@ -5,11 +5,33 @@ import TradesSection from '@/components/TradesSection'
 import ChatSection from '@/components/ChatSection'
 import ChatColumn from '@/components/ChatColumn'
 import MobileChatDrawer from '@/components/MobileChatDrawer'
+import Dice from '@/components/Dice'
+import DiceTrack from '@/components/DiceTrack'
 import { useScreenSize } from '@/hooks/useScreenSize'
+import { useState } from 'react'
+import type { PlayerPosition } from '@/types/diceTrack'
 import './App.css'
 
 function App() {
   const screenSize = useScreenSize()
+  
+  // Mock player data for testing dice track
+  const [mockPlayers] = useState<PlayerPosition[]>([
+    { playerId: '1', playerName: 'Alice', position: 3, color: '#ef4444' },
+    { playerId: '2', playerName: 'Bob', position: 7, color: '#3b82f6' },
+    { playerId: '3', playerName: 'Charlie', position: 12, color: '#22c55e' },
+    { playerId: '4', playerName: 'Diana', position: 3, color: '#a855f7' }
+  ])
+
+  const handleDiceRoll = (value: number) => {
+    console.log(`Dice rolled: ${value}`)
+    // TODO: Implement dice roll logic with game state
+  }
+
+  const handleTileClick = (tile: any) => {
+    console.log('Tile clicked:', tile)
+    // TODO: Implement tile interaction logic
+  }
   
   // Determine which chat component to render
   const renderChat = () => {
@@ -43,6 +65,22 @@ function App() {
         {/* Single instance of hex grid */}
         <div className="hex-grid-area">
           <HexGrid />
+        </div>
+        
+        {/* Dedicated dice area */}
+        <div className="dice-area">
+          <div className="dice-container">
+            <Dice onRoll={handleDiceRoll} />
+          </div>
+        </div>
+        
+        {/* Dedicated dice track area */}
+        <div className="dice-track-area">
+          <DiceTrack 
+            playerPositions={mockPlayers}
+            onTileClick={handleTileClick}
+            totalTiles={20}
+          />
         </div>
         
         {/* Single instance of game info */}

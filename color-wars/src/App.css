@@ -4,6 +4,7 @@
   margin: 0;
   padding: 0;
   overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .app-container {
@@ -11,15 +12,19 @@
   max-width: 100vw;
   display: grid;
   background: var(--background);
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 /* Mobile: Single column layout (default) */
 .app-container {
   grid-template-areas: 
     "hex-grid"
+    "dice"
+    "dice-track"
     "game-info"
     "chat";
-  grid-template-rows: auto auto auto;
+  grid-template-rows: auto auto auto auto auto;
   gap: 1rem;
   padding: 1rem;
 }
@@ -33,6 +38,10 @@
 
 .hex-grid-area {
   grid-area: hex-grid;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 .game-info-area {
@@ -44,10 +53,47 @@
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+}
+
+.dice-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .chat-area {
   grid-area: chat;
+}
+
+.dice-area {
+  grid-area: dice;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.dice-track-area {
+  grid-area: dice-track;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  overflow: hidden;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Mobile chat drawer styles */
@@ -65,24 +111,30 @@
 
 
 
-/* Tablet: 600px-1099px - Hex grid spans top, chat left, game-info right */
+/* Tablet: 600px-1099px - Hex grid spans top, dice and dice track below, chat left, game-info right */
 @media (min-width: 600px) and (max-width: 1099px) {
   .app-container {
     grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto auto;
     grid-template-areas: 
       "hex-grid hex-grid"
+      "dice dice"
+      "dice-track dice-track"
       "chat game-info";
     gap: 1rem;
     padding: 1rem;
   }
 }
 
-/* Desktop Medium: 1100px-1365px - Hex grid left, game-info right (chat inside game-info) */
+/* Desktop Medium: 1100px-1365px - Hex grid left, game-info right, dice and dice track span bottom */
 @media (min-width: 1100px) and (max-width: 1365px) {
   .app-container {
     grid-template-columns: 2fr 1fr;
-    grid-template-areas: "hex-grid game-info";
+    grid-template-rows: auto auto auto;
+    grid-template-areas: 
+      "hex-grid game-info"
+      "dice dice"
+      "dice-track dice-track";
     gap: 1rem;
     padding: 1rem;
   }
@@ -93,11 +145,15 @@
   }
 }
 
-/* Desktop Large: 1366px+ - 3-column layout with dedicated chat column */
+/* Desktop Large: 1366px+ - 3-column layout with dedicated chat column, dice and dice track rows */
 @media (min-width: 1366px) {
   .app-container {
     grid-template-columns: 300px 2fr 400px;
-    grid-template-areas: "chat hex-grid game-info";
+    grid-template-rows: auto auto auto;
+    grid-template-areas: 
+      "chat hex-grid game-info"
+      "chat dice game-info"
+      "chat dice-track game-info";
     gap: 1rem;
     padding: 1rem;
     margin: 0 auto;

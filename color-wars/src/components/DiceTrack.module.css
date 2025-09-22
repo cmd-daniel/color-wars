@@ -1,0 +1,288 @@
+.diceTrackContainer {
+  width: 100%;
+  max-width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+
+.swiperContainer {
+  position: relative;
+  margin-bottom: 1rem;
+  padding: 0 2rem; /* Add padding to accommodate navigation buttons */
+  box-sizing: border-box;
+}
+
+.swiper {
+  padding: 0.5rem 0;
+}
+
+.swiperSlide {
+  width: auto !important;
+  height: auto;
+  flex-shrink: 0;
+  max-width: none;
+}
+
+.tileContainer {
+  padding: 0 8px; /* Horizontal spacing between tiles */
+  box-sizing: border-box;
+}
+
+.swiperButton {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 1.2rem;
+  color: var(--foreground);
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.swiperButton:hover {
+  background: var(--secondary);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.swiperButtonPrev {
+  left: 0;
+}
+
+.swiperButtonNext {
+  right: 0;
+}
+
+
+.tile {
+  width: 140px;
+  height: 180px;
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  border: 2px solid transparent;
+}
+
+.tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.tileHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.tileIcon {
+  font-size: 1.5rem;
+}
+
+.tilePosition {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.tileContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.tileTitle {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.tileValue {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 0.25rem;
+  color: #ffd700; /* Gold color for values */
+}
+
+.tileDescription {
+  margin: 0;
+  font-size: 0.75rem;
+  opacity: 0.9;
+  line-height: 1.3;
+}
+
+.playersContainer {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  gap: 2px;
+}
+
+.playerIndicator {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transition: transform 0.2s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.playerIndicator:hover {
+  transform: scale(1.1);
+  z-index: 2;
+}
+
+.legendContainer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: center;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.legendItem {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--muted-foreground);
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 599px) {
+  .diceTrackContainer {
+    padding: 0.5rem;
+  }
+  
+  .tile {
+    width: 120px;
+    height: 160px;
+    padding: 0.5rem;
+  }
+  
+  .tileTitle {
+    font-size: 0.75rem;
+  }
+  
+  .tileIcon {
+    font-size: 1.25rem;
+  }
+  
+  .swiperContainer {
+    padding: 0 1.5rem;
+  }
+  
+  .swiperButtonPrev {
+    left: 0;
+  }
+  
+  .swiperButtonNext {
+    right: 0;
+  }
+  
+  .swiperButton {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  
+  .legendContainer {
+    gap: 0.5rem;
+  }
+  
+  .legendItem {
+    font-size: 0.7rem;
+  }
+}
+
+@media (min-width: 1100px) {
+  .tile {
+    width: 160px;
+    height: 200px;
+  }
+  
+  .tileTitle {
+    font-size: 1rem;
+  }
+  
+  .tileIcon {
+    font-size: 1.75rem;
+  }
+  
+  .swiperButton {
+    width: 48px;
+    height: 48px;
+    font-size: 1.4rem;
+  }
+  
+.swiperContainer {
+    padding: 0 2.5rem;
+  }
+  
+  .swiperButtonPrev {
+    left: 0;
+  }
+  
+  .swiperButtonNext {
+    right: 0;
+  }
+}
