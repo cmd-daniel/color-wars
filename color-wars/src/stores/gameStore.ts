@@ -7,7 +7,6 @@ interface HexState {
   r: number
   color: string
   owner: string | null
-  isAnimating: boolean
   lastUpdated: number
 }
 
@@ -30,15 +29,19 @@ interface GameState {
   initializeHex: (q: number, r: number) => void
   claimHex: (q: number, r: number, playerId: string) => void
   setHexColor: (q: number, r: number, color: string) => void
-  setHexAnimation: (q: number, r: number, isAnimating: boolean) => void
   addPlayer: (player: Player) => void
   setCurrentPlayer: (playerId: string) => void
   setConnectionStatus: (isConnected: boolean) => void
+  
+  // Game actions
+  attemptClaimHex: (q: number, r: number) => boolean
+  switchToNextPlayer: () => void
   
   // Utility functions
   getHexKey: (q: number, r: number) => string
   getHex: (q: number, r: number) => HexState | undefined
   getPlayerScore: (playerId: string) => number
+  getNextPlayerId: () => string | null
 }
 
 export const useGameStore = create<GameState>()(
@@ -53,6 +56,13 @@ export const useGameStore = create<GameState>()(
     // Actions
     initializeHex: (q: number, r: number) => {
       const key = get().getHexKey(q, r)
+      
+      // Don't reinitialize if hex already exists
+      if (get().hexes[key]) {
+        return
+      }
+      
+      // console.log('Initializing hex:', key)
       set(state => ({
         hexes: {
           ...state.hexes,
@@ -61,7 +71,6 @@ export const useGameStore = create<GameState>()(
             r,
             color: '#303030', // Default gray color
             owner: null,
-            isAnimating: false,
             lastUpdated: Date.now()
           }
         }
@@ -72,25 +81,23 @@ export const useGameStore = create<GameState>()(
       const key = get().getHexKey(q, r)
       const player = get().players[playerId]
       
-      if (!player) return // Player doesn't exist
+      if (!player) {
+        return // Player doesn't exist
+      }
       
       set(state => ({
         hexes: {
           ...state.hexes,
           [key]: {
-            ...state.hexes[key],
+            // Spread existing state if it exists, but provide defaults
+            ...(state.hexes[key] || { q, r, color: '#303030', owner: null, lastUpdated: 0 }),
+            // Override with new values
             color: player.color,
             owner: playerId,
-            isAnimating: true,
             lastUpdated: Date.now()
           }
         }
       }))
-      
-      // Remove animation after a short delay
-      setTimeout(() => {
-        get().setHexAnimation(q, r, false)
-      }, 500)
     },
 
     setHexColor: (q: number, r: number, color: string) => {
@@ -107,19 +114,6 @@ export const useGameStore = create<GameState>()(
       }))
     },
 
-    setHexAnimation: (q: number, r: number, isAnimating: boolean) => {
-      const key = get().getHexKey(q, r)
-      set(state => ({
-        hexes: {
-          ...state.hexes,
-          [key]: {
-            ...state.hexes[key],
-            isAnimating,
-            lastUpdated: Date.now()
-          }
-        }
-      }))
-    },
 
     addPlayer: (player: Player) => {
       set(state => ({
@@ -138,6 +132,40 @@ export const useGameStore = create<GameState>()(
       set({ isConnected })
     },
 
+    // Game actions
+    attemptClaimHex: (q: number, r: number) => {
+      const state = get()
+      
+      // Check if there's a current player
+      if (!state.currentPlayerId) {
+        console.log('No current player set')
+        return false
+      }
+      
+      // Check if hex is already owned
+      const hexKey = state.getHexKey(q, r)
+      const existingHex = state.hexes[hexKey]
+      if (existingHex?.owner) {
+        console.log('Hex already owned by:', existingHex.owner)
+        return false
+      }
+      
+      // Claim the hex
+      state.claimHex(q, r, state.currentPlayerId)
+      
+      // Switch to next player immediately
+      state.switchToNextPlayer()
+      
+      return true
+    },
+
+    switchToNextPlayer: () => {
+      const nextPlayerId = get().getNextPlayerId()
+      if (nextPlayerId) {
+        set({ currentPlayerId: nextPlayerId })
+      }
+    },
+
     // Utility functions
     getHexKey: (q: number, r: number) => `${q},${r}`,
 
@@ -149,6 +177,16 @@ export const useGameStore = create<GameState>()(
     getPlayerScore: (playerId: string) => {
       const hexes = get().hexes
       return Object.values(hexes).filter(hex => hex.owner === playerId).length
+    },
+
+    getNextPlayerId: () => {
+      const state = get()
+      const players = Object.keys(state.players)
+      const currentIndex = players.indexOf(state.currentPlayerId || '')
+      
+      if (currentIndex === -1) return players[0] || null
+      
+      return players[(currentIndex + 1) % players.length] || null
     }
   }))
 )

@@ -1,122 +1,115 @@
-import { Svg, SVG } from '@svgdotjs/svg.js'
 import { defineHex, Grid, ring, Hex } from 'honeycomb-grid'
-import { useLayoutEffect, useRef, useEffect, useState } from 'react'
+import { useLayoutEffect, useEffect, useState } from 'react'
 import { initializeDemoGame } from '@/stores/gameStoreHelpers'
-import Polygon from './Polygon'
+import HexCell from './HexCell'
+import styles from './HexGrid.module.css'
 
+// Grid configuration constants
+const GRID_CONFIG = {
+  hexDimensions: 30,
+  hexOrigin: 'topLeft' as const,
+  gridRadius: 3,
+  viewBoxPadding: 30,
+  defaultViewBox: "0 0 100 100",
+  // Gap configuration
+  hexScale: 0.95, // Scale factor (0.85 = 15% gap between hexes)
+  gapColor: '#1a1a1a00' // Background color visible in gaps
+}
 
-
+/**
+ * HexGrid Component
+ * 
+ * Responsibilities:
+ * - Generate hexagonal grid layout using honeycomb-grid
+ * - Calculate SVG viewBox and positioning
+ * - Provide SVG container for HexCell components
+ * - Initialize demo game state
+ * 
+ * Does NOT handle:
+ * - Individual hex rendering (delegated to HexCell)
+ * - Game logic (delegated to game store)
+ * - Hex interactions (delegated to HexCell)
+ */
 const HexGrid = () => {
-    const svgRef = useRef<SVGSVGElement | null>(null);
-    const [gridData, setGridData] = useState<{ hexes: Hex[], draw: Svg | null }>({ hexes: [], draw: null });
+    const [gridData, setGridData] = useState<{ 
+      hexes: Hex[], 
+      viewBox: string 
+    }>({ hexes: [], viewBox: GRID_CONFIG.defaultViewBox })
 
     // Initialize demo game on component mount
     useEffect(() => {
-        initializeDemoGame();
-    }, []);
+        initializeDemoGame()
+    }, [])
 
     useLayoutEffect(() => {
-        if (!svgRef.current) return;
-
-        // Create hex grid
-        const Hexagon = defineHex({ dimensions: 30, origin: 'topLeft' });
-        const grid = new Grid(Hexagon, [
-            ring({ center: new Hexagon(), radius: 3 }),
-        ]);
+        // === 1. Create Hexagonal Grid ===
+        const Hexagon = defineHex({ 
+            dimensions: GRID_CONFIG.hexDimensions, 
+            origin: GRID_CONFIG.hexOrigin 
+        })
+        // Create rings
+        const rings = new Grid(Hexagon, [
+            ring({ center: new Hexagon(), radius: GRID_CONFIG.gridRadius }),
+            ring({ center: new Hexagon(), radius: GRID_CONFIG.gridRadius-1 }),
+            ring({ center: new Hexagon(), radius: GRID_CONFIG.gridRadius-2 }),
+        ])
         
-        const draw = SVG(svgRef.current) as Svg;
+        // Create center hexagon separately
+        const centerGrid = new Grid(Hexagon, [{ q: 0, r: 0 }])
         
-        // Calculate bounding box for viewBox
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        // Combine both grids
+        const grid = new Grid(Hexagon, [...rings, ...centerGrid])
+        
+        // === 2. Calculate Bounding Box ===
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
         
         grid.forEach(hex => {
             hex.corners.forEach(({ x, y }) => {
-                minX = Math.min(minX, x);
-                minY = Math.min(minY, y);
-                maxX = Math.max(maxX, x);
-                maxY = Math.max(maxY, y);
-            });
-        });
+                minX = Math.min(minX, x)
+                minY = Math.min(minY, y)
+                maxX = Math.max(maxX, x)
+                maxY = Math.max(maxY, y)
+            })
+        })
         
-        // Set viewBox to center and fit all hexagons
-        const padding = 30;
-        const viewBoxWidth = (maxX - minX) + 2 * padding;
-        const viewBoxHeight = (maxY - minY) + 2 * padding;
-        const viewBoxX = minX - padding;
-        const viewBoxY = minY - padding;
+        // === 3. Calculate SVG ViewBox ===
+        const padding = GRID_CONFIG.viewBoxPadding
+        const viewBoxWidth = (maxX - minX) + 2 * padding
+        const viewBoxHeight = (maxY - minY) + 2 * padding
+        const viewBoxX = minX - padding
+        const viewBoxY = minY - padding
+        const viewBox = `${viewBoxX} ${viewBoxY} ${viewBoxWidth} ${viewBoxHeight}`
         
-        draw.viewbox(viewBoxX, viewBoxY, viewBoxWidth, viewBoxHeight);
-        
-        // Store grid data for rendering Polygon components
-        setGridData({ hexes: Array.from(grid), draw });
-        
-        // Cleanup
-        return () => {
-            draw.clear();
-        };
+        // === 4. Update Component State ===
+        setGridData({ 
+          hexes: Array.from(grid), 
+          viewBox 
+        })
     }, [])
 
-    return(
-        <>
-            <style>{`
-                /* Zustand-powered hex cells */
-                .hex-cell {
-                    fill: #303030;
-                    stroke: #fff;
-                    stroke-width: 2px;
-                    cursor: pointer;
-                    transition: fill 0.2s ease-in-out, transform 0.2s ease-in-out;
-                }
-                
-                .hex-cell:hover {
-                    fill: #ff6060 !important;
-                    transform: scale(1.05);
-                }
-                
-                .hex-cell.owned {
-                    stroke-width: 3px;
-                    stroke: #fff;
-                }
-                
-                .hex-cell.animating {
-                    animation: hexClaim 0.5s ease-in-out;
-                }
-                
-                @keyframes hexClaim {
-                    0% { 
-                        transform: scale(1); 
-                        stroke-width: 2px;
-                    }
-                    50% { 
-                        transform: scale(1.2); 
-                        stroke-width: 4px;
-                        stroke: #ffff00;
-                    }
-                    100% { 
-                        transform: scale(1); 
-                        stroke-width: 3px;
-                    }
-                }
-            `}</style>
-            
-            {/* Render Polygon components */}
-            {gridData.draw && gridData.hexes.map((hex) => (
-                <Polygon 
-                    key={`${hex.q},${hex.r}`}
-                    hex={hex} 
-                    draw={gridData.draw!} 
-                />
-            ))}
-            
-            <div id='hex-grid-container' style={
-                {width: "100%", height: "60vh", border: "2px solid black"}}>
-                <svg 
-                    ref={svgRef} 
-                    preserveAspectRatio="xMidYMid meet" width="100%" height="100%" 
-                    style={{ border: "1px solid black" }}
-                />
-            </div>
-        </>
+    return (
+        <div className={styles.container}>
+            <svg 
+                className={styles.svg}
+                viewBox={gridData.viewBox}
+                preserveAspectRatio="xMidYMid meet" 
+                width="100%" 
+                height="100%"
+                style={{ 
+                    backgroundColor: GRID_CONFIG.gapColor,
+                    '--gap-color': GRID_CONFIG.gapColor 
+                } as React.CSSProperties}
+            >
+                {/* Render HexCell components as JSX */}
+                {gridData.hexes.map((hex) => (
+                    <HexCell 
+                        key={`${hex.q},${hex.r}`}
+                        hex={hex}
+                        scale={GRID_CONFIG.hexScale}
+                    />
+                ))}
+            </svg>
+        </div>
     )
 }
 

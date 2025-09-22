@@ -35,21 +35,7 @@ export const initializeDemoGame = () => {
   console.log('Demo game initialized with 3 players')
 }
 
-// Helper to get next player in turn order
-export const getNextPlayer = (): string | null => {
-  const state = useGameStore.getState()
-  const players = Object.keys(state.players)
-  const currentIndex = players.indexOf(state.currentPlayerId || '')
-  
-  if (currentIndex === -1) return players[0] || null
-  
-  return players[(currentIndex + 1) % players.length] || null
-}
-
-// Helper to switch to next player's turn
-export const switchToNextPlayer = () => {
-  const nextPlayer = getNextPlayer()
-  if (nextPlayer) {
-    useGameStore.getState().setCurrentPlayer(nextPlayer)
-  }
-}
+// Helper functions are now moved to the main store
+// These can be removed as they're replaced by store methods:
+// - getNextPlayer() -> store.getNextPlayerId()
+// - switchToNextPlayer() -> store.switchToNextPlayer()
