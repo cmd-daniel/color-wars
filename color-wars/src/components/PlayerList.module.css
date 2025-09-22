@@ -1,0 +1,49 @@
+.playersList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.playerItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+}
+
+.playerItem.currentPlayer {
+  border-color: var(--primary);
+  background: var(--accent);
+}
+
+.playerInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.playerAvatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: white;
+  font-size: 1rem;
+}
+
+.playerName {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.playerScore {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--foreground);
+}

@@ -1,5 +1,6 @@
 import { useGameStore } from '@/stores/gameStore'
 import { useMemo } from 'react'
+import styles from './PlayerList.module.css'
 
 const PlayerList = () => {
   // Use individual selectors with proper equality functions
@@ -28,36 +29,36 @@ const PlayerList = () => {
   }
 
   return (
-    <div className="players-list">
+    <div className={styles.playersList}>
       {playerList.map(player => (
         <div 
           key={player.id}
-          className={`player-item ${currentPlayer?.id === player.id ? 'current-player' : ''}`}
+          className={`${styles.playerItem} ${currentPlayer?.id === player.id ? styles.currentPlayer : ''}`}
         >
-          <div className="player-info">
+          <div className={styles.playerInfo}>
             <div 
-              className="player-avatar"
+              className={styles.playerAvatar}
               style={{ backgroundColor: player.color }}
             >
               {getPlayerInitials(player.name)}
             </div>
-            <span className="player-name">{player.name}</span>
+            <span className={styles.playerName}>{player.name}</span>
           </div>
-          <span className="player-score">${player.score}</span>
+          <span className={styles.playerScore}>${player.score}</span>
         </div>
       ))}
       
       {/* Connection status indicator */}
       {!isConnected && (
-        <div className="player-item" style={{ opacity: 0.7 }}>
-          <div className="player-info">
+        <div className={styles.playerItem} style={{ opacity: 0.7 }}>
+          <div className={styles.playerInfo}>
             <div 
-              className="player-avatar"
+              className={styles.playerAvatar}
               style={{ backgroundColor: '#ef4444' }}
             >
               ⚠
             </div>
-            <span className="player-name">Connection Lost</span>
+            <span className={styles.playerName}>Connection Lost</span>
           </div>
         </div>
       )}

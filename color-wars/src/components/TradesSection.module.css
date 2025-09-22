@@ -1,0 +1,59 @@
+.tradesSection {
+  background: var(--muted);
+  border-radius: var(--radius);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tradesHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tradesTitle {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.diceIcons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.diceIcon {
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--foreground);
+  border-radius: 0.25rem;
+  position: relative;
+}
+
+.diceIcon::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 0.25rem;
+  height: 0.25rem;
+  background: var(--background);
+  border-radius: 50%;
+}
+
+.createButton {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.createButton:hover {
+  opacity: 0.9;
+}

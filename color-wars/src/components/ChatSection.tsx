@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import styles from './ChatSection.module.css'
 
 interface ChatMessage {
   id: string
@@ -52,8 +53,8 @@ const ChatSection = () => {
   }
 
   return (
-    <div className="chat-section">
-      <div className="chat-messages">
+    <div className={styles.chatSection}>
+      <div className={styles.chatMessages}>
         {messages.map(message => (
           <div key={message.id} style={{ marginBottom: '0.25rem' }}>
             <span style={{ fontWeight: 600, color: 'var(--primary)' }}>
@@ -67,17 +68,17 @@ const ChatSection = () => {
         <div ref={messagesEndRef} />
       </div>
       
-      <div className="chat-input-container">
+      <div className={styles.chatInputContainer}>
         <input
           type="text"
-          className="chat-input"
+          className={styles.chatInput}
           placeholder="send a message ..."
           value={currentMessage}
           onChange={(e) => setCurrentMessage(e.target.value)}
           onKeyPress={handleKeyPress}
         />
         <button 
-          className="chat-send-button"
+          className={styles.chatSendButton}
           onClick={handleSendMessage}
           disabled={!currentMessage.trim()}
         >

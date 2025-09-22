@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import styles from './MobileChatDrawer.module.css'
 
 interface ChatMessage {
   id: string
@@ -66,35 +67,35 @@ const MobileChatDrawer = () => {
       {/* Backdrop when expanded */}
       {isExpanded && (
         <div 
-          className="mobile-chat-backdrop"
+          className={styles.backdrop}
           onClick={() => setIsExpanded(false)}
         />
       )}
       
       {/* Chat drawer */}
-      <div className={`mobile-chat-drawer ${isExpanded ? 'expanded' : 'collapsed'}`}>
+      <div className={`${styles.drawer} ${isExpanded ? styles.expanded : styles.collapsed}`}>
         {/* Collapsed view - show last message and input */}
         {!isExpanded && (
-          <div className="mobile-chat-collapsed">
+          <div className={styles.collapsed}>
             <div 
-              className="mobile-chat-last-message"
+              className={styles.lastMessage}
               onClick={() => setIsExpanded(true)}
             >
-              <span className="mobile-chat-sender">{lastMessage.playerName}:</span>
-              <span className="mobile-chat-text">{lastMessage.message}</span>
-              <div className="mobile-chat-expand-indicator">↑</div>
+              <span className={styles.sender}>{lastMessage.playerName}:</span>
+              <span className={styles.text}>{lastMessage.message}</span>
+              <div className={styles.expandIndicator}>↑</div>
             </div>
-            <div className="mobile-chat-input-container">
+            <div className={styles.inputContainer}>
               <input
                 type="text"
-                className="mobile-chat-input"
+                className="{styles.input}"
                 placeholder="Send a message..."
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
               />
               <button 
-                className="mobile-chat-send-button"
+                className="{styles.sendButton}"
                 onClick={handleSendMessage}
                 disabled={!currentMessage.trim()}
               >
@@ -116,38 +117,38 @@ const MobileChatDrawer = () => {
 
         {/* Expanded view - show all messages and input */}
         {isExpanded && (
-          <div className="mobile-chat-expanded">
-            <div className="mobile-chat-header">
+          <div className="{styles.expanded}">
+            <div className="{styles.header}">
               <h3>Chat</h3>
               <button 
-                className="mobile-chat-close"
+                className="{styles.close}"
                 onClick={() => setIsExpanded(false)}
               >
                 ×
               </button>
             </div>
             
-            <div className="mobile-chat-messages">
+            <div className="{styles.messages}">
               {messages.map(message => (
-                <div key={message.id} className="mobile-chat-message">
-                  <span className="mobile-chat-sender">{message.playerName}:</span>
-                  <span className="mobile-chat-text">{message.message}</span>
+                <div key={message.id} className="{styles.message}">
+                  <span className="{styles.sender}">{message.playerName}:</span>
+                  <span className="{styles.text}">{message.message}</span>
                 </div>
               ))}
               <div ref={messagesEndRef} />
             </div>
             
-            <div className="mobile-chat-input-container">
+            <div className="{styles.input}-container">
               <input
                 type="text"
-                className="mobile-chat-input"
+                className="{styles.input}"
                 placeholder="Send a message..."
                 value={currentMessage}
                 onChange={(e) => setCurrentMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
               />
               <button 
-                className="mobile-chat-send-button"
+                className="{styles.sendButton}"
                 onClick={handleSendMessage}
                 disabled={!currentMessage.trim()}
               >

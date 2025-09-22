@@ -1,0 +1,53 @@
+.chatSection {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+}
+
+.chatMessages {
+  overflow-y: auto;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: var(--muted);
+  border-radius: var(--radius);
+  font-size: 0.875rem;
+  max-height: 300px; /* Reasonable max height to prevent excessive growth */
+}
+
+.chatInputContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.chatInput {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 1rem;
+}
+
+.chatInput::placeholder {
+  color: var(--muted-foreground);
+}
+
+.chatSendButton {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.chatSendButton:hover {
+  opacity: 0.9;
+}

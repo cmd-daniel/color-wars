@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import styles from './TradesSection.module.css'
 
 const TradesSection = () => {
   const [isCreatingTrade, setIsCreatingTrade] = useState(false)
@@ -15,17 +16,17 @@ const TradesSection = () => {
   }
 
   return (
-    <div className="trades-section">
-      <div className="trades-header">
-        <span className="trades-title">Trades</span>
-        <div className="dice-icons">
-          <div className="dice-icon"></div>
-          <div className="dice-icon"></div>
+    <div className={styles.tradesSection}>
+      <div className={styles.tradesHeader}>
+        <span className={styles.tradesTitle}>Trades</span>
+        <div className={styles.diceIcons}>
+          <div className={styles.diceIcon}></div>
+          <div className={styles.diceIcon}></div>
         </div>
       </div>
       
       <button 
-        className="create-button"
+        className={styles.createButton}
         onClick={handleCreateTrade}
         disabled={isCreatingTrade}
       >
