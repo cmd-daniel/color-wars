@@ -9,7 +9,7 @@ const GRID_CONFIG = {
   hexDimensions: 30,
   hexOrigin: 'topLeft' as const,
   gridRadius: 3,
-  viewBoxPadding: 30,
+  viewBoxPadding: 10,
   defaultViewBox: "0 0 100 100",
   // Gap configuration
   hexScale: 0.95, // Scale factor (0.85 = 15% gap between hexes)

@@ -4,18 +4,22 @@
 
 .container {
   width: 100%;
-  height: 60vh;
-  border: 2px solid black;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: var(--background);
+  border-radius: var(--radius);
+  /* Let the container size itself based on the SVG content */
+  aspect-ratio: 1;
+  max-width: 100vw;
 }
 
 .svg {
-  border: 1px solid black;
-  max-width: 100%;
-  max-height: 100%;
-  background-color: #1a1a1a; /* Dark background to make gaps visible */
+  width: 100%;
+  height: auto;
+  background-color: transparent;
+  /* SVG will maintain its aspect ratio and fill the container width */
+  object-fit: contain;
 }
 
 /* ===================================
@@ -24,13 +28,15 @@
 
 @media (max-width: 768px) {
   .container {
-    height: 50vh;
+    /* Use slightly less width on smaller screens for padding */
+    width: 95%;
+    margin: 0 auto;
   }
 }
 
 @media (max-width: 480px) {
   .container {
-    height: 40vh;
-    border: 1px solid black;
+    width: 90%;
+    margin: 0 auto;
   }
 }
