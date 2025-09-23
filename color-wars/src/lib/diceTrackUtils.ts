@@ -1,4 +1,5 @@
-import { DiceTrackTile, TileType, TILE_CONFIGS } from '@/types/diceTrack'
+import type { DiceTrackTile } from '@/types/diceTrack'
+import { TileType, TILE_CONFIGS } from '@/types/diceTrack'
 
 /**
  * Generates a random arrangement of dice track tiles
@@ -54,7 +55,7 @@ function createTile(type: TileType, id: number): DiceTrackTile {
         position: 0, // Will be set later
         title: config.titles[randomIndex],
         color: config.colors[randomIndex],
-        value: Math.floor(Math.random() * 200) + 100 // Random value between 100-300
+        value: config.values[randomIndex] // Use predefined property values
       }
     }
     

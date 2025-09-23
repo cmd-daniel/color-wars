@@ -7,25 +7,54 @@ import ChatColumn from '@/components/ChatColumn'
 import MobileChatDrawer from '@/components/MobileChatDrawer'
 import Dice from '@/components/Dice'
 import DiceTrack from '@/components/DiceTrack'
+import GameLog from '@/components/GameLog'
 import { useScreenSize } from '@/hooks/useScreenSize'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useGameStore } from '@/stores/gameStore'
 import type { PlayerPosition } from '@/types/diceTrack'
 import './App.css'
 
 function App() {
   const screenSize = useScreenSize()
   
-  // Mock player data for testing dice track
-  const [mockPlayers] = useState<PlayerPosition[]>([
-    { playerId: '1', playerName: 'Alice', position: 3, color: '#ef4444' },
-    { playerId: '2', playerName: 'Bob', position: 7, color: '#3b82f6' },
-    { playerId: '3', playerName: 'Charlie', position: 12, color: '#22c55e' },
-    { playerId: '4', playerName: 'Diana', position: 3, color: '#a855f7' }
-  ])
+  // Get game store state and methods
+  const players = useGameStore(state => state.state.players)
+  const diceTrackTiles = useGameStore(state => state.state.diceTrackTiles)
+  const dice = useGameStore(state => state.state.dice)
+  const currentPlayer = useGameStore(state => state.getCurrentPlayer())
+  const rollDice = useGameStore(state => state.rollDice)
+  const endTurn = useGameStore(state => state.endTurn)
+  const isGameStarted = useGameStore(state => state.state.isGameStarted)
+  
+  // Animation state for token movement
+  const [isAnimating, setIsAnimating] = useState(false)
+  
+  // Convert game store players to PlayerPosition format for DiceTrack
+  const playerPositions = useMemo((): PlayerPosition[] => {
+    return players.map(player => ({
+      playerId: player.id,
+      playerName: player.name,
+      position: player.diceTrackPosition,
+      color: player.color
+    }))
+  }, [players])
 
-  const handleDiceRoll = (value: number) => {
-    console.log(`Dice rolled: ${value}`)
-    // TODO: Implement dice roll logic with game state
+  const handleDiceRoll = () => {
+    console.log('Dice roll triggered')
+    
+    // Start animation
+    setIsAnimating(true)
+    
+    const result = rollDice()
+    if (result) {
+      // Stop animation after 1.5 seconds (matching CSS animation duration)
+      setTimeout(() => {
+        setIsAnimating(false)
+      }, 1500)
+    } else {
+      console.log('Cannot roll dice - not your turn or already rolled')
+      setIsAnimating(false)
+    }
   }
 
   const handleTileClick = (tile: any) => {
@@ -70,22 +99,49 @@ function App() {
         {/* Dedicated dice area */}
         <div className="dice-area">
           <div className="dice-container">
-            <Dice onRoll={handleDiceRoll} />
+            <Dice 
+              value={dice.currentValue}
+              onRoll={handleDiceRoll} 
+              disabled={!isGameStarted || !currentPlayer?.canRoll}
+              isRolling={dice.isRolling}
+            />
+            {/* End Turn button - only show if game started and current player has rolled */}
+            {isGameStarted && currentPlayer && !currentPlayer.canRoll && (
+              <button 
+                onClick={endTurn}
+                style={{
+                  marginTop: '1rem',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'var(--primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: 'var(--radius)',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500'
+                }}
+              >
+                End Turn
+              </button>
+            )}
           </div>
         </div>
         
         {/* Dedicated dice track area */}
         <div className="dice-track-area">
           <DiceTrack 
-            playerPositions={mockPlayers}
+            tiles={diceTrackTiles}
+            playerPositions={playerPositions}
             onTileClick={handleTileClick}
-            totalTiles={20}
+            currentPlayerId={currentPlayer?.id}
+            isAnimating={isAnimating}
           />
         </div>
         
         {/* Single instance of game info */}
         <div className="game-info-area">
           <PlayerList />
+          <GameLog />
           <TradesSection />
           {/* Chat shows here ONLY for desktop-medium (1100-1365px) */}
           {screenSize === 'desktop-medium' && <ChatSection />}

@@ -37,13 +37,48 @@
   font-size: 1rem;
 }
 
+.noPlayers {
+  text-align: center;
+  padding: 2rem;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+.playerDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .playerName {
   font-weight: 600;
   color: var(--foreground);
+  font-size: 0.9rem;
 }
 
-.playerScore {
+.playerMoney {
   font-weight: 700;
-  font-size: 1.1rem;
-  color: var(--foreground);
+  font-size: 1rem;
+  color: var(--primary);
+}
+
+.playerStatus {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25rem;
+}
+
+.activeBadge {
+  background: var(--primary);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.playerPosition {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
 }

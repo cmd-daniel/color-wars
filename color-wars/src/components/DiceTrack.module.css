@@ -286,3 +286,58 @@
     right: 0;
   }
 }
+
+/* Current player tile highlighting */
+.currentPlayerTile {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.currentPlayerTile::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+  border-radius: inherit;
+  z-index: -1;
+  animation: currentPlayerPulse 2s ease-in-out infinite;
+}
+
+/* Animation for current player tile */
+.animating {
+  animation: tokenMove 1.5s ease-in-out;
+}
+
+/* Token movement animation */
+@keyframes tokenMove {
+  0% {
+    transform: scale(1.05) translateY(0);
+  }
+  25% {
+    transform: scale(1.1) translateY(-8px);
+  }
+  50% {
+    transform: scale(1.15) translateY(-12px);
+  }
+  75% {
+    transform: scale(1.1) translateY(-8px);
+  }
+  100% {
+    transform: scale(1.05) translateY(0);
+  }
+}
+
+/* Current player pulse animation */
+@keyframes currentPlayerPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.02);
+  }
+}

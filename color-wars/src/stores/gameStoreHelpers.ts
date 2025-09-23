@@ -1,41 +1,63 @@
 import { useGameStore } from './gameStore'
 
-// Helper function to initialize a demo game
+// Helper function to initialize a demo game with our new game store
 export const initializeDemoGame = () => {
   const store = useGameStore.getState()
   
-  // Add some demo players
-  store.addPlayer({
-    id: 'player1',
-    name: 'Red Player',
-    color: '#ff4444',
-    score: 0
-  })
-  
-  store.addPlayer({
-    id: 'player2', 
-    name: 'Blue Player',
-    color: '#4444ff',
-    score: 0
-  })
-  
-  store.addPlayer({
-    id: 'player3',
-    name: 'Green Player', 
-    color: '#44ff44',
-    score: 0
-  })
-  
-  // Set current player
-  store.setCurrentPlayer('player1')
-  
-  // Mark as connected (for demo purposes)
-  store.setConnectionStatus(true)
-  
-  console.log('Demo game initialized with 3 players')
+  try {
+    // Initialize game with 3 players
+    store.initializeGame(2, ['Red Player', 'Blue Player'])
+    
+    // Start the game
+    store.startGame()
+    
+    console.log('Demo game initialized with 3 players')
+    console.log('Current player:', store.getCurrentPlayer()?.name)
+    console.log('Game state:', store.state)
+  } catch (error) {
+    console.error('Failed to initialize demo game:', error)
+  }
 }
 
-// Helper functions are now moved to the main store
-// These can be removed as they're replaced by store methods:
-// - getNextPlayer() -> store.getNextPlayerId()
-// - switchToNextPlayer() -> store.switchToNextPlayer()
+// Helper function to get current game status
+export const getGameStatus = () => {
+  const store = useGameStore.getState()
+  return {
+    isStarted: store.state.isGameStarted,
+    isEnded: store.state.isGameEnded,
+    currentPlayer: store.getCurrentPlayer(),
+    players: store.state.players,
+    winner: store.state.winnerId
+  }
+}
+
+// Helper function to simulate a complete turn (for testing)
+export const simulatePlayerTurn = () => {
+  const store = useGameStore.getState()
+  const currentPlayer = store.getCurrentPlayer()
+  
+  if (!currentPlayer) {
+    console.log('No active player')
+    return
+  }
+  
+  console.log(`${currentPlayer.name}'s turn:`)
+  
+  // Roll dice
+  const rollResult = store.rollDice()
+  if (rollResult) {
+    console.log(`- Rolled ${rollResult.value}, moved to position ${rollResult.newPosition + 1}`)
+    if (rollResult.moneyGained > 0) {
+      console.log(`- Gained $${rollResult.moneyGained}`)
+    }
+    if (rollResult.roundTripCompleted) {
+      console.log(`- Completed a round trip!`)
+    }
+  }
+  
+  // End turn
+  store.endTurn()
+  
+  const nextPlayer = store.getCurrentPlayer()
+  console.log(`Next player: ${nextPlayer?.name}`)
+}

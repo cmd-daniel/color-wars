@@ -33,7 +33,8 @@ export interface DiceTrackState {
 export const TILE_CONFIGS = {
   [TileType.PROPERTY]: {
     titles: ['Red Base', 'Blue Castle', 'Green Fortress', 'Yellow Tower', 'Purple Palace'],
-    colors: ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7']
+    colors: ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'],
+    values: [150, 200, 250, 300, 350] // Property values
   },
   [TileType.TREASURE_CHEST]: {
     titles: ['Gold Coins', 'Silver Treasure', 'Ancient Artifacts', 'Gem Collection', 'Royal Chest'],

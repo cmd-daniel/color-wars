@@ -3,19 +3,14 @@ import { useMemo } from 'react'
 import styles from './PlayerList.module.css'
 
 const PlayerList = () => {
-  // Use individual selectors with proper equality functions
-  const currentPlayerId = useGameStore(state => state.currentPlayerId)
-  const players = useGameStore(state => state.players)
-  const isConnected = useGameStore(state => state.isConnected)
+  // Use selectors from our new game store structure
+  const players = useGameStore(state => state.state.players)
+  const isGameStarted = useGameStore(state => state.state.isGameStarted)
+  const currentPlayer = useGameStore(state => state.getCurrentPlayer())
   
   // Memoize computed values
-  const currentPlayer = useMemo(() => {
-    if (!currentPlayerId) return null
-    return players[currentPlayerId] || null
-  }, [currentPlayerId, players])
-  
   const playerList = useMemo(() => {
-    return Object.values(players)
+    return players || []
   }, [players])
 
   // Generate avatar initials from player name
@@ -26,6 +21,16 @@ const PlayerList = () => {
       .join('')
       .toUpperCase()
       .slice(0, 2)
+  }
+
+  if (!isGameStarted && playerList.length === 0) {
+    return (
+      <div className={styles.playersList}>
+        <div className={styles.noPlayers}>
+          <span>No game started</span>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -42,26 +47,17 @@ const PlayerList = () => {
             >
               {getPlayerInitials(player.name)}
             </div>
-            <span className={styles.playerName}>{player.name}</span>
+            <div className={styles.playerDetails}>
+              <span className={styles.playerName}>{player.name}</span>
+              <span className={styles.playerMoney}>${player.money}</span>
+            </div>
           </div>
-          <span className={styles.playerScore}>${player.score}</span>
+          <div className={styles.playerStatus}>
+            {player.isActive && <span className={styles.activeBadge}>Active</span>}
+            <span className={styles.playerPosition}>Track: {player.diceTrackPosition + 1}</span>
+          </div>
         </div>
       ))}
-      
-      {/* Connection status indicator */}
-      {!isConnected && (
-        <div className={styles.playerItem} style={{ opacity: 0.7 }}>
-          <div className={styles.playerInfo}>
-            <div 
-              className={styles.playerAvatar}
-              style={{ backgroundColor: '#ef4444' }}
-            >
-              ⚠
-            </div>
-            <span className={styles.playerName}>Connection Lost</span>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

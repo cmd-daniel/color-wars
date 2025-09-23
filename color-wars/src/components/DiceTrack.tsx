@@ -3,38 +3,34 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation, FreeMode } from 'swiper/modules'
 import type { DiceTrackTile, PlayerPosition } from '@/types/diceTrack'
 import { TileType } from '@/types/diceTrack'
-import { generateRandomDiceTrack, getTileIcon, getTileBackgroundColor } from '@/lib/diceTrackUtils'
+import { getTileIcon, getTileBackgroundColor } from '@/lib/diceTrackUtils'
 import styles from './DiceTrack.module.css'
 
 // Import Swiper styles - bundle version to avoid module resolution issues
 import 'swiper/swiper-bundle.css'
 
 interface DiceTrackProps {
+  tiles: DiceTrackTile[]
   playerPositions?: PlayerPosition[]
   onTileClick?: (tile: DiceTrackTile) => void
-  totalTiles?: number
+  currentPlayerId?: string
+  isAnimating?: boolean
 }
 
-const DiceTrack = ({ playerPositions = [], onTileClick, totalTiles = 20 }: DiceTrackProps) => {
-  const [tiles, setTiles] = useState<DiceTrackTile[]>([])
+const DiceTrack = ({ tiles, playerPositions = [], onTileClick, currentPlayerId, isAnimating = false }: DiceTrackProps) => {
   const [swiperInstance, setSwiperInstance] = useState<any>(null)
 
-  // Generate random tiles on mount - limit to reasonable number for performance
+  // Auto-scroll to follow current player
   useEffect(() => {
-    const limitedTiles = Math.min(totalTiles, 50) // Limit to 50 tiles for better performance
-    const randomTiles = generateRandomDiceTrack(limitedTiles)
-    setTiles(randomTiles)
-  }, [totalTiles])
-
-  // Auto-scroll to follow active player (for demo purposes, we'll follow the first player)
-  useEffect(() => {
-    if (playerPositions.length > 0 && swiperInstance) {
-      const activePlayerPosition = playerPositions[0].position
-      // Slide to the active player's position (with some offset for better viewing)
-      const slideIndex = Math.max(0, activePlayerPosition - 2)
-      swiperInstance.slideTo(slideIndex)
+    if (currentPlayerId && playerPositions.length > 0 && swiperInstance) {
+      const currentPlayerPosition = playerPositions.find(p => p.playerId === currentPlayerId)?.position
+      if (currentPlayerPosition !== undefined) {
+        // Slide to the current player's position (with some offset for better viewing)
+        const slideIndex = Math.max(0, currentPlayerPosition - 2)
+        swiperInstance.slideTo(slideIndex, 800) // Smooth scroll with 800ms duration
+      }
     }
-  }, [playerPositions, swiperInstance])
+  }, [currentPlayerId, playerPositions, swiperInstance])
 
 
   const getPlayersAtPosition = (position: number): PlayerPosition[] => {
@@ -45,16 +41,24 @@ const DiceTrack = ({ playerPositions = [], onTileClick, totalTiles = 20 }: DiceT
   const renderTile = (tile: DiceTrackTile) => {
     const playersHere = getPlayersAtPosition(tile.position)
     const isPropertyTile = tile.type === TileType.PROPERTY
+    const isCurrentPlayerTile = currentPlayerId && playersHere.some(p => p.playerId === currentPlayerId)
+    const currentPlayer = playersHere.find(p => p.playerId === currentPlayerId)
 
     return (
       <div
         key={tile.id}
-        className={`${styles.tile} ${styles[tile.type]}`}
+        className={`${styles.tile} ${styles[tile.type]} ${isCurrentPlayerTile ? styles.currentPlayerTile : ''} ${isAnimating && isCurrentPlayerTile ? styles.animating : ''}`}
         onClick={() => onTileClick?.(tile)}
         style={{
           background: isPropertyTile && tile.color ? 
             `linear-gradient(135deg, ${tile.color} 0%, ${tile.color}80 100%)` : 
-            getTileBackgroundColor(tile.type)
+            getTileBackgroundColor(tile.type),
+          ...(isCurrentPlayerTile && {
+            boxShadow: `0 0 20px ${currentPlayer?.color || '#3b82f6'}80, 0 0 40px ${currentPlayer?.color || '#3b82f6'}40`,
+            border: `2px solid ${currentPlayer?.color || '#3b82f6'}`,
+            transform: 'scale(1.05)',
+            zIndex: 10
+          })
         }}
       >
         <div className={styles.tileHeader}>
@@ -64,7 +68,7 @@ const DiceTrack = ({ playerPositions = [], onTileClick, totalTiles = 20 }: DiceT
         
         <div className={styles.tileContent}>
           <h4 className={styles.tileTitle}>{tile.title}</h4>
-          {tile.value && (
+          {tile.value !== undefined && (
             <div className={styles.tileValue}>
               {tile.type === TileType.PENALTY_CHEST ? '-' : '+'}${tile.value}
             </div>
@@ -100,7 +104,7 @@ const DiceTrack = ({ playerPositions = [], onTileClick, totalTiles = 20 }: DiceT
     return (
       <div className={styles.loading}>
         <div className={styles.loadingSpinner}></div>
-        <p>Generating dice track...</p>
+        <p>Loading dice track...</p>
       </div>
     )
   }
