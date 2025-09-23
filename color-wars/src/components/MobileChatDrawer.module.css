@@ -30,13 +30,12 @@
 }
 
 .collapsed {
-  padding: 1rem;
+  padding: 4px;
 }
 
 .lastMessage {
-  background: var(--muted);
   border-radius: var(--radius);
-  padding: 0.75rem;
+  padding: 4px;
   margin-bottom: 0.75rem;
   cursor: pointer;
   display: flex;
@@ -117,8 +116,9 @@
 .inputContainer {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 0.5rem;
-  padding: 1rem;
+  padding: 4px;
   border-top: 1px solid var(--border);
 }
 
