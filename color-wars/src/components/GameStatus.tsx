@@ -3,24 +3,19 @@ import { useMemo } from 'react'
 
 const GameStatus = () => {
   // Use individual selectors with proper equality functions
-  const currentPlayerId = useGameStore(state => state.currentPlayerId)
-  const players = useGameStore(state => state.players)
-  const hexes = useGameStore(state => state.hexes)
-  const isConnected = useGameStore(state => state.isConnected)
+  const currentPlayer = useGameStore(state => state.getCurrentPlayer())
+  const players = useGameStore(state => state.state.players)
+  const hexes = useGameStore(state => state.state.hexCells)
+  const isConnected = useGameStore(state => state.state.isGameStarted)
   
   // Memoize computed values
-  const currentPlayer = useMemo(() => {
-    if (!currentPlayerId) return null
-    return players[currentPlayerId] || null
-  }, [currentPlayerId, players])
-  
   const playerList = useMemo(() => {
     return Object.values(players)
   }, [players])
   
   const gameStats = useMemo(() => {
-    const totalHexes = Object.keys(hexes).length
-    const claimedHexes = Object.values(hexes).filter(hex => hex.owner).length
+    const totalHexes = hexes.size
+    const claimedHexes = Array.from(hexes.values()).filter(hex => hex.ownerId).length
     return { totalHexes, claimedHexes }
   }, [hexes])
 
@@ -84,7 +79,7 @@ const GameStatus = () => {
                 {player.name}
               </span>
               <span style={{ marginLeft: '0.5rem', color: '#666' }}>
-                Score: {player.score}
+                Money: ${player.money}
               </span>
             </div>
           ))}

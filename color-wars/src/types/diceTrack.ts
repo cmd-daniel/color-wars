@@ -1,10 +1,12 @@
-export enum TileType {
-  PROPERTY = 'property',
-  TREASURE_CHEST = 'treasure_chest',
-  SURPRISE_CHEST = 'surprise_chest',
-  PENALTY_CHEST = 'penalty_chest',
-  ROLL_AGAIN = 'roll_again'
-}
+export const TileType = {
+  PROPERTY: 'property',
+  TREASURE_CHEST: 'treasure_chest',
+  SURPRISE_CHEST: 'surprise_chest',
+  PENALTY_CHEST: 'penalty_chest',
+  ROLL_AGAIN: 'roll_again'
+} as const
+
+export type TileType = typeof TileType[keyof typeof TileType]
 
 export interface DiceTrackTile {
   id: string
