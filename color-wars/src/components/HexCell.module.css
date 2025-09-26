@@ -12,21 +12,7 @@
 /* Hover effects */
 .hexCell:hover,
 .hexCell.hovered {
-  filter: brightness(1.1) drop-shadow(0 0 8px rgba(255, 255, 255, 0.3));
-}
-
-/* Hover effects for different states */
-.hexCell.hovered.animating {
-  filter: brightness(1.2) drop-shadow(0 0 12px rgba(255, 255, 255, 0.5));
-}
-
-.hexCell.hovered.purchaseFailed {
-  filter: brightness(1.1) drop-shadow(0 0 8px rgba(255, 68, 68, 0.5));
-}
-
-/* Special hover effect for owned hexes */
-.hexCell.hovered:not([fill="#303030"]) {
-  filter: brightness(1.15) drop-shadow(0 0 10px currentColor);
+  filter: brightness(1.1) drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
 }
 
 /* ===================================

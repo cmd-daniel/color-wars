@@ -1,343 +1,77 @@
-.diceTrackContainer {
+/* ===================================
+   HOLLOW GRID CONTAINER STYLES
+   =================================== */
+
+.container {
+  position: relative;
   width: 100%;
-  max-width: 100%;
-  background: var(--card);
-  border: 1px solid var(--border);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background);
   border-radius: var(--radius);
-  padding: 1rem;
+  /* Let the container size itself based on the content */
+  aspect-ratio: 1;
+  max-width: 100vw;
   overflow: hidden;
-  box-sizing: border-box;
 }
 
+/* ===================================
+   PIXIJS CONTAINER STYLES
+   =================================== */
 
-.swiperContainer {
-  position: relative;
-  margin-bottom: 1rem;
-  padding: 0 2rem; /* Add padding to accommodate navigation buttons */
-  box-sizing: border-box;
-}
-
-.swiper {
-  padding: 0.5rem 0;
-}
-
-.swiperSlide {
-  width: auto !important;
-  height: auto;
-  flex-shrink: 0;
-  max-width: none;
-}
-
-.tileContainer {
-  padding: 0 8px; /* Horizontal spacing between tiles */
-  box-sizing: border-box;
-}
-
-.swiperButton {
+.pixiContainer {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 40px;
-  height: 40px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 1.2rem;
-  color: var(--foreground);
-  z-index: 10;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.swiperButton:hover {
-  background: var(--secondary);
-  border-color: var(--primary);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.swiperButtonPrev {
+  top: 2%;
   left: 0;
-}
-
-.swiperButtonNext {
-  right: 0;
-}
-
-
-.tile {
-  width: 140px;
-  height: 180px;
-  border-radius: var(--radius);
-  padding: 0.75rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  display: flex;
-  flex-direction: column;
-  border: 2px solid transparent;
-}
-
-.tile:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.tileHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.tileIcon {
-  font-size: 1.5rem;
-}
-
-.tilePosition {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 0.25rem 0.5rem;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: bold;
-}
-
-.tileContent {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.tileTitle {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.875rem;
-  font-weight: bold;
-  line-height: 1.2;
-}
-
-.tileValue {
-  font-size: 1rem;
-  font-weight: bold;
-  margin-bottom: 0.25rem;
-  color: #ffd700; /* Gold color for values */
-}
-
-.tileDescription {
-  margin: 0;
-  font-size: 0.75rem;
-  opacity: 0.9;
-  line-height: 1.3;
-}
-
-.playersContainer {
-  position: absolute;
-  bottom: 0.5rem;
-  right: 0.5rem;
-  display: flex;
-  gap: 2px;
-}
-
-.playerIndicator {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: bold;
-  color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  transition: transform 0.2s ease;
-  position: relative;
+  width: 100%;
+  height: 100%;
   z-index: 1;
+  /* PixiJS handles all interactions by default */
+  pointer-events: auto;
+  border-radius: var(--radius);
 }
 
-.playerIndicator:hover {
-  transform: scale(1.1);
-  z-index: 2;
-}
 
-.legendContainer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: center;
-  border-top: 1px solid var(--border);
-  padding-top: 1rem;
-}
+/* ===================================
+   SVG GRID STYLES
+   =================================== */
 
-.legendItem {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 3rem;
-  color: var(--muted-foreground);
-}
-
-.loadingSpinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--border);
-  border-top: 3px solid var(--primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Responsive adjustments */
-@media (max-width: 599px) {
-  .diceTrackContainer {
-    padding: 0.5rem;
-  }
-  
-  .tile {
-    width: 120px;
-    height: 160px;
-    padding: 0.5rem;
-  }
-  
-  .tileTitle {
-    font-size: 0.75rem;
-  }
-  
-  .tileIcon {
-    font-size: 1.25rem;
-  }
-  
-  .swiperContainer {
-    padding: 0 1.5rem;
-  }
-  
-  .swiperButtonPrev {
-    left: 0;
-  }
-  
-  .swiperButtonNext {
-    right: 0;
-  }
-  
-  .swiperButton {
-    width: 32px;
-    height: 32px;
-    font-size: 1rem;
-  }
-  
-  .legendContainer {
-    gap: 0.5rem;
-  }
-  
-  .legendItem {
-    font-size: 0.7rem;
-  }
-}
-
-@media (min-width: 1100px) {
-  .tile {
-    width: 160px;
-    height: 200px;
-  }
-  
-  .tileTitle {
-    font-size: 1rem;
-  }
-  
-  .tileIcon {
-    font-size: 1.75rem;
-  }
-  
-  .swiperButton {
-    width: 48px;
-    height: 48px;
-    font-size: 1.4rem;
-  }
-  
-.swiperContainer {
-    padding: 0 2.5rem;
-  }
-  
-  .swiperButtonPrev {
-    left: 0;
-  }
-  
-  .swiperButtonNext {
-    right: 0;
-  }
-}
-
-/* Current player tile highlighting */
-.currentPlayerTile {
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.currentPlayerTile::before {
-  content: '';
+.gridSvg {
   position: absolute;
-  top: -4px;
-  left: -4px;
-  right: -4px;
-  bottom: -4px;
-  background: linear-gradient(45deg, transparent, rgba(59, 130, 246, 0.3), transparent);
-  border-radius: inherit;
-  z-index: -1;
-  animation: currentPlayerPulse 2s ease-in-out infinite;
+  top: 0;
+  left: 0;
+  width: calc(100%);
+  height: calc(100%);
+  z-index: 2;
+  /* SVG doesn't block PixiJS interactions */
+  pointer-events: none;
+  background-color: transparent;
+  /* SVG will maintain its aspect ratio and fill the container width */
+  object-fit: contain;
 }
 
-/* Animation for current player tile */
-.animating {
-  animation: tokenMove 1.5s ease-in-out;
+/* ===================================
+   HEX CELL INTERACTIONS
+   =================================== */
+
+/* Individual hex cells can be clicked */
+.gridSvg path {
+  pointer-events: auto;
 }
 
-/* Token movement animation */
-@keyframes tokenMove {
-  0% {
-    transform: scale(1.05) translateY(0);
-  }
-  25% {
-    transform: scale(1.1) translateY(-8px);
-  }
-  50% {
-    transform: scale(1.15) translateY(-12px);
-  }
-  75% {
-    transform: scale(1.1) translateY(-8px);
-  }
-  100% {
-    transform: scale(1.05) translateY(0);
-  }
+
+/* ===================================
+   ANIMATION STATES
+   =================================== */
+
+.container.loading {
+  opacity: 0.8;
 }
 
-/* Current player pulse animation */
-@keyframes currentPlayerPulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.02);
-  }
+.container.loaded {
+  opacity: 1;
+  transition: opacity 0.3s ease-in-out;
 }
+

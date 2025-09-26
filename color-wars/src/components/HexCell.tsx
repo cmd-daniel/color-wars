@@ -23,89 +23,8 @@ interface HexCellProps {
  * - Game logic validation (delegated to game store)
  * - Turn management (delegated to game store)
  */
-const HexCell = ({ hex }: HexCellProps) => {
-  const hexKey = `${hex.q},${hex.r}`
-  const polygonRef = useRef<SVGPolygonElement>(null)
-  
-  // Ripple effect state
-  const [rippleState, setRippleState] = useState<{
-    isActive: boolean
-    targetColor: string
-  } | null>(null)
-  
-  
-  // Hover state
-  const [isHovered, setIsHovered] = useState(false)
-  
-  // Subscribe to this specific hex state using our new store structure
-  const hexState = useGameStore(state => state.getHexCell(hex.q, hex.r, hex.s))
-  const getPlayerById = useGameStore(state => state.getPlayerById)
-  
-  // Track the display color (what the user actually sees)
-  const [displayColor, setDisplayColor] = useState<string>('#303030')
 
-  const [bbox, setBbox] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-
-  useLayoutEffect(() => {
-    if (polygonRef.current) {
-      console.log('is this working?')
-      const box = polygonRef.current.getBBox();
-      setBbox({
-        x: Math.round(box.x),
-        y: Math.round(box.y),
-        width: Math.round(box.width),
-        height: Math.round(box.height),
-      });
-    }
-  }, []);
-
-  if (!bbox){
-    console.log("wtf")
-  }
-  
-  // Get the hex owner's color
-  const hexOwner = hexState?.ownerId ? getPlayerById(hexState.ownerId) : null
-  const newColor = hexOwner?.color || '#303030'
-  
-  // Calculate hover color (brighten the current color)
-  const getHoverColor = (color: string) => {
-    // Convert hex to RGB, brighten, and convert back
-    const hex = color.replace('#', '')
-    const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + 40)
-    const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + 40)
-    const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + 40)
-    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
-  }
-  
-  // Get the current color (base or hover)
-  const currentColor = isHovered ? getHoverColor(displayColor) : displayColor
-  
-  // React to color changes and trigger ripple animation
-  useEffect(() => {
-    // Trigger ripple when color changes to a new value
-    if (newColor !== displayColor) {
-      // Start ripple animation when color changes
-      setRippleState({
-        isActive: true,
-        targetColor: newColor
-      })
-      
-      // Update display color only after animation completes
-      setTimeout(() => {
-        setDisplayColor(newColor)
-        setRippleState(null)
-      }, 500)
-    }
-  }, [newColor, displayColor])
-
-  /**
- * Create an SVG path string for a polygon with rounded corners and scaling
- * @param {Array<{x:number, y:number}>} points - Polygon points
- * @param {number} radius - Corner radius
- * @param {number} scale - Scale factor (0-1)
- * @returns {string} - SVG path "d" attribute
- */
-function roundedPolygonPath(points:{x:number, y:number}[], radius:number, scale = 0.97) {
+const roundedPolygonPath = (points:{x:number, y:number}[], radius:number, scale = 0.97) => {
   const len = points.length;
   if (len < 3) return "";
 
@@ -155,6 +74,80 @@ function roundedPolygonPath(points:{x:number, y:number}[], radius:number, scale 
   d += "Z";
   return d;
 }
+const HexCell = ({ hex }: HexCellProps) => {
+  const hexKey = `${hex.q},${hex.r}`
+  const polygonRef = useRef<SVGPolygonElement>(null)
+  
+  // Ripple effect state
+  const [rippleState, setRippleState] = useState<{
+    isActive: boolean
+    targetColor: string
+  } | null>(null)
+  
+  
+  // Hover state
+  const [isHovered, setIsHovered] = useState(false)
+  
+  // Subscribe to this specific hex state using our new store structure
+  const hexState = useGameStore(state => state.getHexCell(hex.q, hex.r, hex.s))
+  const getPlayerById = useGameStore(state => state.getPlayerById)
+  
+  // Track the display color (what the user actually sees)
+  const [displayColor, setDisplayColor] = useState<string>('#303030')
+
+  const [bbox, setBbox] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (polygonRef.current) {
+      console.log('is this working?')
+      const box = polygonRef.current.getBBox();
+      setBbox({
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      });
+    }
+  }, []);
+
+
+  // Get the hex owner's color
+  const hexOwner = hexState?.ownerId ? getPlayerById(hexState.ownerId) : null
+  const newColor = hexOwner?.color || '#303030'
+  
+  // Calculate hover color (brighten the current color)
+  const getHoverColor = (color: string) => {
+    // Convert hex to RGB, brighten, and convert back
+    const hex = color.replace('#', '')
+    const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + 40)
+    const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + 40)
+    const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + 40)
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+  }
+  
+  // Get the current color (base or hover)
+  const currentColor = isHovered ? getHoverColor(displayColor) : displayColor
+  
+  // React to color changes and trigger ripple animation
+  useEffect(() => {
+    // Trigger ripple when color changes to a new value
+    if (newColor !== displayColor) {
+      // Start ripple animation when color changes
+      setRippleState({
+        isActive: true,
+        targetColor: newColor
+      })
+      
+      // Update display color only after animation completes
+      setTimeout(() => {
+        setDisplayColor(newColor)
+        setRippleState(null)
+      }, 500)
+    }
+  }, [newColor, displayColor])
+
+
+
   
   // Handle hover events
   const handleMouseEnter = () => {
@@ -184,16 +177,16 @@ function roundedPolygonPath(points:{x:number, y:number}[], radius:number, scale 
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         style={{ cursor: 'pointer' }}>
-        </path>
-        {bbox && <foreignObject x={bbox.x} y={bbox.y} width={bbox.width} height={bbox.height}>
-          <div className='w-full h-full flex flex-col items-center justify-center'>
-            <img src={treasureChestImage} width={16} alt="Treasure Chest"></img>
-            <p className='text-[5px]'>Treasure Chest</p>
-          </div>
-        </foreignObject>}
+      </path>
+      {bbox && <foreignObject x={bbox.x} y={bbox.y} width={bbox.width} height={bbox.height}>
+        <div className='w-full h-full flex flex-col items-center justify-center'>
+          <p className='text-[5px]'>{`${hex.q},${hex.r}`}</p>
+        </div>
+      </foreignObject>}
         
     </g>
   )
 }
 
+export { roundedPolygonPath }
 export default HexCell

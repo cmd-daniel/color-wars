@@ -1,5 +1,5 @@
 import { ThemeProvider } from '@/components/theme-provider'
-import HollowGrid from '@/components/HollowGrid'
+import HollowGrid from '@/components/DiceTrack'
 import './App.css'
 
 function App() {
