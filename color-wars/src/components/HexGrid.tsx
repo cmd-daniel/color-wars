@@ -105,7 +105,6 @@ const HexGrid = () => {
                     <HexCell 
                         key={`${hex.q},${hex.r}`}
                         hex={hex}
-                        scale={GRID_CONFIG.hexScale}
                     />
                 ))}
             </svg>

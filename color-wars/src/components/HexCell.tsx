@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react'
+import { useEffect, useState, useRef, useLayoutEffect } from 'react'
 import { Hex } from 'honeycomb-grid'
 import { useGameStore } from '@/stores/gameStore'
 import styles from './HexCell.module.css'
@@ -6,7 +6,6 @@ import treasureChestImage from '../assets/treasure-chest.png'
 
 interface HexCellProps {
   hex: Hex
-  scale?: number // Scale factor to create gaps between hexes
 }
 
 /**
@@ -24,7 +23,7 @@ interface HexCellProps {
  * - Game logic validation (delegated to game store)
  * - Turn management (delegated to game store)
  */
-const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
+const HexCell = ({ hex }: HexCellProps) => {
   const hexKey = `${hex.q},${hex.r}`
   const polygonRef = useRef<SVGPolygonElement>(null)
   
@@ -34,8 +33,6 @@ const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
     targetColor: string
   } | null>(null)
   
-  // Purchase failure state
-  const [purchaseFailed, setPurchaseFailed] = useState(false)
   
   // Hover state
   const [isHovered, setIsHovered] = useState(false)
@@ -180,8 +177,8 @@ function roundedPolygonPath(points:{x:number, y:number}[], radius:number, scale 
       <path
         ref={polygonRef}
         d={roundedPolygonPath(hex.corners,3)}
-        className={`${styles.hexCell} ${rippleState ? "animating" : ""} ${purchaseFailed ? styles.purchaseFailed : ""} ${isHovered ? styles.hovered : ""}`}
-        fill={purchaseFailed ? '#ff4444' : currentColor}
+        className={`${styles.hexCell} ${rippleState ? "animating" : ""} ${isHovered ? styles.hovered : ""}`}
+        fill={currentColor}
         data-coords={hexKey}
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}

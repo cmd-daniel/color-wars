@@ -1,7 +1,5 @@
 import { ThemeProvider } from '@/components/theme-provider'
 import HollowGrid from '@/components/HollowGrid'
-import PlayerList from '@/components/PlayerList'
-import GameLog from '@/components/GameLog'
 import './App.css'
 
 function App() {
