@@ -2,7 +2,7 @@ import { useEffect, useState, useRef, useLayoutEffect } from 'react'
 import { Hex } from 'honeycomb-grid'
 import { useGameStore } from '@/stores/gameStore'
 import styles from './HexCell.module.css'
-import treasureChestImage from '../assets/treasure-chest.png'
+//import treasureChestImage from '../assets/treasure-chest.png'
 
 interface HexCellProps {
   hex: Hex

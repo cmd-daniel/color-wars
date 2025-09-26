@@ -16,7 +16,7 @@ const GRID_CONFIG = {
 }
 
 // One knob to tune the visual gap between hexes and cutout (world units)
-const GAP = GRID_CONFIG.hexDimensions * 0.15
+//const GAP = GRID_CONFIG.hexDimensions * 0.15
 
 // Toggle if you want to see loop vertices for sanity
 const SHOW_DEBUG_POINTS = false
