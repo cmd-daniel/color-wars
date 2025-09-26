@@ -6,7 +6,7 @@ import styles from './HollowGrid.module.css'
 
 // Grid configuration constants
 const GRID_CONFIG = {
-  hexDimensions: 23,
+  hexDimensions: 24,
   hexOrigin: 'topLeft' as const,
   viewBoxPadding: 10,
   defaultViewBox: "0 0 100 100",

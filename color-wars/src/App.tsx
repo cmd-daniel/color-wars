@@ -13,13 +13,6 @@ function App() {
         <div className="hex-grid-area">
           <HollowGrid />
         </div>
-        
-        
-        {/* Single instance of game info */}
-        <div className="game-info-area">
-          <PlayerList />
-          <GameLog />
-        </div>
 
       </div>
     </ThemeProvider>

@@ -18,15 +18,9 @@
 
 /* Mobile: Single column layout (default) */
 .app-container {
-  grid-template-areas: 
-    "hex-grid"
-    "dice"
-    "dice-track"
-    "game-info"
-    "chat";
-  grid-template-rows: auto auto auto auto auto;
+  grid-template-areas: "hex-grid";
+  grid-template-rows: auto;
   gap: 1rem;
-  padding: 1rem;
 }
 
 /* Add bottom padding only for mobile to account for fixed chat */
@@ -122,7 +116,6 @@
       "dice-track dice-track"
       "chat game-info";
     gap: 1rem;
-    padding: 1rem;
   }
 }
 
@@ -136,7 +129,6 @@
       "dice dice"
       "dice-track dice-track";
     gap: 1rem;
-    padding: 1rem;
   }
   
   /* Hide standalone chat area since chat is inside game-info */
@@ -148,14 +140,9 @@
 /* Desktop Large: 1366px+ - 3-column layout with dedicated chat column, dice and dice track rows */
 @media (min-width: 1366px) {
   .app-container {
-    grid-template-columns: 300px 2fr 400px;
-    grid-template-rows: auto auto ;
-    grid-template-areas: 
-      "hex-grid hex-grid game-info"
-      "hex-grid hex-grid game-info";
+    display: flex;
+    flex-direction: row;
     gap: 1rem;
-    padding: 1rem;
-    max-width: 1600px;
   }
 }
 

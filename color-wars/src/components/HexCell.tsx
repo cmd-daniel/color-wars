@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState, useRef } from 'react'
+import { useEffect, useMemo, useState, useRef, useLayoutEffect } from 'react'
 import { Hex } from 'honeycomb-grid'
 import { useGameStore } from '@/stores/gameStore'
 import styles from './HexCell.module.css'
+import treasureChestImage from '../assets/treasure-chest.png'
 
 interface HexCellProps {
   hex: Hex
@@ -39,18 +40,31 @@ const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
   // Hover state
   const [isHovered, setIsHovered] = useState(false)
   
-  // Get store methods and state
-  const buyHexCell = useGameStore(state => state.buyHexCell)
-  
   // Subscribe to this specific hex state using our new store structure
   const hexState = useGameStore(state => state.getHexCell(hex.q, hex.r, hex.s))
-  
-  // Get current player and hex owner information
-  const currentPlayer = useGameStore(state => state.getCurrentPlayer())
   const getPlayerById = useGameStore(state => state.getPlayerById)
   
   // Track the display color (what the user actually sees)
   const [displayColor, setDisplayColor] = useState<string>('#303030')
+
+  const [bbox, setBbox] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (polygonRef.current) {
+      console.log('is this working?')
+      const box = polygonRef.current.getBBox();
+      setBbox({
+        x: Math.round(box.x),
+        y: Math.round(box.y),
+        width: Math.round(box.width),
+        height: Math.round(box.height),
+      });
+    }
+  }, []);
+
+  if (!bbox){
+    console.log("wtf")
+  }
   
   // Get the hex owner's color
   const hexOwner = hexState?.ownerId ? getPlayerById(hexState.ownerId) : null
@@ -86,20 +100,64 @@ const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
       }, 500)
     }
   }, [newColor, displayColor])
-  
-  // Memoize points string for performance with scaling applied
-  const points = useMemo(() => {
-    // Calculate center of the hex for scaling
-    const centerX = hex.corners.reduce((sum, corner) => sum + corner.x, 0) / hex.corners.length
-    const centerY = hex.corners.reduce((sum, corner) => sum + corner.y, 0) / hex.corners.length
-    
-    // Scale each corner relative to the center
-    return hex.corners.map(({ x, y }) => {
-      const scaledX = centerX + (x - centerX) * scale
-      const scaledY = centerY + (y - centerY) * scale
-      return `${scaledX},${scaledY}`
-    }).join(' ')
-  }, [hex.corners, scale])
+
+  /**
+ * Create an SVG path string for a polygon with rounded corners and scaling
+ * @param {Array<{x:number, y:number}>} points - Polygon points
+ * @param {number} radius - Corner radius
+ * @param {number} scale - Scale factor (0-1)
+ * @returns {string} - SVG path "d" attribute
+ */
+function roundedPolygonPath(points:{x:number, y:number}[], radius:number, scale = 0.97) {
+  const len = points.length;
+  if (len < 3) return "";
+
+  // --- scale polygon around centroid ---
+  const cx = points.reduce((sum, p) => sum + p.x, 0) / len;
+  const cy = points.reduce((sum, p) => sum + p.y, 0) / len;
+
+  const scaled = points.map(p => ({
+    x: cx + (p.x - cx) * scale,
+    y: cy + (p.y - cy) * scale,
+  }));
+
+  let d = "";
+
+  for (let i = 0; i < len; i++) {
+    const prev = scaled[(i - 1 + len) % len];
+    const curr = scaled[i];
+    const next = scaled[(i + 1) % len];
+
+    // vectors
+    const v1 = { x: curr.x - prev.x, y: curr.y - prev.y };
+    const v2 = { x: next.x - curr.x, y: next.y - curr.y };
+
+    // normalize
+    const len1 = Math.hypot(v1.x, v1.y);
+    const len2 = Math.hypot(v2.x, v2.y);
+    const n1 = { x: v1.x / len1, y: v1.y / len1 };
+    const n2 = { x: v2.x / len2, y: v2.y / len2 };
+
+    // clamp radius to fit edge
+    const r = Math.min(radius, len1 / 2, len2 / 2);
+
+    // rounded corner points
+    const p1 = { x: curr.x - n1.x * r, y: curr.y - n1.y * r };
+    const p2 = { x: curr.x + n2.x * r, y: curr.y + n2.y * r };
+
+    if (i === 0) {
+      d += `M ${p1.x} ${p1.y} `;
+    } else {
+      d += `L ${p1.x} ${p1.y} `;
+    }
+
+    // quadratic Bézier curve
+    d += `Q ${curr.x} ${curr.y} ${p2.x} ${p2.y} `;
+  }
+
+  d += "Z";
+  return d;
+}
   
   // Handle hover events
   const handleMouseEnter = () => {
@@ -112,80 +170,31 @@ const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
   
   // Handle click - attempt to buy the hex cell
   const handleClick = () => {
-    if (!currentPlayer || !currentPlayer.canBuy) {
-      console.log('Cannot buy hex: not your turn or no buy permission')
-      return
-    }
-    
-    if (hexState?.ownerId) {
-      console.log('Cannot buy hex: already owned')
-      return
-    }
-    
-    const success = buyHexCell(hex.q, hex.r, hex.s)
-    if (success) {
-      console.log(`${currentPlayer.name} bought hex (${hex.q},${hex.r},${hex.s}) for $${hexState?.cost}`)
-    } else {
-      console.log('Failed to buy hex')
-      // Trigger visual feedback for failed purchase
-      setPurchaseFailed(true)
-      setTimeout(() => setPurchaseFailed(false), 200) // Reset after 1 second
-    }
+
   }
   
   
   return (
     <g>
       {/* Base hexagon */}
-      <polygon
+      <path
         ref={polygonRef}
-        points={points}
+        d={roundedPolygonPath(hex.corners,3)}
         className={`${styles.hexCell} ${rippleState ? "animating" : ""} ${purchaseFailed ? styles.purchaseFailed : ""} ${isHovered ? styles.hovered : ""}`}
         fill={purchaseFailed ? '#ff4444' : currentColor}
         data-coords={hexKey}
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        style={{ cursor: 'pointer' }}
-      />
-      
-      {/* Ripple overlay */}
-      {rippleState && (
-        <polygon
-          points={points}
-          fill={rippleState.targetColor}
-          className={`${styles.rippleOverlay} ${styles.rippleExpand}`}
-          pointerEvents="none"
-        />
-      )}
-      
-      {/* No money symbol overlay */}
-      {purchaseFailed && (
-        <g className={styles.noMoneySymbol}>
-          <text
-            x={hex.corners.reduce((sum, corner) => sum + corner.x, 0) / hex.corners.length}
-            y={hex.corners.reduce((sum, corner) => sum + corner.y, 0) / hex.corners.length}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontSize="20"
-            fill="white"
-            fontWeight="bold"
-            stroke="black"
-            strokeWidth="0.5"
-          >
-            $
-          </text>
-          <line
-            x1={hex.corners.reduce((sum, corner) => sum + corner.x, 0) / hex.corners.length - 8}
-            y1={hex.corners.reduce((sum, corner) => sum + corner.y, 0) / hex.corners.length - 8}
-            x2={hex.corners.reduce((sum, corner) => sum + corner.x, 0) / hex.corners.length + 8}
-            y2={hex.corners.reduce((sum, corner) => sum + corner.y, 0) / hex.corners.length + 8}
-            stroke="red"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        </g>
-      )}
+        style={{ cursor: 'pointer' }}>
+        </path>
+        {bbox && <foreignObject x={bbox.x} y={bbox.y} width={bbox.width} height={bbox.height}>
+          <div className='w-full h-full flex flex-col items-center justify-center'>
+            <img src={treasureChestImage} width={16} alt="Treasure Chest"></img>
+            <p className='text-[5px]'>Treasure Chest</p>
+          </div>
+        </foreignObject>}
+        
     </g>
   )
 }
