@@ -107,6 +107,61 @@ function createTile(type: TileType, id: number): DiceTrackTile {
       }
     }
     
+    case TileType.GO:
+      return {
+        id: baseId,
+        type,
+        position: 0,
+        title: 'GO',
+        description: 'Collect $200',
+        value: 200
+      }
+    
+    case TileType.JAIL:
+      return {
+        id: baseId,
+        type,
+        position: 0,
+        title: 'JAIL',
+        description: 'Just Visiting'
+      }
+    
+    case TileType.FREE_PARKING:
+      return {
+        id: baseId,
+        type,
+        position: 0,
+        title: 'FREE PARKING',
+        description: 'Free Parking'
+      }
+    
+    case TileType.GO_TO_JAIL:
+      return {
+        id: baseId,
+        type,
+        position: 0,
+        title: 'GO TO JAIL',
+        description: 'Go directly to Jail'
+      }
+    
+    case TileType.CHANCE:
+      return {
+        id: baseId,
+        type,
+        position: 0,
+        title: 'CHANCE',
+        description: 'Draw a chance card'
+      }
+    
+    case TileType.CORNER:
+      return {
+        id: baseId,
+        type,
+        position: 0,
+        title: 'CORNER',
+        description: 'Special corner'
+      }
+    
     default:
       throw new Error(`Unknown tile type: ${type}`)
   }
@@ -139,6 +194,18 @@ export function getTileIcon(type: TileType): string {
       return '💸'
     case TileType.ROLL_AGAIN:
       return '🎲'
+    case TileType.GO:
+      return '🚀'
+    case TileType.JAIL:
+      return '🔒'
+    case TileType.FREE_PARKING:
+      return '🅿️'
+    case TileType.GO_TO_JAIL:
+      return '🚨'
+    case TileType.CHANCE:
+      return '❓'
+    case TileType.CORNER:
+      return '📍'
     default:
       return '❓'
   }
@@ -159,6 +226,18 @@ export function getTileBackgroundColor(type: TileType): string {
       return 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)'
     case TileType.ROLL_AGAIN:
       return 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)'
+    case TileType.GO:
+      return 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)'
+    case TileType.JAIL:
+      return 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+    case TileType.FREE_PARKING:
+      return 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+    case TileType.GO_TO_JAIL:
+      return 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
+    case TileType.CHANCE:
+      return 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+    case TileType.CORNER:
+      return 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)'
     default:
       return 'linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)'
   }

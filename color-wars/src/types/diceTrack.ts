@@ -3,7 +3,13 @@ export const TileType = {
   TREASURE_CHEST: 'treasure_chest',
   SURPRISE_CHEST: 'surprise_chest',
   PENALTY_CHEST: 'penalty_chest',
-  ROLL_AGAIN: 'roll_again'
+  ROLL_AGAIN: 'roll_again',
+  GO: 'go',
+  JAIL: 'jail',
+  FREE_PARKING: 'free_parking',
+  GO_TO_JAIL: 'go_to_jail',
+  CHANCE: 'chance',
+  CORNER: 'corner'
 } as const
 
 export type TileType = typeof TileType[keyof typeof TileType]

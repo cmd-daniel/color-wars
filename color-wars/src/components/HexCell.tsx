@@ -36,6 +36,9 @@ const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
   // Purchase failure state
   const [purchaseFailed, setPurchaseFailed] = useState(false)
   
+  // Hover state
+  const [isHovered, setIsHovered] = useState(false)
+  
   // Get store methods and state
   const buyHexCell = useGameStore(state => state.buyHexCell)
   
@@ -52,6 +55,19 @@ const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
   // Get the hex owner's color
   const hexOwner = hexState?.ownerId ? getPlayerById(hexState.ownerId) : null
   const newColor = hexOwner?.color || '#303030'
+  
+  // Calculate hover color (brighten the current color)
+  const getHoverColor = (color: string) => {
+    // Convert hex to RGB, brighten, and convert back
+    const hex = color.replace('#', '')
+    const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + 40)
+    const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + 40)
+    const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + 40)
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+  }
+  
+  // Get the current color (base or hover)
+  const currentColor = isHovered ? getHoverColor(displayColor) : displayColor
   
   // React to color changes and trigger ripple animation
   useEffect(() => {
@@ -85,6 +101,15 @@ const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
     }).join(' ')
   }, [hex.corners, scale])
   
+  // Handle hover events
+  const handleMouseEnter = () => {
+    setIsHovered(true)
+  }
+  
+  const handleMouseLeave = () => {
+    setIsHovered(false)
+  }
+  
   // Handle click - attempt to buy the hex cell
   const handleClick = () => {
     if (!currentPlayer || !currentPlayer.canBuy) {
@@ -115,13 +140,12 @@ const HexCell = ({ hex, scale = 1 }: HexCellProps) => {
       <polygon
         ref={polygonRef}
         points={points}
-        // The original code attempts to concatenate a string with an object, which is incorrect.
-        // To conditionally add a class based on rippleState, use a template literal or string concatenation.
-        // Here, we add a class "asdf" if rippleState is truthy, otherwise "sdf".
-        className={`${styles.hexCell} ${rippleState ? "animating" : ""} ${purchaseFailed ? styles.purchaseFailed : ""}`}
-        fill={purchaseFailed ? '#ff4444' : displayColor}
+        className={`${styles.hexCell} ${rippleState ? "animating" : ""} ${purchaseFailed ? styles.purchaseFailed : ""} ${isHovered ? styles.hovered : ""}`}
+        fill={purchaseFailed ? '#ff4444' : currentColor}
         data-coords={hexKey}
         onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         style={{ cursor: 'pointer' }}
       />
       
