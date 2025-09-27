@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SVG Path Pixel Plot</title>
+</head>
+<body>
+<input type="file" id="svgFile" accept=".svg">
+<label>Cell Size: <input type="number" id="cellSize" value="5"></label>
+<canvas id="canvas"></canvas>
+
+<script>
+const fileInput = document.getElementById('svgFile');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const cellSizeInput = document.querySelector('#cellSize');
+
+fileInput.addEventListener('change', handleFile);
+
+function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const svgText = event.target.result;
+        plotSVG(svgText);
+    };
+    reader.readAsText(file);
+}
+
+function randomColor() {
+    return '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
+}
+
+function plotSVG(svgText) {
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+    const paths = svgDoc.querySelectorAll('path');
+
+    const svgEl = svgDoc.querySelector('svg');
+    const width = parseFloat(svgEl.getAttribute('width')) || 500;
+    const height = parseFloat(svgEl.getAttribute('height')) || 500;
+
+    canvas.width = width;
+    canvas.height = height;
+    ctx.clearRect(0,0,width,height);
+
+    const cellSize = parseInt(cellSizeInput.value,10) || 5;
+
+    paths.forEach(pathEl => {
+        const color = randomColor();
+        ctx.fillStyle = color;
+
+        // Create an SVG path element in memory to sample points
+        const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        tempPath.setAttribute("d", pathEl.getAttribute('d'));
+        const pathLength = tempPath.getTotalLength();
+
+        // Sample along the path and plot cells
+        for(let i = 0; i <= pathLength; i += cellSize) {
+            const point = tempPath.getPointAtLength(i);
+            ctx.fillRect(point.x, point.y, cellSize, cellSize);
+        }
+    });
+}
+</script>
+</body>
+</html>

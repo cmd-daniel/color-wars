@@ -1,6 +1,5 @@
-import { useEffect, useState, useRef, useLayoutEffect } from 'react'
+import { useState, useRef, useLayoutEffect } from 'react'
 import { Hex } from 'honeycomb-grid'
-import { useGameStore } from '@/stores/gameStore'
 import styles from './HexCell.module.css'
 //import treasureChestImage from '../assets/treasure-chest.png'
 
@@ -79,7 +78,7 @@ const HexCell = ({ hex }: HexCellProps) => {
   const polygonRef = useRef<SVGPolygonElement>(null)
   
   // Ripple effect state
-  const [rippleState, setRippleState] = useState<{
+  const [rippleState] = useState<{
     isActive: boolean
     targetColor: string
   } | null>(null)
@@ -88,18 +87,14 @@ const HexCell = ({ hex }: HexCellProps) => {
   // Hover state
   const [isHovered, setIsHovered] = useState(false)
   
-  // Subscribe to this specific hex state using our new store structure
-  const hexState = useGameStore(state => state.getHexCell(hex.q, hex.r, hex.s))
-  const getPlayerById = useGameStore(state => state.getPlayerById)
   
   // Track the display color (what the user actually sees)
-  const [displayColor, setDisplayColor] = useState<string>('#303030')
+  const [displayColor] = useState<string>('#303030')
 
   const [bbox, setBbox] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   useLayoutEffect(() => {
     if (polygonRef.current) {
-      console.log('is this working?')
       const box = polygonRef.current.getBBox();
       setBbox({
         x: Math.round(box.x),
@@ -111,10 +106,7 @@ const HexCell = ({ hex }: HexCellProps) => {
   }, []);
 
 
-  // Get the hex owner's color
-  const hexOwner = hexState?.ownerId ? getPlayerById(hexState.ownerId) : null
-  const newColor = hexOwner?.color || '#303030'
-  
+
   // Calculate hover color (brighten the current color)
   const getHoverColor = (color: string) => {
     // Convert hex to RGB, brighten, and convert back
@@ -128,23 +120,7 @@ const HexCell = ({ hex }: HexCellProps) => {
   // Get the current color (base or hover)
   const currentColor = isHovered ? getHoverColor(displayColor) : displayColor
   
-  // React to color changes and trigger ripple animation
-  useEffect(() => {
-    // Trigger ripple when color changes to a new value
-    if (newColor !== displayColor) {
-      // Start ripple animation when color changes
-      setRippleState({
-        isActive: true,
-        targetColor: newColor
-      })
-      
-      // Update display color only after animation completes
-      setTimeout(() => {
-        setDisplayColor(newColor)
-        setRippleState(null)
-      }, 500)
-    }
-  }, [newColor, displayColor])
+
 
 
 

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SVG Blob Growth</title>
+<style>
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #111;
+  color: #ddd;
+  font-family: sans-serif;
+  gap: 10px;
+  padding: 10px;
+}
+canvas { border:2px solid #444; background:#222; cursor: crosshair;}
+.controls { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
+input[type="range"], input[type="number"] { width:120px; }
+button { padding:6px 12px; border-radius:4px; border:none; background:#444; color:#eee; cursor:pointer; }
+button.primary { background:#2ea85a; }
+</style>
+</head>
+<body>
+
+<input type="file" id="svgFile" accept=".svg">
+<div class="controls">
+<label>Cell Size: <input type="number" id="cellSize" value="2" min="2"></label>
+<label>Speed: <input type="range" id="speedSlider" min="1" max="50" value="50"></label>
+<label>Wall Width: <input type="range" id="wallWidthSlider" min="1" max="20" value="2"></label>
+<button id="startBtn" class="primary">Start</button>
+<button id="resetBtn">Reset</button>
+</div>
+<canvas id="canvas" width="500" height="400"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const cellSizeInput = document.getElementById('cellSize');
+const speedSlider = document.getElementById('speedSlider');
+const wallWidthSlider = document.getElementById('wallWidthSlider');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const svgFileInput = document.getElementById('svgFile');
+
+let cellSize = parseInt(cellSizeInput.value);
+let cols = Math.floor(canvas.width/cellSize);
+let rows = Math.floor(canvas.height/cellSize);
+
+let mask = [];
+let visited = [];
+let queue = [];
+let running = false;
+let animationId = null;
+let drawingWall = false;
+
+// Auto-color array for seeds
+const colors = ['#2ea85a','#e63946','#f1fa3c','#4361ee','#ff9f1c','#9d4edd'];
+let colorIndex = 0;
+
+// Initialize grid
+function initGrid() {
+  cols = Math.floor(canvas.width/cellSize);
+  rows = Math.floor(canvas.height/cellSize);
+  mask = Array.from({length:rows},()=>Array(cols).fill(true));
+  visited = Array.from({length:rows},()=>Array(cols).fill(null));
+  queue=[];
+  ctx.fillStyle='#222';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+
+// Draw walls
+function drawWalls(){
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(!mask[r][c]){
+        ctx.fillStyle='#555';
+        ctx.fillRect(c*cellSize,r*cellSize,cellSize,cellSize);
+      }
+    }
+  }
+}
+
+// Draw wall cells with wallWidth
+function drawWallsFromSVGPoint(r, c) {
+  const wallWidth = parseInt(wallWidthSlider.value);
+  for(let dr=0; dr<wallWidth; dr++){
+    for(let dc=0; dc<wallWidth; dc++){
+      const nr = r+dr;
+      const nc = c+dc;
+      if(nr>=0 && nc>=0 && nr<rows && nc<cols){
+        mask[nr][nc] = false;
+      }
+    }
+  }
+}
+
+// Shuffle helper
+function shuffle(array){
+  for(let i=array.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [array[i],array[j]]=[array[j],array[i]];
+  }
+  return array;
+}
+
+// Draw a blob cell
+function drawCell(r,c,color){
+  ctx.fillStyle=color;
+  ctx.fillRect(c*cellSize,r*cellSize,cellSize,cellSize);
+}
+
+// BFS step
+function stepOnce(){
+  const perFrame = parseInt(speedSlider.value);
+  let popped=0;
+  while(popped<perFrame && queue.length>0){
+    const seed = queue.shift();
+    const {r,c,color} = seed;
+    drawCell(r,c,color);
+
+    const dirs=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
+    shuffle(dirs).forEach(([dr,dc])=>{
+      const nr=r+dr, nc=c+dc;
+      if(nr<0||nc<0||nr>=rows||nc>=cols) return;
+      if(!mask[nr][nc] || visited[nr][nc]) return;
+      visited[nr][nc] = color;
+      if(Math.random()<0.5) queue.push({r:nr,c:nc,color});
+      else setTimeout(()=>queue.push({r:nr,c:nc,color}), Math.random()*200);
+    });
+    popped++;
+  }
+}
+
+// Animation loop
+function loop(){
+  if(running) stepOnce();
+  animationId=requestAnimationFrame(loop);
+}
+
+// Controls
+startBtn.addEventListener('click',()=>{
+  if(queue.length===0){
+    alert("Add at least one seed (right-click) before starting!");
+    return;
+  }
+  running = !running;
+  startBtn.textContent = running?'Pause':'Start';
+  if(!animationId){ // start loop only once
+    loop();
+  }
+});
+
+resetBtn.addEventListener('click',()=>{
+  running=false;
+  startBtn.textContent='Start';
+  if(animationId){ cancelAnimationFrame(animationId); animationId=null; }
+  queue=[];
+  visited = Array.from({length:rows},()=>Array(cols).fill(null));
+  colorIndex=0;
+  initGrid();
+  drawWalls();
+});
+
+// Cell size change
+cellSizeInput.addEventListener('change',()=>{
+  cellSize = parseInt(cellSizeInput.value);
+  initGrid();
+  drawWalls();
+});
+
+// Mouse events
+canvas.addEventListener('mousedown',e=>{
+  const x=e.offsetX;
+  const y=e.offsetY;
+  const c=Math.floor(x/cellSize);
+  const r=Math.floor(y/cellSize);
+
+  if(e.button===0){ // left-click = draw walls
+    drawingWall=true;
+    mask[r][c]=false;
+    drawWalls();
+  }
+});
+
+canvas.addEventListener('mousemove',e=>{
+  if(!drawingWall) return;
+  const x=e.offsetX;
+  const y=e.offsetY;
+  const c=Math.floor(x/cellSize);
+  const r=Math.floor(y/cellSize);
+  if(r>=0 && c>=0 && r<rows && c<cols){
+    mask[r][c]=false;
+    drawWalls();
+  }
+});
+
+canvas.addEventListener('mouseup',()=>{ drawingWall=false; });
+
+// Right-click = add seeds with auto-color
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+canvas.addEventListener('mousedown',e=>{
+  if(e.button===2){
+    const x=e.offsetX;
+    const y=e.offsetY;
+    const c=Math.floor(x/cellSize);
+    const r=Math.floor(y/cellSize);
+    if(r<0||c<0||r>=rows||c>=cols) return;
+    if(mask[r][c] && !visited[r][c]){
+      const color = colors[colorIndex];
+      colorIndex = (colorIndex+1) % colors.length;
+      visited[r][c] = color;
+      queue.push({r,c,color});
+      drawCell(r,c,color);
+    }
+  }
+});
+
+// Upload SVG and convert paths to walls
+svgFileInput.addEventListener('change', e=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = evt=>{
+    const svgText = evt.target.result;
+    initGrid();
+    const parser = new DOMParser();
+    const svgDoc = parser.parseFromString(svgText,"image/svg+xml");
+    const paths = svgDoc.querySelectorAll('path');
+    const svgEl = svgDoc.querySelector('svg');
+    let vb = [0,0,canvas.width,canvas.height];
+    const viewBox = svgEl.getAttribute('viewBox');
+    if(viewBox) vb = viewBox.split(' ').map(Number);
+    const [minX,minY,vbWidth,vbHeight] = vb;
+    const scaleX = canvas.width / vbWidth;
+    const scaleY = canvas.height / vbHeight;
+
+    paths.forEach(pathEl=>{
+      const tempPath = document.createElementNS("http://www.w3.org/2000/svg","path");
+      tempPath.setAttribute("d", pathEl.getAttribute('d'));
+      const pathLength = tempPath.getTotalLength();
+      for(let i=0;i<=pathLength;i+=1){ // sample every 1px
+        const pt = tempPath.getPointAtLength(i);
+        const px = (pt.x - minX) * scaleX;
+        const py = (pt.y - minY) * scaleY;
+        const c = Math.floor(px/cellSize);
+        const r = Math.floor(py/cellSize);
+        drawWallsFromSVGPoint(r,c); // apply wall width
+      }
+    });
+    drawWalls();
+  };
+  reader.readAsText(file);
+});
+</script>
+</body>
+</html>

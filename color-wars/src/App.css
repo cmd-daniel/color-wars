@@ -90,61 +90,6 @@
   max-width: 100%;
 }
 
-/* Mobile chat drawer styles */
-@media (max-width: 599px) {
-  .chat-area {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 100;
-  }
-}
-
-
-
-
-
-/* Tablet: 600px-1099px - Hex grid spans top, dice and dice track below, chat left, game-info right */
-@media (min-width: 600px) and (max-width: 1099px) {
-  .app-container {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto auto;
-    grid-template-areas: 
-      "hex-grid hex-grid"
-      "dice dice"
-      "dice-track dice-track"
-      "chat game-info";
-    gap: 1rem;
-  }
-}
-
-/* Desktop Medium: 1100px-1365px - Hex grid left, game-info right, dice and dice track span bottom */
-@media (min-width: 1100px) and (max-width: 1365px) {
-  .app-container {
-    grid-template-columns: 2fr 1fr;
-    grid-template-rows: auto auto auto;
-    grid-template-areas: 
-      "hex-grid game-info"
-      "dice dice"
-      "dice-track dice-track";
-    gap: 1rem;
-  }
-  
-  /* Hide standalone chat area since chat is inside game-info */
-  .chat-area {
-    display: none;
-  }
-}
-
-/* Desktop Large: 1366px+ - 3-column layout with dedicated chat column, dice and dice track rows */
-@media (min-width: 1366px) {
-  .app-container {
-    display: flex;
-    flex-direction: row;
-    gap: 1rem;
-  }
-}
 
 
 
