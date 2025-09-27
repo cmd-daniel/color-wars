@@ -5,6 +5,8 @@ import type { ParsedSvgDocument } from '../utils/svgParsing'
 import { parseSvgString } from '../utils/svgParsing'
 import type { GridOverlayConfig } from '../utils/svgToHex'
 import { rasteriseSvgToMap } from '../utils/svgToHex'
+import { withRecomputedAdjacency } from '../utils/adjacency'
+import { validateMap, type ValidationIssue } from '../utils/validation'
 import { pixelToAxial } from '../utils/hexGeometry'
 
 interface EditorState {
@@ -14,6 +16,7 @@ interface EditorState {
   gridOverlay: GridOverlayConfig
   paintMode: 'brush' | 'erase' | 'flood' | 'delete-hex'
   interactionMode: 'view' | 'edit'
+  validationIssues: ValidationIssue[]
   setSelectedState: (stateId: StateId | null) => void
   upsertState: (state: StateRegion) => void
   removeState: (stateId: StateId) => void
@@ -29,6 +32,7 @@ interface EditorState {
   addHexAtWorldPoint: (point: { x: number; y: number }) => void
   setInteractionMode: (mode: EditorState['interactionMode']) => void
   deleteHex: (hexKey: string) => void
+  updateMapMetadata: (details: Partial<Pick<MapConfig, 'id' | 'name' | 'version' | 'metadata'>>) => void
 }
 
 const keyForHex = (hex: Pick<HexCell, 'q' | 'r'>) => `${hex.q},${hex.r}`
@@ -53,8 +57,18 @@ const recalcBounds = (hexes: HexCell[]): HexBounds => {
   return { minQ, maxQ, minR, maxR }
 }
 
+const computeMapState = (map: MapConfig) => {
+  const normalised = withRecomputedAdjacency(map)
+  return {
+    map: normalised,
+    validationIssues: validateMap(normalised),
+  }
+}
+
+const INITIAL_MAP_STATE = computeMapState(SAMPLE_MAP_CONFIG)
+
 export const useMapEditorStore = create<EditorState>((set, get) => ({
-  map: SAMPLE_MAP_CONFIG,
+  ...INITIAL_MAP_STATE,
   selectedStateId: null,
   svgDocument: null,
   gridOverlay: {
@@ -81,13 +95,11 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
         nextAdjacency[state.id] = []
       }
 
-      return {
-        map: {
-          ...current.map,
-          states: nextStates,
-          adjacencies: nextAdjacency,
-        },
-      }
+      const next = computeMapState({
+        ...current.map,
+        states: nextStates,
+      })
+      return next
     }),
   removeState: (stateId) =>
     set((current) => {
@@ -95,21 +107,14 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
       const nextHexes = current.map.hexes.map((hex) =>
         hex.stateId === stateId ? { ...hex, stateId: null } : hex,
       )
-      const { [stateId]: _removed, ...rest } = current.map.adjacencies
-      const cleanedAdjacency: Record<StateId, StateId[]> = {}
-      Object.entries(rest).forEach(([key, neighbours]) => {
-        cleanedAdjacency[key] = neighbours.filter((entry) => entry !== stateId)
+      const next = computeMapState({
+        ...current.map,
+        states: nextStates,
+        hexes: nextHexes,
       })
-
       return {
-        map: {
-          ...current.map,
-          states: nextStates,
-          hexes: nextHexes,
-          adjacencies: cleanedAdjacency,
-        },
-        selectedStateId:
-          current.selectedStateId === stateId ? null : current.selectedStateId,
+        ...next,
+        selectedStateId: current.selectedStateId === stateId ? null : current.selectedStateId,
       }
     }),
   assignHexToState: (hexKey, stateId) =>
@@ -135,24 +140,21 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
         }
       })
 
-      return {
-        map: {
-          ...current.map,
-          hexes: nextHexes,
-          states: nextStates,
-        },
-      }
+      const next = computeMapState({
+        ...current.map,
+        hexes: nextHexes,
+        states: nextStates,
+      })
+      return next
     }),
   setGridConfig: (grid) =>
-    set((current) => ({
-      map: {
+    set((current) => computeMapState({
         ...current.map,
         grid,
-      },
-    })),
+      })),
   importMap: (config) =>
     set({
-      map: config,
+      ...computeMapState(config),
       selectedStateId: null,
       svgDocument: null,
       gridOverlay: {
@@ -203,12 +205,19 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
     const nextMap = rasteriseSvgToMap(current.svgDocument, current.gridOverlay, current.map)
     console.info('[SVG→Hex] Generated', nextMap.hexes.length, 'hexes across', nextMap.states.length, 'states')
     set({
-      map: nextMap,
+      ...computeMapState(nextMap),
       selectedStateId: null,
     })
   },
   setPaintMode: (mode) => set({ paintMode: mode }),
   setInteractionMode: (mode) => set({ interactionMode: mode }),
+  updateMapMetadata: (details) =>
+    set((current) => ({
+      ...computeMapState({
+        ...current.map,
+        ...details,
+      }),
+    })),
   paintHex: (hexKey) => {
     const current = get()
     if (current.interactionMode !== 'edit') {
@@ -351,7 +360,7 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
     }
 
     set({
-      map: {
+      ...computeMapState({
         ...current.map,
         hexes: nextHexes,
         states: nextStates,
@@ -360,7 +369,7 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
           bounds,
           origin: { q: bounds.minQ, r: bounds.minR },
         },
-      },
+      }),
     })
     console.info('[Canvas] Added hex', key, 'state', stateId ?? 'neutral')
   },
@@ -385,7 +394,7 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
     const bounds = recalcBounds(remainingHexes)
 
     set({
-      map: {
+      ...computeMapState({
         ...current.map,
         hexes: remainingHexes,
         states: nextStates,
@@ -394,7 +403,7 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
           bounds,
           origin: { q: bounds.minQ, r: bounds.minR },
         },
-      },
+      }),
     })
     console.info('[Canvas] Removed hex', hexKey)
   },

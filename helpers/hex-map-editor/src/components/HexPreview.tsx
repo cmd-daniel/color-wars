@@ -1,4 +1,12 @@
-import { type ReactNode, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  type ReactNode,
+  type WheelEvent as ReactWheelEvent,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { Application, extend, useApplication } from '@pixi/react'
 import { Container, Graphics as PixiGraphics, type FederatedPointerEvent } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
@@ -11,6 +19,7 @@ extend({ Container, Graphics: PixiGraphics, Viewport })
 const NEUTRAL_FILL = 0x2a2a2a
 const STROKE_DEFAULT = 0x161616
 const STROKE_SELECTED = 0xffffff
+const STROKE_NEIGHBOUR = 0xfacc15
 const STROKE_WIDTH = 1.5
 const CANVAS_BACKGROUND = 0x080b12
 const PADDING_FACTOR = 2.2
@@ -146,6 +155,9 @@ const HexPreview = () => {
     }
 
     const stateColorLookup = new Map(map.states.map((state) => [state.id, colorToNumber(state.displayColor, NEUTRAL_FILL)]))
+    const neighbourSet = selectedStateId
+      ? new Set(map.adjacencies[selectedStateId] ?? [])
+      : null
 
     const rawPoints = map.hexes.map((hex) => {
       const center = axialToPixel(hex.q, hex.r, map.grid)
@@ -180,13 +192,19 @@ const HexPreview = () => {
       const hexKey = `${hex.q},${hex.r}`
       const polygon = points.flatMap((point) => [point.x + offsetX, point.y + offsetY])
       const isSelected = hex.stateId !== null && hex.stateId === selectedStateId
+      const isNeighbour = !isSelected && hex.stateId && neighbourSet?.has(hex.stateId)
       const fill = hex.stateId ? stateColorLookup.get(hex.stateId) ?? NEUTRAL_FILL : NEUTRAL_FILL
+      const strokeColor = isSelected
+        ? STROKE_SELECTED
+        : isNeighbour
+          ? STROKE_NEIGHBOUR
+          : STROKE_DEFAULT
 
       return {
         key: hexKey,
         polygon,
         fill,
-        stroke: isSelected ? STROKE_SELECTED : STROKE_DEFAULT,
+        stroke: strokeColor,
       }
     })
 
@@ -222,13 +240,17 @@ const HexPreview = () => {
     addHexAtWorldPoint({ x: local.x - offset.x, y: local.y - offset.y })
   }
 
+  const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    event.preventDefault()
+  }, [])
+
   const worldSize = {
     width: Math.max(world.width, viewportSize.width),
     height: Math.max(world.height, viewportSize.height),
   }
 
   return (
-    <div ref={containerRef} className="hex-preview">
+    <div ref={containerRef} className="hex-preview" onWheel={handleWheel}>
       <Application
         width={viewportSize.width}
         height={viewportSize.height}

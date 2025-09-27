@@ -1,6 +1,7 @@
 import type { HexBounds, HexCell, MapConfig, StateRegion, AxialCoord } from '../schema/mapConfig'
 import type { ParsedSvgDocument, SvgPathDefinition } from './svgParsing'
 import { axialToPixel, pixelToAxial } from './hexGeometry'
+import { withRecomputedAdjacency } from './adjacency'
 
 export interface GridOverlayConfig {
   orientation: 'pointy' | 'flat'
@@ -235,7 +236,7 @@ export const rasteriseSvgToMap = (
 ): MapConfig => {
   const result = interpolateHexes(svg, overlay)
 
-  return {
+  return withRecomputedAdjacency({
     ...currentMap,
     grid: {
       ...currentMap.grid,
@@ -246,6 +247,5 @@ export const rasteriseSvgToMap = (
     },
     hexes: result.hexes,
     states: result.states,
-    adjacencies: {},
-  }
+  })
 }

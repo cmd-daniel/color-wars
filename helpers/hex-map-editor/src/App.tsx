@@ -1,9 +1,10 @@
-import { type ChangeEvent } from 'react'
+import { type ChangeEvent, useEffect, useState } from 'react'
 import HexPreview from './components/HexPreview'
 import StateSidebar from './components/StateSidebar'
 import SvgImportPanel from './components/SvgImportPanel'
 import GridControls from './components/GridControls'
 import PaintControls from './components/PaintControls'
+import ValidationPanel from './components/ValidationPanel'
 import { useMapEditorStore } from './state/useMapEditorStore'
 import type { MapConfig } from './schema/mapConfig'
 import './App.css'
@@ -11,8 +12,56 @@ import './App.css'
 const App = () => {
   const map = useMapEditorStore((state) => state.map)
   const importMap = useMapEditorStore((state) => state.importMap)
+  const validationIssues = useMapEditorStore((state) => state.validationIssues)
+  const updateMapMetadata = useMapEditorStore((state) => state.updateMapMetadata)
+
+  const [metadataDraft, setMetadataDraft] = useState(() =>
+    map.metadata ? JSON.stringify(map.metadata, null, 2) : '',
+  )
+  const [metadataError, setMetadataError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setMetadataDraft(map.metadata ? JSON.stringify(map.metadata, null, 2) : '')
+    setMetadataError(null)
+  }, [map.metadata])
+
+  const handleMetadataFieldChange = (field: 'id' | 'name' | 'version') =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      updateMapMetadata({ [field]: event.target.value } as Partial<Pick<MapConfig, 'id' | 'name' | 'version'>>)
+    }
+
+  const handleMetadataDraftChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    setMetadataDraft(event.target.value)
+  }
+
+  const handleMetadataDraftBlur = () => {
+    const trimmed = metadataDraft.trim()
+    if (!trimmed) {
+      updateMapMetadata({ metadata: undefined })
+      setMetadataError(null)
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      updateMapMetadata({ metadata: parsed })
+      setMetadataError(null)
+    } catch (error) {
+      console.error('Invalid metadata JSON', error)
+      setMetadataError('Invalid JSON. Please provide a valid JSON object or clear the field.')
+    }
+  }
 
   const handleExport = () => {
+    const blocking = validationIssues.filter((issue) => issue.level === 'error')
+    if (blocking.length > 0) {
+      const proceed = window.confirm(
+        `There are ${blocking.length} blocking issue(s). Resolve them before export.\nPress OK to export anyway.`,
+      )
+      if (!proceed) {
+        return
+      }
+    }
     const payload = JSON.stringify(map, null, 2)
     const blob = new Blob([payload], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -71,26 +120,53 @@ const App = () => {
             <HexPreview />
           </section>
           <section className="details-panel">
-            <h2>Map details</h2>
-            <dl>
-              <div>
-                <dt>Map ID</dt>
-                <dd>{map.id}</dd>
-              </div>
-              <div>
-                <dt>Version</dt>
-                <dd>{map.version}</dd>
-              </div>
-              <div>
-                <dt>Orientation</dt>
-                <dd>{map.grid.orientation}</dd>
-              </div>
-              <div>
-                <dt>Hex size</dt>
-                <dd>{map.grid.hexSize}</dd>
-              </div>
-            </dl>
+            <h2>Map metadata</h2>
+            <form className="details-form" onSubmit={(event) => event.preventDefault()}>
+              <label htmlFor="map-name">
+                <span>Map name</span>
+                <input
+                  id="map-name"
+                  type="text"
+                  value={map.name}
+                  onChange={handleMetadataFieldChange('name')}
+                />
+              </label>
+              <label htmlFor="map-id">
+                <span>Map identifier</span>
+                <input
+                  id="map-id"
+                  type="text"
+                  value={map.id}
+                  onChange={handleMetadataFieldChange('id')}
+                />
+              </label>
+              <label htmlFor="map-version">
+                <span>Version</span>
+                <input
+                  id="map-version"
+                  type="text"
+                  value={map.version}
+                  onChange={handleMetadataFieldChange('version')}
+                />
+              </label>
+              <label htmlFor="map-metadata">
+                <span>Metadata JSON (optional)</span>
+                <textarea
+                  id="map-metadata"
+                  value={metadataDraft}
+                  onChange={handleMetadataDraftChange}
+                  onBlur={handleMetadataDraftBlur}
+                  placeholder={'{"description": "..."}'}
+                />
+              </label>
+              {metadataError && <p className="metadata-error">{metadataError}</p>}
+            </form>
+            <p className="panel__helper">
+              Orientation: <strong>{map.grid.orientation}</strong> | Hex size:{' '}
+              <strong>{map.grid.hexSize}</strong>
+            </p>
           </section>
+          <ValidationPanel />
         </main>
       </div>
     </div>

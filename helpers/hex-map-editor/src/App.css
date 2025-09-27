@@ -99,7 +99,7 @@ button:hover {
 
 .app-shell__main {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) 200px;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   gap: 1rem;
   padding: 1rem 1.5rem;
   background: rgba(17, 24, 39, 0.65);
@@ -287,9 +287,70 @@ button:hover {
   background: rgba(30, 41, 59, 0.6);
 }
 
+.tag--alert {
+  color: #fecaca;
+  border-color: rgba(248, 113, 113, 0.4);
+  background: rgba(127, 29, 29, 0.35);
+}
+
+.validation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.validation-item {
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.75rem;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.validation-item--error {
+  border-color: rgba(248, 113, 113, 0.6);
+  background: rgba(127, 29, 29, 0.35);
+}
+
+.validation-item--warning {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: rgba(120, 53, 15, 0.35);
+}
+
+.validation-item__header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.validation-item__badge {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #e2e8f0;
+}
+
+.validation-item__entity {
+  font-size: 0.75rem;
+  color: #cbd5f5;
+}
+
+.validation-item__extra {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #c7d2fe;
+}
+
 .hex-preview {
   flex: 1;
   min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .hex-preview__canvas {
@@ -313,23 +374,42 @@ button:hover {
   font-size: 1rem;
 }
 
-.details-panel dl {
+.details-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0.75rem;
-  margin: 0;
 }
 
-.details-panel dt {
+.details-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
-.details-panel dd {
-  margin: 0.25rem 0 0;
-  font-weight: 600;
+.details-form input,
+.details-form textarea {
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(8, 11, 18, 0.9);
+  color: #f3f4f6;
+  font: inherit;
+}
+
+.details-form textarea {
+  min-height: 6rem;
+  resize: vertical;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+}
+
+.metadata-error {
+  margin: 0;
+  color: #fca5a5;
+  font-size: 0.78rem;
 }
 
 .state-sidebar {
@@ -365,6 +445,7 @@ button:hover {
   flex-direction: column;
   gap: 0.5rem;
   overflow-y: auto;
+  max-height: 500px;
 }
 
 .state-item {
@@ -425,6 +506,11 @@ button:hover {
   cursor: pointer;
 }
 
+.state-item__remove:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .state-sidebar__form {
   display: grid;
   gap: 0.5rem;
@@ -452,6 +538,54 @@ button:hover {
 .state-sidebar__add {
   background: linear-gradient(135deg, #22c55e, #2563eb);
   border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.state-sidebar__form button:disabled,
+.state-sidebar__form input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.state-sidebar__adjacency {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(17, 24, 39, 0.6);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.75rem;
+}
+
+.state-sidebar__adjacency h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a5b4fc;
+}
+
+.adjacency-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.adjacency-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  background: rgba(30, 64, 175, 0.25);
+  color: #e0e7ff;
+  padding: 0.25rem 0.75rem;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.adjacency-pill:hover {
+  background: rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 1024px) {

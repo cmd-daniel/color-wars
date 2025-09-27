@@ -13,12 +13,21 @@ const PaintControls = () => {
   const selectedStateId = useMapEditorStore((state) => state.selectedStateId)
   const interactionMode = useMapEditorStore((state) => state.interactionMode)
   const setInteractionMode = useMapEditorStore((state) => state.setInteractionMode)
+  const territories = useMapEditorStore((state) => state.map.states)
+
+  const selectedTerritoryName = selectedStateId
+    ? territories.find((territory) => territory.id === selectedStateId)?.name ?? selectedStateId
+    : null
 
   return (
     <section className="panel">
       <header>
         <h3>Painting</h3>
-        <span className="tag">{interactionMode === 'view' ? 'View only' : selectedStateId ?? 'No state selected'}</span>
+        <span className="tag">
+          {interactionMode === 'view'
+            ? 'View only'
+            : selectedTerritoryName ?? 'No territory selected'}
+        </span>
       </header>
       <div className="segmented">
         {(['view', 'edit'] as const).map((mode) => (
@@ -47,10 +56,12 @@ const PaintControls = () => {
       </div>
       {interactionMode === 'view' && <p className="panel__placeholder">Switch to edit mode to modify the map.</p>}
       {interactionMode === 'edit' && paintMode !== 'erase' && paintMode !== 'delete-hex' && !selectedStateId && (
-        <p className="panel__placeholder">Select a state in the sidebar to enable painting.</p>
+        <p className="panel__placeholder">Select a territory in the sidebar to enable painting.</p>
       )}
       {paintMode === 'flood' && (
-        <p className="panel__helper">Flood fill paints all connected hexes that currently share the clicked hex&apos;s original owner.</p>
+        <p className="panel__helper">
+          Flood fill paints all connected hexes that currently share the clicked hex&apos;s original owner.
+        </p>
       )}
       {paintMode === 'delete-hex' && interactionMode === 'edit' && (
         <p className="panel__helper">Delete removes the hex entirely from the grid and its state.</p>
