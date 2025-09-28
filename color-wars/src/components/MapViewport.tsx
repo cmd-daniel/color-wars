@@ -143,7 +143,7 @@ const MapViewport = ({ className, background, transparent = false }: MapViewport
     const updateResolution = () => {
       if (typeof window === 'undefined') return
       const devicePixelRatio = window.devicePixelRatio || 1
-      setResolution(Math.min(devicePixelRatio * 1.25, 3))
+      setResolution(Math.min(devicePixelRatio * 2, 3))
     }
 
     updateResolution()
