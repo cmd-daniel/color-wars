@@ -116,6 +116,7 @@ interface MapViewportProps {
 const MapViewport = ({ className, background, transparent = false }: MapViewportProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [viewportSize, setViewportSize] = useState({ width: 800, height: 600 })
+  const [resolution, setResolution] = useState(1)
   const [visibleBounds, setVisibleBounds] = useState<{
     left: number
     right: number
@@ -136,6 +137,18 @@ const MapViewport = ({ className, background, transparent = false }: MapViewport
 
   const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
     event.preventDefault()
+  }, [])
+
+  useEffect(() => {
+    const updateResolution = () => {
+      if (typeof window === 'undefined') return
+      const devicePixelRatio = window.devicePixelRatio || 1
+      setResolution(Math.min(devicePixelRatio * 1.25, 3))
+    }
+
+    updateResolution()
+    window.addEventListener('resize', updateResolution)
+    return () => window.removeEventListener('resize', updateResolution)
   }, [])
 
   useLayoutEffect(() => {
@@ -207,6 +220,8 @@ const MapViewport = ({ className, background, transparent = false }: MapViewport
         background={backgroundColor}
         antialias
         eventMode="static"
+        autoDensity
+        resolution={resolution}
       >
         <InteractiveViewport
           width={viewportSize.width}
