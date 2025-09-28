@@ -17,20 +17,20 @@
   overflow: hidden;
 }
 
-/* ===================================
-   PIXIJS CONTAINER STYLES
-   =================================== */
-
-.pixiContainer {
+.mapViewport {
   position: absolute;
   top: 2%;
-  left: 0;
   width: 100%;
   height: 100%;
   z-index: 1;
-  /* PixiJS handles all interactions by default */
   pointer-events: auto;
   border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.overlayViewport {
+  background: transparent;
+  border: none;
 }
 
 
@@ -74,4 +74,3 @@
   opacity: 1;
   transition: opacity 0.3s ease-in-out;
 }
-

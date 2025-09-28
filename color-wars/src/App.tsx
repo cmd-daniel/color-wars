@@ -1,17 +1,12 @@
 import { ThemeProvider } from '@/components/theme-provider'
-import HollowGrid from '@/components/DiceTrack'
+import DiceTrack from '@/components/DiceTrack'
 import './App.css'
 
 function App() {
-
   return (
-    <ThemeProvider defaultTheme='dark' storageKey='vite-ui-theme'>
-      <div className="app-container">
-        {/* Single instance of hollow grid */}
-        <div className="hex-grid-area">
-          <HollowGrid />
-        </div>
-
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <div className="app-shell">
+        <DiceTrack />
       </div>
     </ThemeProvider>
   )

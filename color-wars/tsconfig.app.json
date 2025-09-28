@@ -32,7 +32,8 @@
       "@components/*": [
         "./src/components/*"
       ]
-    }
+    },
+    "types": ["vite/client", "@pixi/react"]
   },
   "include": ["src"]
 }
