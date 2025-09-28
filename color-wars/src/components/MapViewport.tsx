@@ -222,6 +222,7 @@ const MapViewport = ({ className, background, transparent = false }: MapViewport
         eventMode="static"
         autoDensity
         resolution={resolution}
+        resizeTo={containerRef}
       >
         <InteractiveViewport
           width={viewportSize.width}
