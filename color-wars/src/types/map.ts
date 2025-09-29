@@ -8,6 +8,7 @@ export interface MapDefinition {
   hexes: HexCellDefinition[]
   territories: TerritoryDefinition[]
   adjacencies: Record<TerritoryId, TerritoryId[]>
+  metadata?: Record<string, unknown>
 }
 
 export interface HexGridConfig {

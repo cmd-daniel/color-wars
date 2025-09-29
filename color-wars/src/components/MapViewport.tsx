@@ -163,7 +163,7 @@ const MapViewport = ({
     top: number
     bottom: number
   } | null>(null)
-  const { map, positionedHexes, loadMap, loading } = useMapStore()
+  const { map, positionedHexes, loadMap, loading, displayConfig } = useMapStore()
   const {
     selectedTerritory,
     hoveredTerritory,
@@ -307,6 +307,7 @@ const MapViewport = ({
             outlineWidth={outlineWidth}
             visibleBounds={visibleBounds}
             showHexFill={showHexFill}
+            showTerritoryLabels={displayConfig.showTerritoryLabels}
           />
         </InteractiveViewport>
       </Application>

@@ -32,6 +32,7 @@ interface MapHexLayerProps {
   outlineWidth: number
   visibleBounds: VisibleBounds | null
   showHexFill: boolean
+  showTerritoryLabels: boolean
 }
 
 const colorToNumber = (color: string | undefined): number => {
@@ -108,11 +109,13 @@ const MapHexLayer = ({
   outlineWidth,
   visibleBounds,
   showHexFill,
+  showTerritoryLabels,
 }: MapHexLayerProps) => {
   const labelEntries = useMemo(() => {
+    if (!showTerritoryLabels) return []
     if (!visibleBounds) return territoryRenderList
     return territoryRenderList.filter((entry) => intersectsBounds(entry.bounds, visibleBounds))
-  }, [territoryRenderList, visibleBounds])
+  }, [territoryRenderList, visibleBounds, showTerritoryLabels])
 
   const outlineCommandLookup = useMemo(() => buildCommandLookup(territoryRenderList), [territoryRenderList])
   const hitAreaLookup = useMemo(() => buildHitAreaLookup(territoryRenderList), [territoryRenderList])

@@ -2,6 +2,7 @@
   "id": "sample-subcontinent",
   "name": "Sample Subcontinent",
   "version": "0.1.0",
+  "metadata": { "display": { "showTerritoryLabels": false } },
   "grid": {
     "orientation": "pointy",
     "hexSize": 5,

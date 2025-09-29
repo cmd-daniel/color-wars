@@ -3,6 +3,8 @@ import type { MapDefinition, PositionedHex, TerritoryId, TerritoryDefinition } f
 import { fetchMapDefinition } from '@/utils/mapLoader'
 import { buildPositionedHex } from '@/utils/hexGeometry'
 import { useMapInteractionsStore } from './mapInteractionsStore'
+import type { MapDisplayConfig } from '@/utils/mapDisplayConfig'
+import { DEFAULT_MAP_DISPLAY_CONFIG, resolveMapDisplayConfig } from '@/utils/mapDisplayConfig'
 
 const CHUNK_WORLD_SIZE = 300
 
@@ -13,6 +15,7 @@ interface MapState {
   territoriesById: Record<TerritoryId, TerritoryDefinition>
   loading: boolean
   error: string | null
+  displayConfig: MapDisplayConfig
   loadMap: (path?: string) => Promise<void>
 }
 
@@ -23,6 +26,7 @@ export const useMapStore = create<MapState>((set) => ({
   territoriesById: {},
   loading: false,
   error: null,
+  displayConfig: { ...DEFAULT_MAP_DISPLAY_CONFIG },
   loadMap: async (path = '/sample-subcontinent.json') => {
     try {
       set({ loading: true, error: null })
@@ -52,6 +56,7 @@ export const useMapStore = create<MapState>((set) => ({
         chunks,
         loading: false,
         error: null,
+        displayConfig: resolveMapDisplayConfig(definition.metadata ?? null),
       })
 
       const setSelected = useMapInteractionsStore.getState().setSelectedTerritory
