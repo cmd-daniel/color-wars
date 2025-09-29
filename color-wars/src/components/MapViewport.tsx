@@ -9,26 +9,19 @@ import {
   useLayoutEffect,
 } from 'react'
 import { Application, extend, useApplication } from '@pixi/react'
-import { Container, Graphics } from 'pixi.js'
+import { Container, Graphics, Text } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
 import { useMapStore } from '@/stores/mapStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
-import { hexPolygonCommands } from '@/utils/pixiGeometry'
+import MapHexLayer from './MapHexLayer'
+import { computeTerritoryRenderInfo, mapTerritoryRenderInfo } from '@/utils/territoryGeometry'
+import type { TerritoryId } from '@/types/map'
 import styles from './PixiViewport.module.css'
 
-extend({ Container, Graphics, Viewport })
+extend({ Container, Graphics, Viewport, Text })
 
 const BACKGROUND_COLOR = 0x0b1120
-const SELECTED_OUTLINE = 0xffffff
-const HOVER_OUTLINE = 0xfacc15
-const NEIGHBOUR_OUTLINE = 0x93c5fd
-const TERRITORY_ALPHA = 0.82
-
-const colorToNumber = (color: string) => {
-  const normalized = color.startsWith('#') ? color.slice(1) : color
-  const value = Number.parseInt(normalized, 16)
-  return Number.isNaN(value) ? 0x64748b : value
-}
+const HEX_DETAIL_THRESHOLD = 4
 
 interface InteractiveViewportProps {
   width: number
@@ -36,6 +29,9 @@ interface InteractiveViewportProps {
   worldWidth: number
   worldHeight: number
   onBoundsChange?: (bounds: { left: number; right: number; top: number; bottom: number }) => void
+  onScaleChange?: (scale: number) => void
+  fitPadding: number
+  initialZoomFactor: number
   children: ReactNode
 }
 
@@ -45,6 +41,9 @@ const InteractiveViewport = ({
   worldWidth,
   worldHeight,
   onBoundsChange,
+  onScaleChange,
+  fitPadding,
+  initialZoomFactor,
   children,
 }: InteractiveViewportProps) => {
   const { app } = useApplication()
@@ -68,6 +67,18 @@ const InteractiveViewport = ({
     viewport.resize(width, height, worldWidth, worldHeight)
     viewport.moveCenter(worldWidth / 2, worldHeight / 2)
 
+    const paddedWorldWidth = worldWidth + fitPadding * 2
+    const paddedWorldHeight = worldHeight + fitPadding * 2
+
+    if (paddedWorldWidth > 0 && paddedWorldHeight > 0 && width > 0 && height > 0) {
+      const baseScale = Math.min(width / paddedWorldWidth, height / paddedWorldHeight)
+      const fitScale = baseScale * initialZoomFactor
+      if (Number.isFinite(fitScale) && fitScale > 0) {
+        viewport.setZoom(fitScale, true)
+        viewport.moveCenter(worldWidth / 2, worldHeight / 2)
+      }
+    }
+
     const notify = () => {
       if (!onBoundsChange) return
       const bounds = viewport.getVisibleBounds()
@@ -79,14 +90,34 @@ const InteractiveViewport = ({
       })
     }
 
+    const notifyScale = () => {
+      if (!onScaleChange) return
+      onScaleChange(viewport.scale.x)
+    }
+
     viewport.on('moved', notify)
+    viewport.on('zoomed', notifyScale)
     notify()
+    notifyScale()
 
     return () => {
       viewport.plugins.removeAll()
       viewport.off('moved', notify)
+      viewport.off('zoomed', notifyScale)
     }
-  }, [height, isReady, onBoundsChange, ticker, renderer, width, worldHeight, worldWidth])
+  }, [
+    fitPadding,
+    height,
+    initialZoomFactor,
+    isReady,
+    onBoundsChange,
+    onScaleChange,
+    ticker,
+    renderer,
+    width,
+    worldHeight,
+    worldWidth,
+  ])
 
   if (!isReady) {
     return null
@@ -111,12 +142,21 @@ interface MapViewportProps {
   className?: string
   background?: number
   transparent?: boolean
+  initialZoomFactor?: number
+  fitPadding?: number
 }
 
-const MapViewport = ({ className, background, transparent = false }: MapViewportProps) => {
+const MapViewport = ({
+  className,
+  background,
+  transparent = false,
+  initialZoomFactor = 1,
+  fitPadding = 0,
+}: MapViewportProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [viewportSize, setViewportSize] = useState({ width: 800, height: 600 })
   const [resolution, setResolution] = useState(1)
+  const [viewportScale, setViewportScale] = useState(1)
   const [visibleBounds, setVisibleBounds] = useState<{
     left: number
     right: number
@@ -138,6 +178,20 @@ const MapViewport = ({ className, background, transparent = false }: MapViewport
   const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
     event.preventDefault()
   }, [])
+
+  const handleBoundsChange = useCallback(
+    (bounds: { left: number; right: number; top: number; bottom: number }) => {
+      if (!map) return
+      const padding = map.grid.hexSize * 4
+      setVisibleBounds({
+        left: bounds.left - padding,
+        right: bounds.right + padding,
+        top: bounds.top - padding,
+        bottom: bounds.bottom + padding,
+      })
+    },
+    [map],
+  )
 
   useEffect(() => {
     const updateResolution = () => {
@@ -171,12 +225,14 @@ const MapViewport = ({ className, background, transparent = false }: MapViewport
   }, [])
 
   const territoryColorLookup = useMemo(() => {
-    if (!map) return new Map<string, string>()
+    if (!map) return new Map<TerritoryId, string>()
     return new Map(map.territories.map((territory) => [territory.id, territory.displayColor]))
   }, [map])
 
+  const showHexFill = viewportScale >= HEX_DETAIL_THRESHOLD
+
   const visibleHexes = useMemo(() => {
-    if (!map) return []
+    if (!map || !showHexFill) return []
     if (!visibleBounds) {
       return positionedHexes
     }
@@ -188,14 +244,18 @@ const MapViewport = ({ className, background, transparent = false }: MapViewport
       hex.center.y >= visibleBounds.top - padding &&
       hex.center.y <= visibleBounds.bottom + padding,
     )
-  }, [map, positionedHexes, visibleBounds])
+  }, [map, positionedHexes, visibleBounds, showHexFill])
 
-  const selectedNeighbours = useMemo(() => {
-    if (!map || !selectedTerritory) return new Set<string>()
-    return new Set(map.adjacencies[selectedTerritory] ?? [])
-  }, [map, selectedTerritory])
+  const territoryRenderList = useMemo(() => {
+    if (!map) return []
+    return computeTerritoryRenderInfo(map.territories, positionedHexes, map.grid.hexSize)
+  }, [map, positionedHexes])
 
-  
+  const territoryRenderMap = useMemo(() => mapTerritoryRenderInfo(territoryRenderList), [territoryRenderList])
+
+  const hexSize = map?.grid.hexSize ?? 0
+  const hexGap = useMemo(() => (hexSize > 0 ? hexSize * 0.12 : 0), [hexSize])
+  const outlineWidth = useMemo(() => (hexSize > 0 ? Math.max(2, hexSize * 0.16) : 2), [hexSize])
 
   if (!map || loading) {
     return <div className={styles.loading}>Loading map…</div>
@@ -229,45 +289,25 @@ const MapViewport = ({ className, background, transparent = false }: MapViewport
           height={viewportSize.height}
           worldWidth={worldWidth}
           worldHeight={worldHeight}
-          onBoundsChange={setVisibleBounds}
+          onBoundsChange={handleBoundsChange}
+          onScaleChange={setViewportScale}
+          fitPadding={fitPadding}
+          initialZoomFactor={initialZoomFactor}
         >
-          <pixiContainer>
-            {visibleHexes.map((hex) => {
-              const commands = hexPolygonCommands(hex.corners)
-              const isSelected = hex.territoryId === selectedTerritory
-              const isHovered = hex.territoryId === hoveredTerritory
-              const isNeighbour = hex.territoryId && selectedNeighbours.has(hex.territoryId)
-
-              const territoryColor = hex.territoryId
-                ? territoryColorLookup.get(hex.territoryId) ?? '#4b5563'
-                : '#1f2937'
-              const colorValue = colorToNumber(territoryColor)
-
-              return (
-                <pixiGraphics
-                  key={hex.id}
-                  draw={(graphics: Graphics) => {
-                    graphics.clear()
-                    graphics.poly(commands)
-                    graphics.fill({ color: colorValue, alpha: TERRITORY_ALPHA })
-
-                    if (isSelected || isHovered || isNeighbour) {
-                      graphics.poly(commands)
-                      graphics.stroke({
-                        width: isSelected ? 3 : 2,
-                        color: isSelected ? SELECTED_OUTLINE : isHovered ? HOVER_OUTLINE : NEIGHBOUR_OUTLINE,
-                      })
-                    }
-                  }}
-                  eventMode="static"
-                  cursor="pointer"
-                  onPointerOver={() => setHoveredTerritory(hex.territoryId ?? null)}
-                  onPointerOut={() => setHoveredTerritory(null)}
-                  onPointerTap={() => setSelectedTerritory(hex.territoryId ?? null)}
-                />
-              )
-            })}
-          </pixiContainer>
+          <MapHexLayer
+            hexes={showHexFill ? visibleHexes : []}
+            territoryColorLookup={territoryColorLookup}
+            hoveredTerritory={hoveredTerritory}
+            selectedTerritory={selectedTerritory}
+            onHover={setHoveredTerritory}
+            onSelect={setSelectedTerritory}
+            territoryRenderList={territoryRenderList}
+            territoryRenderMap={territoryRenderMap}
+            hexGap={hexGap}
+            outlineWidth={outlineWidth}
+            visibleBounds={visibleBounds}
+            showHexFill={showHexFill}
+          />
         </InteractiveViewport>
       </Application>
     </div>
