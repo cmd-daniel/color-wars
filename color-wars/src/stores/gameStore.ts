@@ -176,7 +176,7 @@ const initialPlayers = createPlayers(2)
 
 const computeTerritoryCost = (territory: { hexIds: string[] }): number => {
   const base = 150
-  const perHex = 25
+  const perHex = 1
   const computed = base + territory.hexIds.length * perHex
   return Math.round(computed)
 }
