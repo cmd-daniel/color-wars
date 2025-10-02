@@ -180,6 +180,7 @@ const MapHexLayer = ({
         const commands = outlineCommandLookup.get(entry.id) ?? []
         const territoryColor = colorToNumber(territoryColorLookup.get(entry.id))
         const outlineColor = lightenColor(territoryColor, PASSIVE_OUTLINE_LIGHTEN)
+        const baseFillAlpha = showHexFill ? 0.001 : TERRITORY_FILL_ALPHA
 
         return (
           <pixiGraphics
@@ -189,7 +190,7 @@ const MapHexLayer = ({
               drawLoops(graphics, commands)
 
               if (commands.length > 0) {
-                graphics.fill({ color: outlineColor, alpha: 0.001 })
+                graphics.fill({ color: territoryColor, alpha: baseFillAlpha })
                 graphics.stroke({
                   width: baseOutlineWidth,
                   color: outlineColor,

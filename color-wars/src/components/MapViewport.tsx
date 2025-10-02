@@ -13,6 +13,7 @@ import { Container, Graphics, Rectangle, Text } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
 import { useMapStore } from '@/stores/mapStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
+import { useGameStore } from '@/stores/gameStore'
 import MapHexLayer from './MapHexLayer'
 import { computeTerritoryRenderInfo, mapTerritoryRenderInfo } from '@/utils/territoryGeometry'
 import type { TerritoryId } from '@/types/map'
@@ -192,6 +193,8 @@ const MapViewport = ({
     setHoveredTerritory,
     highlightedTerritory,
   } = useMapInteractionsStore()
+  const ownershipByTerritory = useGameStore((state) => state.ownershipByTerritory)
+  const playerColors = useGameStore((state) => state.playerColors)
 
   useEffect(() => {
     loadMap()
@@ -247,9 +250,18 @@ const MapViewport = ({
   }, [])
 
   const territoryColorLookup = useMemo(() => {
-    if (!map) return new Map<TerritoryId, string>()
-    return new Map(map.territories.map((territory) => [territory.id, territory.displayColor]))
-  }, [map])
+    const lookup = new Map<TerritoryId, string>()
+    if (!map) return lookup
+
+    for (const territory of map.territories) {
+      const ownerId = ownershipByTerritory[territory.id] ?? null
+      const ownerColor = ownerId ? playerColors[ownerId] : undefined
+      const color = ownerColor ?? territory.displayColor ?? '#1f2937'
+      lookup.set(territory.id, color)
+    }
+
+    return lookup
+  }, [map, ownershipByTerritory, playerColors])
 
   const worldBounds = useMemo<WorldBounds | null>(() => {
     if (!positionedHexes.length) {

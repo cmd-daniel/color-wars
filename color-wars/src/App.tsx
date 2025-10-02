@@ -14,8 +14,8 @@ function App() {
             <DiceTrack />
           </div>
           <div className="game-hud">
-            <PlayerHud />
             <TurnControls />
+            <PlayerHud />
             <GameLog />
           </div>
         </div>
