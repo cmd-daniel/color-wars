@@ -6,6 +6,8 @@ interface MapInteractionsState {
   hoveredTerritory: TerritoryId | null
   setSelectedTerritory: (territoryId: TerritoryId | null) => void
   setHoveredTerritory: (territoryId: TerritoryId | null) => void
+  highlightedTerritory: TerritoryId | null
+  setHighlightedTerritory: (territoryId: TerritoryId | null) => void
 }
 
 export const useMapInteractionsStore = create<MapInteractionsState>((set) => ({
@@ -13,4 +15,6 @@ export const useMapInteractionsStore = create<MapInteractionsState>((set) => ({
   hoveredTerritory: null,
   setSelectedTerritory: (territoryId) => set({ selectedTerritory: territoryId }),
   setHoveredTerritory: (territoryId) => set({ hoveredTerritory: territoryId }),
+  highlightedTerritory: null,
+  setHighlightedTerritory: (territoryId) => set({ highlightedTerritory: territoryId }),
 }))

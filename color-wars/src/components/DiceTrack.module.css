@@ -57,8 +57,10 @@
    =================================== */
 
 /* Individual hex cells can be clicked */
-.gridSvg path {
-  pointer-events: auto;
+.gridSvg path,
+.gridSvg circle,
+.gridSvg text {
+  pointer-events: none;
 }
 
 

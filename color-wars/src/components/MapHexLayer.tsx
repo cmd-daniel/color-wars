@@ -10,6 +10,7 @@ const PASSIVE_OUTLINE_ALPHA = 0.65
 const PASSIVE_OUTLINE_LIGHTEN = 0.2
 const SELECTED_OUTLINE_COLOR = 0xffffff
 const HOVER_OUTLINE_COLOR = 0xfacc15
+const HIGHLIGHT_OUTLINE_COLOR = 0x22c55e
 const DEFAULT_TERRITORY_COLOR = 0x1f2937
 
 interface VisibleBounds {
@@ -24,6 +25,7 @@ interface MapHexLayerProps {
   territoryColorLookup: Map<TerritoryId, string>
   hoveredTerritory: TerritoryId | null
   selectedTerritory: TerritoryId | null
+  highlightedTerritory: TerritoryId | null
   onHover: (territoryId: TerritoryId | null) => void
   onSelect: (territoryId: TerritoryId | null) => void
   territoryRenderList: TerritoryRenderInfo[]
@@ -101,6 +103,7 @@ const MapHexLayer = ({
   territoryColorLookup,
   hoveredTerritory,
   selectedTerritory,
+  highlightedTerritory,
   onHover,
   onSelect,
   territoryRenderList,
@@ -122,10 +125,12 @@ const MapHexLayer = ({
 
   const selectedRenderInfo = selectedTerritory ? territoryRenderMap.get(selectedTerritory) ?? null : null
   const hoveredRenderInfo = hoveredTerritory ? territoryRenderMap.get(hoveredTerritory) ?? null : null
+  const highlightedRenderInfo = highlightedTerritory ? territoryRenderMap.get(highlightedTerritory) ?? null : null
 
   const baseOutlineWidth = Math.max(outlineWidth * 0.45, 1.15)
   const hoverOutlineWidth = Math.max(outlineWidth * 0.75, baseOutlineWidth + 0.5)
   const selectedOutlineWidth = Math.max(outlineWidth, hoverOutlineWidth + 0.5)
+  const highlightOutlineWidth = Math.max(outlineWidth * 0.65, baseOutlineWidth + 0.25)
 
   const drawLoops = (graphics: Graphics, commandSets: number[][]) => {
     commandSets.forEach((commands) => {
@@ -206,6 +211,29 @@ const MapHexLayer = ({
           />
         )
       })}
+
+      {highlightedRenderInfo && (!selectedRenderInfo || highlightedRenderInfo.id !== selectedRenderInfo.id) && (
+        <pixiGraphics
+          key="territory-highlight-outline"
+          draw={(graphics: Graphics) => {
+            graphics.clear()
+            const commands = outlineCommandLookup.get(highlightedRenderInfo.id) ?? []
+            drawLoops(graphics, commands)
+            if (commands.length > 0) {
+              graphics.fill({ color: HIGHLIGHT_OUTLINE_COLOR, alpha: 0 })
+              graphics.stroke({
+                width: highlightOutlineWidth,
+                color: HIGHLIGHT_OUTLINE_COLOR,
+                alignment: 0.5,
+                join: 'round',
+                cap: 'round',
+                alpha: 0.85,
+              })
+            }
+          }}
+          eventMode="none"
+        />
+      )}
 
       {selectedRenderInfo && selectedRenderInfo.outline.length > 0 && (
         <pixiGraphics

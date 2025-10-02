@@ -2,9 +2,10 @@ import { create } from 'zustand'
 import type { MapDefinition, PositionedHex, TerritoryId, TerritoryDefinition } from '@/types/map'
 import { fetchMapDefinition } from '@/utils/mapLoader'
 import { buildPositionedHex } from '@/utils/hexGeometry'
-import { useMapInteractionsStore } from './mapInteractionsStore'
 import type { MapDisplayConfig } from '@/utils/mapDisplayConfig'
 import { DEFAULT_MAP_DISPLAY_CONFIG, resolveMapDisplayConfig } from '@/utils/mapDisplayConfig'
+import { useMapInteractionsStore } from './mapInteractionsStore'
+import { useGameStore } from './gameStore'
 
 const CHUNK_WORLD_SIZE = 300
 
@@ -61,6 +62,8 @@ export const useMapStore = create<MapState>((set) => ({
 
       const setSelected = useMapInteractionsStore.getState().setSelectedTerritory
       setSelected(definition.territories[0]?.id ?? null)
+
+      useGameStore.getState().initializeFromMap(definition)
     } catch (error) {
       console.error(error)
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false })

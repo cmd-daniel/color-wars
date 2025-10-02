@@ -169,6 +169,7 @@ const MapViewport = ({
     hoveredTerritory,
     setSelectedTerritory,
     setHoveredTerritory,
+    highlightedTerritory,
   } = useMapInteractionsStore()
 
   useEffect(() => {
@@ -299,6 +300,7 @@ const MapViewport = ({
             territoryColorLookup={territoryColorLookup}
             hoveredTerritory={hoveredTerritory}
             selectedTerritory={selectedTerritory}
+            highlightedTerritory={highlightedTerritory}
             onHover={setHoveredTerritory}
             onSelect={setSelectedTerritory}
             territoryRenderList={territoryRenderList}
