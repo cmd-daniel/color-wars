@@ -9,7 +9,7 @@ import {
   useLayoutEffect,
 } from 'react'
 import { Application, extend, useApplication } from '@pixi/react'
-import { Container, Graphics, Text } from 'pixi.js'
+import { Container, Graphics, Rectangle, Text } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
 import { useMapStore } from '@/stores/mapStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
@@ -23,11 +23,21 @@ extend({ Container, Graphics, Viewport, Text })
 const BACKGROUND_COLOR = 0x0b1120
 const HEX_DETAIL_THRESHOLD = 4
 
+interface WorldBounds {
+  minX: number
+  minY: number
+  maxX: number
+  maxY: number
+  width: number
+  height: number
+  centerX: number
+  centerY: number
+}
+
 interface InteractiveViewportProps {
   width: number
   height: number
-  worldWidth: number
-  worldHeight: number
+  worldBounds: WorldBounds
   onBoundsChange?: (bounds: { left: number; right: number; top: number; bottom: number }) => void
   onScaleChange?: (scale: number) => void
   fitPadding: number
@@ -38,8 +48,7 @@ interface InteractiveViewportProps {
 const InteractiveViewport = ({
   width,
   height,
-  worldWidth,
-  worldHeight,
+  worldBounds,
   onBoundsChange,
   onScaleChange,
   fitPadding,
@@ -62,20 +71,31 @@ const InteractiveViewport = ({
 
     viewport.options.events = renderer.events
     viewport.options.ticker = ticker
+    const dominantDimension = Math.max(worldBounds.width, worldBounds.height, 1)
+    // Pad the hit area well beyond the rendered map so the entire canvas responds to drag/zoom.
+    const hitAreaPadding = dominantDimension * 2
+    const hitArea = new Rectangle(
+      worldBounds.minX - hitAreaPadding,
+      worldBounds.minY - hitAreaPadding,
+      worldBounds.width + hitAreaPadding * 2,
+      worldBounds.height + hitAreaPadding * 2,
+    )
+    viewport.forceHitArea = hitArea
+    viewport.hitArea = hitArea
     viewport.drag().pinch().wheel().decelerate()
     viewport.clampZoom({ minScale: 0.25, maxScale: 4 })
-    viewport.resize(width, height, worldWidth, worldHeight)
-    viewport.moveCenter(worldWidth / 2, worldHeight / 2)
+    viewport.resize(width, height, worldBounds.width, worldBounds.height)
+    viewport.moveCenter(worldBounds.centerX, worldBounds.centerY)
 
-    const paddedWorldWidth = worldWidth + fitPadding * 2
-    const paddedWorldHeight = worldHeight + fitPadding * 2
+    const paddedWorldWidth = worldBounds.width + fitPadding * 2
+    const paddedWorldHeight = worldBounds.height + fitPadding * 2
 
     if (paddedWorldWidth > 0 && paddedWorldHeight > 0 && width > 0 && height > 0) {
       const baseScale = Math.min(width / paddedWorldWidth, height / paddedWorldHeight)
       const fitScale = baseScale * initialZoomFactor
       if (Number.isFinite(fitScale) && fitScale > 0) {
         viewport.setZoom(fitScale, true)
-        viewport.moveCenter(worldWidth / 2, worldHeight / 2)
+        viewport.moveCenter(worldBounds.centerX, worldBounds.centerY)
       }
     }
 
@@ -102,6 +122,8 @@ const InteractiveViewport = ({
 
     return () => {
       viewport.plugins.removeAll()
+      viewport.hitArea = null
+      viewport.forceHitArea = undefined
       viewport.off('moved', notify)
       viewport.off('zoomed', notifyScale)
     }
@@ -115,8 +137,7 @@ const InteractiveViewport = ({
     ticker,
     renderer,
     width,
-    worldHeight,
-    worldWidth,
+    worldBounds,
   ])
 
   if (!isReady) {
@@ -128,8 +149,8 @@ const InteractiveViewport = ({
       ref={viewportRef}
       screenWidth={width}
       screenHeight={height}
-      worldWidth={worldWidth}
-      worldHeight={worldHeight}
+      worldWidth={worldBounds.width}
+      worldHeight={worldBounds.height}
       events={renderer.events}
       ticker={ticker}
     >
@@ -230,6 +251,49 @@ const MapViewport = ({
     return new Map(map.territories.map((territory) => [territory.id, territory.displayColor]))
   }, [map])
 
+  const worldBounds = useMemo<WorldBounds | null>(() => {
+    if (!positionedHexes.length) {
+      return null
+    }
+
+    let minX = Infinity
+    let maxX = -Infinity
+    let minY = Infinity
+    let maxY = -Infinity
+
+    for (const hex of positionedHexes) {
+      const corners = hex.corners.length > 0 ? hex.corners : [hex.center]
+      for (const corner of corners) {
+        if (corner.x < minX) minX = corner.x
+        if (corner.x > maxX) maxX = corner.x
+        if (corner.y < minY) minY = corner.y
+        if (corner.y > maxY) maxY = corner.y
+      }
+    }
+
+    if (!Number.isFinite(minX) || !Number.isFinite(maxX) || !Number.isFinite(minY) || !Number.isFinite(maxY)) {
+      return null
+    }
+
+    const width = maxX - minX
+    const height = maxY - minY
+
+    if (width <= 0 || height <= 0) {
+      return null
+    }
+
+    return {
+      minX,
+      minY,
+      maxX,
+      maxY,
+      width,
+      height,
+      centerX: minX + width / 2,
+      centerY: minY + height / 2,
+    }
+  }, [positionedHexes])
+
   const showHexFill = viewportScale >= HEX_DETAIL_THRESHOLD
 
   const visibleHexes = useMemo(() => {
@@ -258,12 +322,9 @@ const MapViewport = ({
   const hexGap = useMemo(() => (hexSize > 0 ? hexSize * 0.12 : 0), [hexSize])
   const outlineWidth = useMemo(() => (hexSize > 0 ? Math.max(2, hexSize * 0.16) : 2), [hexSize])
 
-  if (!map || loading) {
+  if (!map || loading || !worldBounds) {
     return <div className={styles.loading}>Loading map…</div>
   }
-
-  const worldWidth = (map.grid.bounds.maxQ - map.grid.bounds.minQ + 1) * map.grid.hexSize * Math.sqrt(3)
-  const worldHeight = (map.grid.bounds.maxR - map.grid.bounds.minR + 1) * map.grid.hexSize * 1.5
   const containerClass = [
     styles.container,
     transparent ? styles.overlay : '',
@@ -288,8 +349,7 @@ const MapViewport = ({
         <InteractiveViewport
           width={viewportSize.width}
           height={viewportSize.height}
-          worldWidth={worldWidth}
-          worldHeight={worldHeight}
+          worldBounds={worldBounds}
           onBoundsChange={handleBoundsChange}
           onScaleChange={setViewportScale}
           fitPadding={fitPadding}
