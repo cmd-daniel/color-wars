@@ -1,4 +1,5 @@
-import { useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { Hex } from 'honeycomb-grid'
 import MapViewport from '@components/MapViewport'
 import styles from './DiceTrack.module.css'
 import { GRID_CONFIG, SHOW_DEBUG_POINTS } from '@/utils/diceTrackConfig'
@@ -31,24 +32,319 @@ const getTileStyle = (type: 'start' | 'event', eventKind?: TrackEventKind) => {
   return { fill: '#1f2937', stroke: '#64748b', icon: '•', textColor: '#e2e8f0' }
 }
 
+const HOP_DURATION = 280
+const STEP_DELAY = 120
+const MIN_TRACK_LENGTH = 1
+
+interface TokenRenderState {
+  center: { x: number; y: number }
+  index: number
+  hopId: number
+  moving: boolean
+}
+
+interface PlayerAnimationState {
+  currentIndex: number
+  queue: number[]
+  activeStep: {
+    from: number
+    to: number
+    startTime: number
+    endTime: number
+  } | null
+  pauseUntil: number
+  hopId: number
+}
+
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+
 const DiceTrack = () => {
   const track = useGameStore((state) => state.track)
   const trackSpaces = useGameStore((state) => state.trackSpaces)
   const players = useGameStore((state) => state.players)
   const playerColors = useGameStore((state) => state.playerColors)
 
+  const tileCenters = useMemo(
+    () => track.hexes.map((hex: Hex) => ({ x: hex.x, y: hex.y })),
+    [track.hexes],
+  )
+
+  const [renderTokens, setRenderTokens] = useState<Record<string, TokenRenderState>>({})
+  const animationStateRef = useRef<Record<string, PlayerAnimationState>>({})
+  const frameRef = useRef<number | null>(null)
+  const tileCentersRef = useRef(tileCenters)
+  const trackLengthRef = useRef(trackSpaces.length)
+
+  useEffect(() => {
+    tileCentersRef.current = tileCenters
+  }, [tileCenters])
+
+  useEffect(() => {
+    trackLengthRef.current = trackSpaces.length
+  }, [trackSpaces.length])
+
+  const ensureAnimationFrame = useCallback(
+    (step: (time: number) => void) => {
+      if (frameRef.current !== null) {
+        return
+      }
+      frameRef.current = requestAnimationFrame(step)
+    },
+    [],
+  )
+
+  useEffect(() => {
+    const state = animationStateRef.current
+    let hasChanges = false
+    const activeIds = new Set<string>()
+
+    players.forEach((player) => {
+      activeIds.add(player.id)
+      if (!state[player.id]) {
+        state[player.id] = {
+          currentIndex: player.position,
+          queue: [],
+          activeStep: null,
+          pauseUntil: 0,
+          hopId: 0,
+        }
+        hasChanges = true
+      }
+    })
+
+    Object.keys(state).forEach((playerId) => {
+      if (!activeIds.has(playerId)) {
+        delete state[playerId]
+        hasChanges = true
+      }
+    })
+
+    if (hasChanges) {
+      setRenderTokens(() => {
+        const next: Record<string, TokenRenderState> = {}
+        players.forEach((player) => {
+          const baseState = state[player.id]
+          const center = tileCenters[baseState?.currentIndex ?? player.position] ?? tileCenters[player.position] ?? { x: 0, y: 0 }
+          next[player.id] = {
+            center,
+            index: baseState?.currentIndex ?? player.position,
+            hopId: baseState?.hopId ?? 0,
+            moving: Boolean(baseState?.activeStep),
+          }
+        })
+        return next
+      })
+    }
+  }, [players, tileCenters])
+
+  const tick = useCallback(
+    (time: number) => {
+      const state = animationStateRef.current
+      const nextRender: Record<string, TokenRenderState> = {}
+      let shouldContinue = false
+
+      const tileCentersLocal = tileCentersRef.current
+      const trackLength = trackLengthRef.current
+      const hopHeight = GRID_CONFIG.hexDimensions * 0.42
+      const defaultPoint = { x: 0, y: 0 }
+
+      Object.entries(state).forEach(([playerId, animState]) => {
+        if (
+          !animState.activeStep &&
+          animState.queue.length > 0 &&
+          trackLength >= MIN_TRACK_LENGTH &&
+          time >= animState.pauseUntil
+        ) {
+          const nextIndex = animState.queue.shift()
+          if (typeof nextIndex === 'number') {
+            animState.activeStep = {
+              from: animState.currentIndex,
+              to: nextIndex,
+              startTime: time,
+              endTime: time + HOP_DURATION,
+            }
+            animState.hopId += 1
+          }
+        }
+
+          const currentCenter = tileCentersLocal[animState.currentIndex] ?? defaultPoint
+          let center = currentCenter
+          let indexForGrouping = animState.currentIndex
+          let moving = false
+
+          if (animState.activeStep) {
+            const { from, to, startTime, endTime } = animState.activeStep
+            const origin = tileCentersLocal[from] ?? currentCenter
+            const target = tileCentersLocal[to] ?? origin
+            const duration = Math.max(endTime - startTime, 1)
+            const rawProgress = (time - startTime) / duration
+            const progress = Math.min(Math.max(rawProgress, 0), 1)
+            const eased = easeInOutCubic(progress)
+            const lift = Math.sin(Math.PI * eased) * hopHeight
+
+          center = {
+            x: origin.x + (target.x - origin.x) * eased,
+            y: origin.y + (target.y - origin.y) * eased - lift,
+          }
+          indexForGrouping = progress < 0.5 ? from : to
+          moving = true
+          shouldContinue = true
+
+          if (progress >= 1) {
+            animState.currentIndex = to
+            animState.activeStep = null
+            animState.pauseUntil = time + STEP_DELAY
+            center = target
+            indexForGrouping = to
+            moving = false
+          }
+        } else if (animState.queue.length > 0 || time < animState.pauseUntil) {
+          shouldContinue = true
+        }
+
+        nextRender[playerId] = {
+          center,
+          index: indexForGrouping,
+          hopId: animState.hopId,
+          moving,
+        }
+      })
+
+      setRenderTokens((prev) => {
+        const prevKeys = Object.keys(prev)
+        const nextKeys = Object.keys(nextRender)
+        if (prevKeys.length !== nextKeys.length) {
+          return nextRender
+        }
+
+        for (const key of nextKeys) {
+          const nextState = nextRender[key]
+          const prevState = prev[key]
+          if (
+            !prevState ||
+            prevState.center.x !== nextState.center.x ||
+            prevState.center.y !== nextState.center.y ||
+            prevState.index !== nextState.index ||
+            prevState.hopId !== nextState.hopId ||
+            prevState.moving !== nextState.moving
+          ) {
+            return nextRender
+          }
+        }
+        return prev
+      })
+
+      if (shouldContinue) {
+        frameRef.current = requestAnimationFrame(tick)
+      } else {
+        frameRef.current = null
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    return () => {
+      if (frameRef.current !== null) {
+        cancelAnimationFrame(frameRef.current)
+        frameRef.current = null
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const state = animationStateRef.current
+    const trackLength = trackSpaces.length
+    if (trackLength < MIN_TRACK_LENGTH) {
+      return
+    }
+
+    let hasNewSteps = false
+
+    players.forEach((player) => {
+      const animState = state[player.id]
+      if (!animState) {
+        return
+      }
+
+      const finalIndex = (() => {
+        if (animState.queue.length > 0) {
+          return animState.queue[animState.queue.length - 1]
+        }
+        if (animState.activeStep) {
+          return animState.activeStep.to
+        }
+        return animState.currentIndex
+      })()
+
+      const safeTarget = ((player.position % trackLength) + trackLength) % trackLength
+      if (finalIndex === safeTarget) {
+        return
+      }
+
+      let cursor = finalIndex
+      const steps: number[] = []
+      const guard = trackLength * 2
+
+      for (let i = 0; i < guard; i += 1) {
+        cursor = (cursor + 1) % trackLength
+        steps.push(cursor)
+        if (cursor === safeTarget) {
+          break
+        }
+      }
+
+      if (steps.length) {
+        animState.queue.push(...steps)
+        hasNewSteps = true
+      }
+    })
+
+    if (hasNewSteps) {
+      ensureAnimationFrame(tick)
+    }
+  }, [players, trackSpaces.length, ensureAnimationFrame, tick])
+
+  useEffect(() => {
+    const anyActive = Object.values(animationStateRef.current).some(
+      (state) => state.activeStep !== null || state.queue.length > 0,
+    )
+    if (anyActive) {
+      ensureAnimationFrame(tick)
+    }
+  }, [ensureAnimationFrame, tick])
+
+  const tokens = useMemo(() => {
+    return players.map((player) => {
+      const token = renderTokens[player.id]
+      const fallbackIndex = animationStateRef.current[player.id]?.currentIndex ?? player.position
+      const index = token?.index ?? fallbackIndex
+      const center = token?.center ?? tileCenters[index] ?? { x: 0, y: 0 }
+      const hopId = token?.hopId ?? 0
+      const moving = token?.moving ?? false
+
+      return {
+        player,
+        center,
+        index,
+        hopId,
+        moving,
+      }
+    })
+  }, [players, renderTokens, tileCenters])
+
   const occupancy = useMemo(() => {
     const map = new Map<number, string[]>()
-    players.forEach((player) => {
-      const group = map.get(player.position) ?? []
+    tokens.forEach(({ player, index }) => {
+      const group = map.get(index) ?? []
       group.push(player.id)
-      map.set(player.position, group)
+      map.set(index, group)
     })
     return map
-  }, [players])
+  }, [tokens])
 
-  const tokenRadius = GRID_CONFIG.hexDimensions * 0.18
-
+  const tokenRadius = GRID_CONFIG.hexDimensions * 0.4
+  
   return (
     <div className={styles.container}>
       <div className={styles.mapViewport}>
@@ -78,12 +374,11 @@ const DiceTrack = () => {
           pointerEvents="none"
         />
 
-        {track.hexes.map((hex, index) => {
+        {track.hexes.map((hex: Hex, index) => {
           const space = trackSpaces[index] ?? { index, type: 'event', label: 'Event' }
           const points = (hex.corners as { x: number; y: number }[]) ?? []
           const path = roundedPolygonPath(points, 1.8, GRID_CONFIG.hexScale)
-          const toPoint = (hex as any).toPoint as (() => { x: number; y: number }) | undefined
-          const center = toPoint ? toPoint.call(hex) : { x: (hex as any).x ?? 0, y: (hex as any).y ?? 0 }
+          const center = tileCenters[index] ?? { x: hex.x, y: hex.y }
           const style = getTileStyle(space.type as 'start' | 'event', space.event?.kind)
           const fontSize = GRID_CONFIG.hexDimensions * 0.55
           const labelFontSize = GRID_CONFIG.hexDimensions * 0.32
@@ -138,16 +433,10 @@ const DiceTrack = () => {
           )
         })}
 
-        {players.map((player) => {
-          const hex = track.hexes[player.position]
-          if (!hex) {
-            return null
-          }
-          const toPoint = (hex as any).toPoint as (() => { x: number; y: number }) | undefined
-          const center = toPoint ? toPoint.call(hex) : { x: (hex as any).x ?? 0, y: (hex as any).y ?? 0 }
-          const crowd = occupancy.get(player.position) ?? []
-          const index = crowd.indexOf(player.id)
-          const angle = (index / Math.max(1, crowd.length)) * Math.PI * 2
+        {tokens.map(({ player, center, index, hopId }) => {
+          const crowd = occupancy.get(index) ?? []
+          const crowdIndex = Math.max(0, crowd.indexOf(player.id))
+          const angle = (crowdIndex / Math.max(1, crowd.length)) * Math.PI * 2
           const offsetRadius = tokenRadius * 1.35
           const offset = crowd.length > 1
             ? {
@@ -159,7 +448,7 @@ const DiceTrack = () => {
           const color = playerColors[player.id] ?? '#f97316'
 
           return (
-            <g key={player.id}>
+            <g key={player.id} data-hop={hopId}>
               <circle
                 cx={center.x + offset.x}
                 cy={center.y + offset.y}
