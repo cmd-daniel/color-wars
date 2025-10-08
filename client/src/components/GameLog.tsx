@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useGameStore } from '@/stores/gameStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import type { GameLogEntry } from '@/types/game'
 
 const formatTime = (timestamp: number) => {
@@ -7,8 +7,11 @@ const formatTime = (timestamp: number) => {
   return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 }
 
+const EMPTY_LOGS: GameLogEntry[] = []
+
 const GameLog = () => {
-  const logs = useGameStore((state) => state.logs)
+  const logEntries = useSessionStore((state) => state.roomView?.logs)
+  const logs = logEntries ?? EMPTY_LOGS
 
   const items = useMemo(() => [...logs].reverse(), [logs])
 

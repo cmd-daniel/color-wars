@@ -2,10 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Hex } from 'honeycomb-grid'
 import MapViewport from '@components/MapViewport'
 import styles from './DiceTrack.module.css'
-import { GRID_CONFIG, SHOW_DEBUG_POINTS } from '@/utils/diceTrackConfig'
-import { useGameStore } from '@/stores/gameStore'
+import { GRID_CONFIG, SHOW_DEBUG_POINTS, INNER_EDGE_SPEC } from '@/utils/diceTrackConfig'
+import { createHollowGrid, computeViewBox } from '@/utils/gridUtils'
+import { buildInnerPathFromSpec } from '@/utils/hexEdgeUtils'
+import { useSessionStore } from '@/stores/sessionStore'
+import type { GamePlayer } from '@/stores/sessionStore'
 import { roundedPolygonPath } from '@components/HexCell'
-import type { TrackEventKind } from '@/types/game'
+import type { TrackEventKind, TrackSpace } from '@/types/game'
 
 const START_TILE_STYLE = {
   fill: '#0ea5e9',
@@ -35,6 +38,10 @@ const getTileStyle = (type: 'start' | 'event', eventKind?: TrackEventKind) => {
 const HOP_DURATION = 280
 const STEP_DELAY = 120
 const MIN_TRACK_LENGTH = 1
+const EMPTY_PLAYERS: GamePlayer[] = []
+const EMPTY_TRACK_SPACES: TrackSpace[] = []
+const EMPTY_PLAYER_COLORS = Object.freeze({}) as Record<string, string>
+const EMPTY_PLAYER_ORDER: string[] = []
 
 interface TokenRenderState {
   center: { x: number; y: number }
@@ -59,10 +66,36 @@ interface PlayerAnimationState {
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
 const DiceTrack = () => {
-  const track = useGameStore((state) => state.track)
-  const trackSpaces = useGameStore((state) => state.trackSpaces)
-  const players = useGameStore((state) => state.players)
-  const playerColors = useGameStore((state) => state.playerColors)
+  const roomView = useSessionStore((state) => state.roomView)
+  const sessionId = useSessionStore((state) => state.sessionId)
+
+  const trackGeometry = useMemo(() => {
+    const grid = createHollowGrid()
+    const hexes = Array.from(grid)
+    const viewBox = computeViewBox(grid)
+    const innerPath = buildInnerPathFromSpec(grid, INNER_EDGE_SPEC, {
+      radius: 3,
+      edgeScaleForLoop: 1,
+    }).d
+    return { hexes, viewBox, innerPath }
+  }, [])
+
+  const maskIdRef = useRef(`gridMask-${Math.round(Math.random() * 1_000_000)}`)
+
+  const track = useMemo(
+    () => ({
+      hexes: trackGeometry.hexes,
+      viewBox: trackGeometry.viewBox,
+      innerPath: trackGeometry.innerPath,
+      maskId: maskIdRef.current,
+    }),
+    [trackGeometry],
+  )
+
+  const trackSpaces = roomView?.trackSpaces ?? EMPTY_TRACK_SPACES
+  const players = roomView?.players ?? EMPTY_PLAYERS
+  const playerColors = roomView?.playerColors ?? EMPTY_PLAYER_COLORS
+  const playerOrder = roomView?.playerOrder ?? EMPTY_PLAYER_ORDER
 
   const tileCenters = useMemo(
     () => track.hexes.map((hex: Hex) => ({ x: hex.x, y: hex.y })),
@@ -99,9 +132,9 @@ const DiceTrack = () => {
     const activeIds = new Set<string>()
 
     players.forEach((player) => {
-      activeIds.add(player.id)
-      if (!state[player.id]) {
-        state[player.id] = {
+      activeIds.add(player.sessionId)
+      if (!state[player.sessionId]) {
+        state[player.sessionId] = {
           currentIndex: player.position,
           queue: [],
           activeStep: null,
@@ -123,9 +156,9 @@ const DiceTrack = () => {
       setRenderTokens(() => {
         const next: Record<string, TokenRenderState> = {}
         players.forEach((player) => {
-          const baseState = state[player.id]
+          const baseState = state[player.sessionId]
           const center = tileCenters[baseState?.currentIndex ?? player.position] ?? tileCenters[player.position] ?? { x: 0, y: 0 }
-          next[player.id] = {
+          next[player.sessionId] = {
             center,
             index: baseState?.currentIndex ?? player.position,
             hopId: baseState?.hopId ?? 0,
@@ -262,7 +295,7 @@ const DiceTrack = () => {
     let hasNewSteps = false
 
     players.forEach((player) => {
-      const animState = state[player.id]
+      const animState = state[player.sessionId]
       if (!animState) {
         return
       }
@@ -316,8 +349,8 @@ const DiceTrack = () => {
 
   const tokens = useMemo(() => {
     return players.map((player) => {
-      const token = renderTokens[player.id]
-      const fallbackIndex = animationStateRef.current[player.id]?.currentIndex ?? player.position
+      const token = renderTokens[player.sessionId]
+      const fallbackIndex = animationStateRef.current[player.sessionId]?.currentIndex ?? player.position
       const index = token?.index ?? fallbackIndex
       const center = token?.center ?? tileCenters[index] ?? { x: 0, y: 0 }
       const hopId = token?.hopId ?? 0
@@ -337,7 +370,7 @@ const DiceTrack = () => {
     const map = new Map<number, string[]>()
     tokens.forEach(({ player, index }) => {
       const group = map.get(index) ?? []
-      group.push(player.id)
+      group.push(player.sessionId)
       map.set(index, group)
     })
     return map
@@ -435,7 +468,7 @@ const DiceTrack = () => {
 
         {tokens.map(({ player, center, index, hopId }) => {
           const crowd = occupancy.get(index) ?? []
-          const crowdIndex = Math.max(0, crowd.indexOf(player.id))
+          const crowdIndex = Math.max(0, crowd.indexOf(player.sessionId))
           const angle = (crowdIndex / Math.max(1, crowd.length)) * Math.PI * 2
           const offsetRadius = tokenRadius * 1.35
           const offset = crowd.length > 1
@@ -445,10 +478,18 @@ const DiceTrack = () => {
               }
             : { x: 0, y: 0 }
 
-          const color = playerColors[player.id] ?? '#f97316'
+          const color = playerColors[player.sessionId] ?? '#f97316'
+          const orderIndex = playerOrder.indexOf(player.sessionId)
+          const fallbackIndex = players.findIndex((entry) => entry.sessionId === player.sessionId)
+          const numericLabel =
+            (orderIndex >= 0 ? orderIndex : fallbackIndex >= 0 ? fallbackIndex : 0) + 1
+          const label =
+            Number.isFinite(numericLabel) && numericLabel > 0
+              ? numericLabel.toString()
+              : player.sessionId.slice(0, 2).toUpperCase()
 
           return (
-            <g key={player.id} data-hop={hopId}>
+            <g key={player.sessionId} data-hop={hopId} data-self={player.sessionId === sessionId}>
               <circle
                 cx={center.x + offset.x}
                 cy={center.y + offset.y}
@@ -466,7 +507,7 @@ const DiceTrack = () => {
                 fontFamily="Inter, system-ui, sans-serif"
                 pointerEvents="none"
               >
-                {player.id.replace('P', '')}
+                {label}
               </text>
             </g>
           )

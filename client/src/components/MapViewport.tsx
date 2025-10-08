@@ -11,9 +11,10 @@ import {
 import { Application, extend, useApplication } from '@pixi/react'
 import { Container, Graphics, Rectangle, Text } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
+import { useShallow } from 'zustand/shallow'
 import { useMapStore } from '@/stores/mapStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
-import { useGameStore } from '@/stores/gameStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import MapHexLayer from './MapHexLayer'
 import { computeTerritoryRenderInfo, mapTerritoryRenderInfo } from '@/utils/territoryGeometry'
 import type { TerritoryId } from '@/types/map'
@@ -23,6 +24,8 @@ extend({ Container, Graphics, Viewport, Text })
 
 const BACKGROUND_COLOR = 0x0b1120
 const HEX_DETAIL_THRESHOLD = 4
+const EMPTY_TERRITORY_OWNERSHIP = Object.freeze({}) as Record<TerritoryId, string | null>
+const EMPTY_PLAYER_COLORS = Object.freeze({}) as Record<string, string>
 
 interface WorldBounds {
   minX: number
@@ -185,7 +188,15 @@ const MapViewport = ({
     top: number
     bottom: number
   } | null>(null)
-  const { map, positionedHexes, loadMap, loading, displayConfig } = useMapStore()
+  const { map, positionedHexes, loading, displayConfig } = useMapStore(
+    useShallow((state) => ({
+      map: state.map,
+      positionedHexes: state.positionedHexes,
+      loading: state.loading,
+      displayConfig: state.displayConfig,
+    })),
+  )
+  const loadMap = useMapStore((state) => state.loadMap)
   const {
     selectedTerritory,
     hoveredTerritory,
@@ -193,12 +204,18 @@ const MapViewport = ({
     setHoveredTerritory,
     highlightedTerritory,
   } = useMapInteractionsStore()
-  const ownershipByTerritory = useGameStore((state) => state.ownershipByTerritory)
-  const playerColors = useGameStore((state) => state.playerColors)
+  const { ownershipByTerritory, playerColors } = useSessionStore(
+    useShallow((state) => ({
+      ownershipByTerritory: state.roomView?.territoryOwnership ?? EMPTY_TERRITORY_OWNERSHIP,
+      playerColors: state.roomView?.playerColors ?? EMPTY_PLAYER_COLORS,
+    })),
+  )
 
   useEffect(() => {
-    loadMap()
-  }, [loadMap])
+    if (!map && !loading) {
+      void loadMap()
+    }
+  }, [loadMap, map, loading])
 
   const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
     event.preventDefault()
