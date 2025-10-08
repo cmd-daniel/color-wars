@@ -208,10 +208,20 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 type SetStateFn = StoreApi<SessionState>['setState']
 
 const attachToRoom = async (reservation: any, set: SetStateFn) => {
-  set({ status: 'connecting' })
+  set({ status: 'connecting', error: undefined })
   const client = getColyseusClient()
-  debugger
-  const room = await client.consumeSeatReservation(reservation)
+
+  let room: Room
+  try {
+    room = await client.consumeSeatReservation(reservation)
+  } catch (error) {
+    console.error('Unable to connect to room', error)
+    set({
+      status: 'error',
+      error: (error as Error).message || 'Unable to connect to the room. Please try again.',
+    })
+    return
+  }
 
   const updateFromState = (state: any) => {
     const roomView = transformRoomState(state)
@@ -222,7 +232,7 @@ const attachToRoom = async (reservation: any, set: SetStateFn) => {
 
   room.onError((code, message) => {
     console.error('Room error', { code, message })
-    set({ status: 'error', error: `${message} (${code})` })
+    set({ status: 'error', error: message ? `${message} (${code})` : `Room error (${code})` })
   })
 
   room.onLeave(() => {

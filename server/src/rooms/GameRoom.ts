@@ -11,6 +11,7 @@ import {
   WAITING_TIMEOUT_MS
 } from "../constants";
 import { logAnalyticsEvent } from "../utils/logger";
+import { GameEngine } from "../game/GameEngine";
 
 export interface CreateRoomOptions {
   isPrivate?: boolean;
@@ -27,6 +28,10 @@ interface ChatMessagePayload {
   message: string;
 }
 
+interface PurchaseTerritoryPayload {
+  territoryId?: string;
+}
+
 export class GameRoom extends Room<GameState> {
   private waitingTimer?: Delayed;
   private lobbyTimer?: Delayed;
@@ -34,6 +39,7 @@ export class GameRoom extends Room<GameState> {
 
   private waitingForced = false;
   private disposeReason: string | null = null;
+  private gameEngine!: GameEngine;
 
   async onCreate(options: CreateRoomOptions = {}) {
     const isPrivate = options.isPrivate ?? false;
@@ -47,6 +53,7 @@ export class GameRoom extends Room<GameState> {
     this.setState(new GameState(this.roomId, isPrivate, joinCode ?? "", maxPlayers, minPlayers));
     await this.updateMetadata();
 
+    this.gameEngine = new GameEngine(this.state);
     this.registerMessageHandlers();
     RoomManager.registerRoom(this);
     RoomManager.updateRoomPhase(this);
@@ -72,6 +79,7 @@ export class GameRoom extends Room<GameState> {
     }
 
     this.state.connectedPlayers = this.clients.length;
+    this.gameEngine.handlePlayerJoined(player);
     this.clearEmptyRoomTimeout();
     await this.updateMetadata();
 
@@ -99,9 +107,11 @@ export class GameRoom extends Room<GameState> {
         await this.updateMetadata();
         return;
       } catch {
+        this.gameEngine.handlePlayerLeft(client.sessionId);
         this.state.players.delete(client.sessionId);
       }
     } else {
+      this.gameEngine.handlePlayerLeft(client.sessionId);
       this.state.players.delete(client.sessionId);
     }
 
@@ -146,6 +156,12 @@ export class GameRoom extends Room<GameState> {
   private registerMessageHandlers() {
     this.onMessage("chat", (client, payload: ChatMessagePayload) => this.handleChat(client, payload));
     this.onMessage("ready", (client, payload: ReadyMessagePayload) => this.handleReady(client, payload));
+    this.onMessage("rollDice", (client) => this.gameEngine.handleRoll(client));
+    this.onMessage("purchaseTerritory", (client, payload: PurchaseTerritoryPayload) => {
+      const territoryId = typeof payload?.territoryId === "string" ? payload.territoryId : "";
+      this.gameEngine.handlePurchaseTerritory(client, territoryId);
+    });
+    this.onMessage("endTurn", (client) => this.gameEngine.handleEndTurn(client));
   }
 
   private handleChat(client: Client, payload: ChatMessagePayload) {
@@ -237,6 +253,7 @@ export class GameRoom extends Room<GameState> {
     this.state.lobbyEndsAt = 0;
     this.state.waitTimeoutAt = 0;
     this.disposeReason = null;
+    this.gameEngine.startGame();
     this.clearLobbyTimeout();
     void this.updateMetadata();
     logAnalyticsEvent("game_started", {
@@ -263,6 +280,11 @@ export class GameRoom extends Room<GameState> {
     this.state.lobbyEndsAt = 0;
     this.waitingForced = false;
     this.disposeReason = null;
+    this.state.turnPhase = "awaiting-roll";
+    this.state.currentTurn = "";
+    this.state.lastRoll = 0;
+    this.state.lastEvent = undefined;
+    this.state.round = 1;
     void this.updateMetadata();
     this.scheduleWaitTimeout();
   }

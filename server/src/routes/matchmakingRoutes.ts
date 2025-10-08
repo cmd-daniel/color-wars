@@ -51,9 +51,25 @@ export function createMatchmakingRouter() {
 function formatReservationResponse(reservation: Awaited<ReturnType<typeof RoomManager.quickMatch>>) {
   return {
     sessionId: reservation.sessionId,
+    reservationId: (reservation as any).reservationId,
+    protocol: (reservation as any).protocol,
+    reconnectionToken: (reservation as any).reconnectionToken,
+    devMode: reservation.devMode,
     roomId: reservation.room.roomId,
     processId: reservation.room.processId,
     roomName: reservation.room.name,
-    metadata: reservation.room.metadata
+    metadata: reservation.room.metadata,
+    room: {
+      roomId: reservation.room.roomId,
+      processId: reservation.room.processId,
+      name: reservation.room.name,
+      clients: reservation.room.clients,
+      maxClients: reservation.room.maxClients,
+      locked: reservation.room.locked,
+      private: reservation.room.private,
+      publicAddress: reservation.room.publicAddress,
+      unlisted: reservation.room.unlisted,
+      metadata: reservation.room.metadata
+    }
   };
 }
