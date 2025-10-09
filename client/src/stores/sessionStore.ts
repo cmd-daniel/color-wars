@@ -15,6 +15,28 @@ import type {
 } from '@/types/game'
 import type { TerritoryId } from '@/types/map'
 
+type PurchaseFailureReason = 'invalid-territory' | 'not-active' | 'not-your-turn' | 'already-owned' | 'insufficient-funds'
+
+type PurchaseResultMessage =
+  | {
+      success: true
+      territoryId?: TerritoryId
+      territoryName?: string
+      cost?: number
+      balance?: number
+    }
+  | {
+      success: false
+      reason?: PurchaseFailureReason
+      cost?: number
+      balance?: number
+    }
+
+export type GameNotice = {
+  kind: 'success' | 'error'
+  message: string
+}
+
 export type SessionStatus = 'idle' | 'matchmaking' | 'connecting' | 'connected' | 'error'
 
 export interface GamePlayer {
@@ -74,9 +96,12 @@ interface SessionState {
   room?: Room
   roomView?: GameRoomView
   sessionId?: string
+  gameNotice?: GameNotice
   setPlayerName: (name: string) => void
   setRequestedJoinCode: (code: string) => void
   clearError: () => void
+  setGameNotice: (notice?: GameNotice) => void
+  clearGameNotice: () => void
   quickMatch: () => Promise<void>
   createPrivateRoom: () => Promise<void>
   joinPrivateRoom: () => Promise<void>
@@ -90,6 +115,19 @@ interface SessionState {
 }
 
 const DEFAULT_PLAYER_NAME = 'Commander'
+const currencyFormatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD',
+  maximumFractionDigits: 0,
+})
+
+const PURCHASE_FAILURE_MESSAGES: Record<PurchaseFailureReason, string> = {
+  'invalid-territory': 'Unable to identify that territory.',
+  'not-active': 'You can only buy territories during an active match.',
+  'not-your-turn': 'Wait for your turn before buying a territory.',
+  'already-owned': 'That territory is already owned.',
+  'insufficient-funds': 'You do not have enough funds for that purchase.',
+}
 
 const transformRoomState = (state: any): GameRoomView | undefined => {
   if (!state) {
@@ -266,6 +304,7 @@ const resetState = {
   room: undefined,
   roomView: undefined,
   sessionId: undefined,
+  gameNotice: undefined,
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -273,6 +312,8 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setPlayerName: (name: string) => set({ playerName: name }),
   setRequestedJoinCode: (code: string) => set({ requestedJoinCode: code.toUpperCase() }),
   clearError: () => set({ error: undefined }),
+  setGameNotice: (notice) => set({ gameNotice: notice }),
+  clearGameNotice: () => set({ gameNotice: undefined }),
   quickMatch: async () => {
     const { playerName } = get()
     set({ status: 'matchmaking', error: undefined, hostedJoinCode: undefined, roomView: undefined })
@@ -374,6 +415,7 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
     const { room } = get()
     try {
+      set({ gameNotice: undefined })
       room?.send('purchaseTerritory', { territoryId })
     } catch (error) {
       console.warn('Unable to purchase territory', error)
@@ -409,6 +451,34 @@ const attachToRoom = async (reservation: any, set: SetStateFn) => {
   room.onError((code, message) => {
     console.error('Room error', { code, message })
     set({ status: 'error', error: message ? `${message} (${code})` : `Room error (${code})` })
+  })
+
+  room.onMessage('purchaseResult', (payload: PurchaseResultMessage) => {
+    if (!payload) {
+      return
+    }
+
+    if (payload.success) {
+      const territoryLabel = payload.territoryName ?? payload.territoryId ?? 'territory'
+      const costLabel = payload.cost !== undefined ? currencyFormatter.format(payload.cost) : null
+      const balanceLabel = payload.balance !== undefined ? currencyFormatter.format(payload.balance) : null
+      const pieces: string[] = []
+      pieces.push(costLabel ? `Purchased ${territoryLabel} for ${costLabel}` : `Purchased ${territoryLabel}`)
+      if (balanceLabel) {
+        pieces.push(`Remaining balance: ${balanceLabel}`)
+      }
+      const message = `${pieces.join('. ')}.`
+      set({ gameNotice: { kind: 'success', message } })
+      return
+    }
+
+    const reason = payload.reason ?? 'invalid-territory'
+    const baseMessage = PURCHASE_FAILURE_MESSAGES[reason] ?? 'Unable to purchase this territory.'
+    const message =
+      reason === 'insufficient-funds' && payload.cost !== undefined
+        ? `${baseMessage} It costs ${currencyFormatter.format(payload.cost)}.`
+        : baseMessage
+    set({ gameNotice: { kind: 'error', message } })
   })
 
   room.onLeave(() => {

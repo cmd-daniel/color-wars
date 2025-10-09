@@ -22,6 +22,8 @@ const TurnControls = () => {
   const rollDice = useSessionStore((state) => state.rollDice)
   const endTurn = useSessionStore((state) => state.endTurn)
   const purchaseTerritory = useSessionStore((state) => state.purchaseTerritory)
+  const gameNotice = useSessionStore((state) => state.gameNotice)
+  const clearGameNotice = useSessionStore((state) => state.clearGameNotice)
   const {
     selectedTerritory: selectedTerritoryId,
     highlightedTerritory,
@@ -68,6 +70,7 @@ const TurnControls = () => {
 
   const handlePurchase = () => {
     if (selectedOffer) {
+      clearGameNotice()
       purchaseTerritory(selectedOffer.id)
     }
   }
@@ -118,6 +121,14 @@ const TurnControls = () => {
           {lastEvent.kind !== 'roll-again' && (
             <span className="event-banner__amount">{eventAmountLabel}</span>
           )}
+        </div>
+      )}
+      {gameNotice && (
+        <div className={`turn-feedback turn-feedback--${gameNotice.kind}`}>
+          <span>{gameNotice.message}</span>
+          <button type="button" onClick={clearGameNotice}>
+            Dismiss
+          </button>
         </div>
       )}
       <div className="turn-actions">

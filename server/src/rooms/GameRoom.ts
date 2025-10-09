@@ -48,9 +48,9 @@ export class GameRoom extends Room<GameState> {
     const minPlayers = options.minPlayers ?? DEFAULT_MIN_PLAYERS;
 
     this.maxClients = maxPlayers;
-    this.autoDispose = false;
+    this.autoDispose = true;
 
-    this.setState(new GameState(this.roomId, isPrivate, joinCode ?? "", maxPlayers, minPlayers));
+    this.state = new GameState(this.roomId, isPrivate, joinCode ?? "", maxPlayers, minPlayers);
     await this.updateMetadata();
 
     this.gameEngine = new GameEngine(this.state);
@@ -159,7 +159,8 @@ export class GameRoom extends Room<GameState> {
     this.onMessage("rollDice", (client) => this.gameEngine.handleRoll(client));
     this.onMessage("purchaseTerritory", (client, payload: PurchaseTerritoryPayload) => {
       const territoryId = typeof payload?.territoryId === "string" ? payload.territoryId : "";
-      this.gameEngine.handlePurchaseTerritory(client, territoryId);
+      const result = this.gameEngine.handlePurchaseTerritory(client, territoryId);
+      client.send("purchaseResult", result);
     });
     this.onMessage("endTurn", (client) => this.gameEngine.handleEndTurn(client));
   }

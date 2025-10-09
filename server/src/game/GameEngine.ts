@@ -127,6 +127,23 @@ const buildTrackSpaces = () => {
   return spaces;
 };
 
+const normalizeTerritories = (parsed: any): MapTerritory[] => {
+  if (Array.isArray(parsed?.territories)) {
+    return parsed.territories as MapTerritory[];
+  }
+
+  const states = parsed?.states;
+  if (Array.isArray(states)) {
+    return states as MapTerritory[];
+  }
+
+  if (states && typeof states === "object") {
+    return Object.values(states) as MapTerritory[];
+  }
+
+  return [];
+};
+
 const loadDefaultMapDefinition = (): MapDefinition | null => {
   try {
     const customPath = process.env.MAP_DEFINITION_PATH;
@@ -135,18 +152,38 @@ const loadDefaultMapDefinition = (): MapDefinition | null => {
         ? customPath
         : path.resolve(__dirname, "../../../client/public/sample-subcontinent.json");
     const raw = readFileSync(filePath, "utf8");
-    const parsed = JSON.parse(raw) as MapDefinition;
+    const parsed = JSON.parse(raw) as Partial<MapDefinition> & { states?: unknown };
 
-    if (!parsed?.territories || !Array.isArray(parsed.territories)) {
+    const territories = normalizeTerritories(parsed);
+    if (!territories.length) {
       throw new Error("Map definition missing territories array");
     }
 
-    return parsed;
+    return {
+      ...(parsed as object),
+      territories
+    } as MapDefinition;
   } catch (error) {
     logger.error("map_definition_load_failed", { message: (error as Error).message });
     return null;
   }
 };
+
+export type PurchaseFailureReason =
+  | "invalid-territory"
+  | "not-active"
+  | "not-your-turn"
+  | "already-owned"
+  | "insufficient-funds";
+
+export interface PurchaseResult {
+  success: boolean;
+  territoryId?: string;
+  cost?: number;
+  balance?: number;
+  territoryName?: string;
+  reason?: PurchaseFailureReason;
+}
 
 export class GameEngine {
   private mapDefinition: MapDefinition | null;
@@ -329,32 +366,32 @@ export class GameEngine {
     this.state.lastEvent = lastEventResult;
   }
 
-  handlePurchaseTerritory(client: Client, territoryId: string) {
-    if (!territoryId || this.state.phase !== "active") {
-      return;
+  handlePurchaseTerritory(client: Client, territoryId: string): PurchaseResult {
+    if (!territoryId) {
+      return { success: false, reason: "invalid-territory" };
     }
 
-    if (client.sessionId !== this.state.currentTurn) {
-      return;
+    if (this.state.phase !== "active") {
+      return { success: false, reason: "not-active" };
     }
 
     const player = this.state.players.get(client.sessionId);
-    if (!player) {
-      return;
+    if (!player || client.sessionId !== this.state.currentTurn) {
+      return { success: false, reason: "not-your-turn" };
     }
 
     const territory = this.state.territoryInfo.get(territoryId);
     if (!territory) {
-      return;
+      return { success: false, reason: "invalid-territory" };
     }
 
     const owner = this.state.territoryOwnership.get(territoryId);
     if (owner && owner.length > 0) {
-      return;
+      return { success: false, reason: "already-owned" };
     }
 
     if (player.money < territory.cost) {
-      return;
+      return { success: false, reason: "insufficient-funds", cost: territory.cost, balance: player.money };
     }
 
     player.money -= territory.cost;
@@ -366,6 +403,14 @@ export class GameEngine {
     this.addLog(`${player.name} purchased ${territory.name} for ${formatCurrency(territory.cost)}`, {
       type: "purchase"
     });
+
+    return {
+      success: true,
+      territoryId,
+      cost: territory.cost,
+      balance: player.money,
+      territoryName: territory.name
+    };
   }
 
   handleEndTurn(client: Client) {

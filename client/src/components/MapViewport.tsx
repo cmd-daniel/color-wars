@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   useLayoutEffect,
+  type WheelEvent,
 } from 'react'
 import { Application, extend, useApplication } from '@pixi/react'
 import { Container, Graphics, Rectangle, Text } from 'pixi.js'
@@ -217,9 +218,9 @@ const MapViewport = ({
     }
   }, [loadMap, map, loading])
 
-  const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+  const handleWheel =(event: Event) => {
     event.preventDefault()
-  }, [])
+  }
 
   const handleBoundsChange = useCallback(
     (bounds: { left: number; right: number; top: number; bottom: number }) => {
@@ -234,6 +235,17 @@ const MapViewport = ({
     },
     [map],
   )
+
+  useEffect(()=>{
+    const mapContainer = containerRef.current;
+    debugger
+    if(mapContainer){
+      mapContainer.addEventListener('wheel', handleWheel, {passive:false})
+    }
+    return (()=>{
+      mapContainer?.removeEventListener('wheel', handleWheel)
+    })
+  },[containerRef.current])
 
   useEffect(() => {
     const updateResolution = () => {
@@ -364,7 +376,7 @@ const MapViewport = ({
   const backgroundColor = background ?? BACKGROUND_COLOR
 
   return (
-    <div ref={containerRef} className={containerClass} onWheel={handleWheel}>
+    <div ref={containerRef} className={containerClass}>
       <Application
         width={viewportSize.width}
         height={viewportSize.height}
