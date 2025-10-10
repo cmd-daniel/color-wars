@@ -1,19 +1,34 @@
-const DEFAULT_HTTP_ENDPOINT = 'http://localhost:2567';
+const normalize = (value?: string | null) => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+};
+
+const stripTrailingSlashes = (value: string) => value.replace(/\/+$/, '');
 
 const resolveHttpEndpoint = () => {
-  const fromEnv = import.meta.env.VITE_SERVER_HTTP_ENDPOINT as string | undefined;
-  if (fromEnv && typeof fromEnv === 'string' && fromEnv.length > 0) {
-    return fromEnv.replace(/\/+$/, '');
+  if (import.meta.env.DEV) {
+    const fromEnv = normalize(import.meta.env.VITE_API_BASE_URL as string | undefined);
+    if (!fromEnv) {
+      throw new Error('VITE_API_BASE_URL must be set when running the client in development mode.');
+    }
+    return stripTrailingSlashes(fromEnv);
   }
 
   if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
-    const inferredProtocol = protocol === 'https:' ? 'https:' : 'http:';
-    const port = (import.meta.env.VITE_SERVER_PORT as string | undefined) ?? '2567';
-    return `${inferredProtocol}//${hostname}:${port}`;
+    return stripTrailingSlashes(window.location.origin);
   }
 
-  return DEFAULT_HTTP_ENDPOINT;
+  if (typeof globalThis.location !== 'undefined') {
+    const { protocol, hostname, port } = globalThis.location as Location;
+    const portSuffix = port ? `:${port}` : '';
+    return stripTrailingSlashes(`${protocol}//${hostname}${portSuffix}`);
+  }
+
+  throw new Error('Unable to determine API endpoint for production build.');
 };
 
 const httpEndpoint = resolveHttpEndpoint();

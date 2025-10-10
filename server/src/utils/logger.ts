@@ -1,4 +1,5 @@
 import winston from "winston";
+import { env } from "../config/env";
 
 const { combine, timestamp, errors, json, printf, colorize } = winston.format;
 
@@ -8,7 +9,7 @@ const consoleFormat = printf(({ level, message, timestamp: ts, ...meta }) => {
 });
 
 export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL ?? "info",
+  level: env.logLevel,
   format: combine(timestamp(), errors({ stack: true }), json()),
   defaultMeta: { service: "color-wars-server" },
   transports: [

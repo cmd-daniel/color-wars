@@ -14,6 +14,7 @@ import {
   TerritoryInfoState
 } from "../state/GameState";
 import { logger } from "../utils/logger";
+import { env } from "../config/env";
 
 const STARTING_CASH = 600;
 const PASS_START_INCOME_FALLBACK = 120;
@@ -146,11 +147,9 @@ const normalizeTerritories = (parsed: any): MapTerritory[] => {
 
 const loadDefaultMapDefinition = (): MapDefinition | null => {
   try {
-    const customPath = process.env.MAP_DEFINITION_PATH;
+    const customPath = env.mapDefinitionPath;
     const filePath =
-      customPath && customPath.trim().length > 0
-        ? customPath
-        : path.resolve(__dirname, "../../../client/public/sample-subcontinent.json");
+      customPath ?? path.resolve(__dirname, "../../../client/public/sample-subcontinent.json");
     const raw = readFileSync(filePath, "utf8");
     const parsed = JSON.parse(raw) as Partial<MapDefinition> & { states?: unknown };
 

@@ -1,13 +1,11 @@
 import {
   type ReactNode,
-  type WheelEvent as ReactWheelEvent,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   useLayoutEffect,
-  type WheelEvent,
 } from 'react'
 import { Application, extend, useApplication } from '@pixi/react'
 import { Container, Graphics, Rectangle, Text } from 'pixi.js'
