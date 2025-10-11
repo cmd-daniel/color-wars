@@ -138,8 +138,6 @@ const DiceTrackLayer = memo(
       const boxWidth = track.viewBox.width || 1
       const boxHeight = track.viewBox.height || 1
       const maxDimension = Math.max(boxWidth, boxHeight)
-      const padX = (maxDimension - boxWidth) / 2
-      const padY = (maxDimension - boxHeight) / 2
       const scale = size / maxDimension
       return {
         scale,
