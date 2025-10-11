@@ -13,6 +13,7 @@ import type { TrackSpace } from '@/types/game'
 const HOP_DURATION = 280
 const STEP_DELAY = 120
 const MIN_TRACK_LENGTH = 1
+const OVERLAY_RESOLUTION_MULTIPLIER = 1.2
 const EMPTY_PLAYERS: GamePlayer[] = []
 const EMPTY_TRACK_SPACES: TrackSpace[] = []
 const EMPTY_PLAYER_COLORS = Object.freeze({}) as Record<string, string>
@@ -374,6 +375,7 @@ const DiceTrack = () => {
           className={styles.overlayViewport}
           background={0x000000}
           transparent
+          resolutionMultiplier={OVERLAY_RESOLUTION_MULTIPLIER}
           overlay={renderOverlay}
         />
       </div>

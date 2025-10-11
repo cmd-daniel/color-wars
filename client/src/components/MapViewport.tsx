@@ -175,6 +175,8 @@ interface MapViewportProps {
   transparent?: boolean
   initialZoomFactor?: number
   fitPadding?: number
+  resolutionMultiplier?: number
+  maxResolution?: number
   overlay?: (props: MapViewportOverlayProps) => ReactNode
 }
 
@@ -184,6 +186,8 @@ const MapViewport = ({
   transparent = false,
   initialZoomFactor = 1,
   fitPadding = 0,
+  resolutionMultiplier = 1,
+  maxResolution = 6,
   overlay,
 }: MapViewportProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -256,13 +260,16 @@ const MapViewport = ({
     const updateResolution = () => {
       if (typeof window === 'undefined') return
       const devicePixelRatio = window.devicePixelRatio || 1
-      setResolution(Math.min(devicePixelRatio * 2, 3))
+      const base = Math.min(devicePixelRatio * 2, 3)
+      const boosted = base * Math.max(1, resolutionMultiplier)
+      const clamped = Math.max(1, Math.min(boosted, Math.max(1, maxResolution)))
+      setResolution(clamped)
     }
 
     updateResolution()
     window.addEventListener('resize', updateResolution)
     return () => window.removeEventListener('resize', updateResolution)
-  }, [])
+  }, [maxResolution, resolutionMultiplier])
 
   useLayoutEffect(() => {
     const element = containerRef.current

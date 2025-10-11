@@ -161,7 +161,8 @@ const DiceTrackLayer = memo(
 
     const textResolution = useMemo(() => {
       const base = Math.max(1, resolution)
-      return Math.min(8, base * Math.max(1, scaleInfo.scale))
+      const scaled = base * Math.max(1, scaleInfo.scale)
+      return Math.min(12, scaled)
     }, [resolution, scaleInfo.scale])
 
     useEffect(() => {
@@ -229,11 +230,11 @@ const DiceTrackLayer = memo(
                   x={center.x}
                   y={center.y + fontSize * 0.15 - 3}
                   anchor={{ x: 0.5, y: 0.5 }}
+                  resolution={textResolution}
                   style={{
                     fontSize,
                     fill: style.textColor,
                     fontFamily: "'Noto Emoji', 'Segoe UI Emoji', sans-serif",
-                    resolution: textResolution,
                   }}
                 />
 
@@ -243,11 +244,11 @@ const DiceTrackLayer = memo(
                     x={center.x}
                     y={center.y + fontSize * 0.65}
                     anchor={{ x: 0.5, y: 0.5 }}
+                    resolution={textResolution}
                     style={{
                       fontSize: labelFontSize,
                       fill: style.textColor,
                       fontFamily: 'Inter, system-ui, sans-serif',
-                      resolution: textResolution,
                     }}
                   />
                 ) : null}
@@ -258,11 +259,11 @@ const DiceTrackLayer = memo(
                     x={center.x}
                     y={center.y + fontSize * 0.75}
                     anchor={{ x: 0.5, y: 0.5 }}
+                    resolution={textResolution}
                     style={{
                       fontSize: labelFontSize,
                       fill: style.textColor,
                       fontFamily: 'Inter, system-ui, sans-serif',
-                      resolution: textResolution,
                     }}
                   />
                 ) : null}
@@ -313,12 +314,12 @@ const DiceTrackLayer = memo(
                   text={label}
                   anchor={{ x: 0.5, y: 0.5 }}
                   y={tokenRadius * 0.35}
+                  resolution={textResolution}
                   style={{
                     fontSize: tokenRadius * 1.1,
                     fill: '#0f172a',
                     fontFamily: 'Inter, system-ui, sans-serif',
                     fontWeight: '600',
-                    resolution: textResolution,
                   }}
                 />
               </pixiContainer>
