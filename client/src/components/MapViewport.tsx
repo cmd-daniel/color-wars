@@ -162,12 +162,20 @@ const InteractiveViewport = ({
   )
 }
 
+interface MapViewportOverlayProps {
+  size: number
+  resolution: number
+  offsetX: number
+  offsetY: number
+}
+
 interface MapViewportProps {
   className?: string
   background?: number
   transparent?: boolean
   initialZoomFactor?: number
   fitPadding?: number
+  overlay?: (props: MapViewportOverlayProps) => ReactNode
 }
 
 const MapViewport = ({
@@ -176,6 +184,7 @@ const MapViewport = ({
   transparent = false,
   initialZoomFactor = 1,
   fitPadding = 0,
+  overlay,
 }: MapViewportProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [viewportSize, setViewportSize] = useState({ width: 800, height: 600 })
@@ -216,9 +225,9 @@ const MapViewport = ({
     }
   }, [loadMap, map, loading])
 
-  const handleWheel =(event: Event) => {
+  const handleWheel = useCallback((event: WheelEvent) => {
     event.preventDefault()
-  }
+  }, [])
 
   const handleBoundsChange = useCallback(
     (bounds: { left: number; right: number; top: number; bottom: number }) => {
@@ -234,16 +243,14 @@ const MapViewport = ({
     [map],
   )
 
-  useEffect(()=>{
-    const mapContainer = containerRef.current;
-    debugger
-    if(mapContainer){
-      mapContainer.addEventListener('wheel', handleWheel, {passive:false})
+  useEffect(() => {
+    const mapContainer = containerRef.current
+    if (!mapContainer) return
+    mapContainer.addEventListener('wheel', handleWheel, { passive: false })
+    return () => {
+      mapContainer.removeEventListener('wheel', handleWheel)
     }
-    return (()=>{
-      mapContainer?.removeEventListener('wheel', handleWheel)
-    })
-  },[containerRef.current])
+  }, [handleWheel])
 
   useEffect(() => {
     const updateResolution = () => {
@@ -264,9 +271,10 @@ const MapViewport = ({
     const observer = new ResizeObserver(([entry]) => {
       if (!entry) return
       const { width, height } = entry.contentRect
+      const squareSize = Math.max(1, Math.round(Math.min(width, height)))
       setViewportSize({
-        width: Math.max(1, Math.round(width)),
-        height: Math.max(1, Math.round(height)),
+        width: squareSize,
+        height: squareSize,
       })
     })
 
@@ -361,9 +369,23 @@ const MapViewport = ({
   const hexGap = useMemo(() => (hexSize > 0 ? hexSize * 0.12 : 0), [hexSize])
   const outlineWidth = useMemo(() => (hexSize > 0 ? Math.max(2, hexSize * 0.16) : 2), [hexSize])
 
-  if (!map || loading || !worldBounds) {
-    return <div className={styles.loading}>Loading map…</div>
-  }
+  const overlaySize = useMemo(
+    () => Math.max(1, Math.round(Math.min(viewportSize.width, viewportSize.height))),
+    [viewportSize.height, viewportSize.width],
+  )
+  const overlayOffsetX = useMemo(() => (viewportSize.width - overlaySize) / 2, [overlaySize, viewportSize.width])
+  const overlayOffsetY = useMemo(() => (viewportSize.height - overlaySize) / 2, [overlaySize, viewportSize.height])
+
+  const overlayNode = useMemo(() => {
+    if (!overlay) return null
+    return overlay({
+      size: overlaySize,
+      resolution,
+      offsetX: overlayOffsetX,
+      offsetY: overlayOffsetY,
+    })
+  }, [overlay, overlayOffsetX, overlayOffsetY, overlaySize, resolution])
+
   const containerClass = [
     styles.container,
     transparent ? styles.overlay : '',
@@ -375,43 +397,50 @@ const MapViewport = ({
 
   return (
     <div ref={containerRef} className={containerClass}>
-      <Application
-        width={viewportSize.width}
-        height={viewportSize.height}
-        background={backgroundColor}
-        antialias
-        eventMode="static"
-        autoDensity
-        resolution={resolution}
-        resizeTo={containerRef}
-      >
-        <InteractiveViewport
+      {map && !loading && worldBounds ? (
+        <Application
           width={viewportSize.width}
           height={viewportSize.height}
-          worldBounds={worldBounds}
-          onBoundsChange={handleBoundsChange}
-          onScaleChange={setViewportScale}
-          fitPadding={fitPadding}
-          initialZoomFactor={initialZoomFactor}
+          background={backgroundColor}
+          antialias
+          eventMode="static"
+          autoDensity
+          resolution={resolution}
+          resizeTo={containerRef}
         >
-          <MapHexLayer
-            hexes={showHexFill ? visibleHexes : []}
-            territoryColorLookup={territoryColorLookup}
-            hoveredTerritory={hoveredTerritory}
-            selectedTerritory={selectedTerritory}
-            highlightedTerritory={highlightedTerritory}
-            onHover={setHoveredTerritory}
-            onSelect={setSelectedTerritory}
-            territoryRenderList={territoryRenderList}
-            territoryRenderMap={territoryRenderMap}
-            hexGap={hexGap}
-            outlineWidth={outlineWidth}
-            visibleBounds={visibleBounds}
-            showHexFill={showHexFill}
-            showTerritoryLabels={displayConfig.showTerritoryLabels}
-          />
-        </InteractiveViewport>
-      </Application>
+          <pixiContainer label="map-layer" eventMode="passive">
+            <InteractiveViewport
+              width={viewportSize.width}
+              height={viewportSize.height}
+              worldBounds={worldBounds}
+              onBoundsChange={handleBoundsChange}
+              onScaleChange={setViewportScale}
+              fitPadding={fitPadding}
+              initialZoomFactor={initialZoomFactor}
+            >
+              <MapHexLayer
+                hexes={showHexFill ? visibleHexes : []}
+                territoryColorLookup={territoryColorLookup}
+                hoveredTerritory={hoveredTerritory}
+                selectedTerritory={selectedTerritory}
+                highlightedTerritory={highlightedTerritory}
+                onHover={setHoveredTerritory}
+                onSelect={setSelectedTerritory}
+                territoryRenderList={territoryRenderList}
+                territoryRenderMap={territoryRenderMap}
+                hexGap={hexGap}
+                outlineWidth={outlineWidth}
+                visibleBounds={visibleBounds}
+                showHexFill={showHexFill}
+                showTerritoryLabels={displayConfig.showTerritoryLabels}
+              />
+            </InteractiveViewport>
+          </pixiContainer>
+          {overlayNode}
+        </Application>
+      ) : (
+        <div className={styles.loading}>Loading map…</div>
+      )}
     </div>
   )
 }

@@ -1,6 +1,5 @@
 import config from "@colyseus/tools";
 import { monitor } from "@colyseus/monitor";
-import { playground } from "@colyseus/playground";
 import cors from "cors";
 import express from "express";
 import path from "path";
@@ -53,10 +52,6 @@ export default config({
     app.use(express.json());
 
     app.use("/matchmaking", createMatchmakingRouter());
-
-    if (env.nodeEnv !== "production") {
-      app.use("/playground", playground());
-    }
 
     app.use("/monitor", monitor());
 
