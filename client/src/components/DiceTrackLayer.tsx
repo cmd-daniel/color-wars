@@ -48,6 +48,10 @@ const START_TILE_STYLE = {
   textColor: '#e0f2fe',
 }
 
+const INNER_LOOP_RADIUS = 3
+const OVERLAY_FILL_COLOR = 0x020617
+const OVERLAY_ALPHA = 1
+
 const EVENT_TILE_STYLE: Record<TrackEventKind, { fill: string; stroke: string; icon: string; textColor: string }> = {
   bonus: { fill: '#14532d', stroke: '#22c55e', icon: '💰', textColor: '#dcfce7' },
   penalty: { fill: '#7f1d1d', stroke: '#f97316', icon: '⚠️', textColor: '#fee2e2' },
@@ -179,15 +183,12 @@ const DiceTrackLayer = memo(
       return map
     }, [tokens])
 
+    const innerLoop = track.innerLoop
+    const hasInnerLoop = Array.isArray(innerLoop) && innerLoop.length > 2
+
     return (
       <pixiContainer label="dice-track-overlay" eventMode="none" position={{ x: offsetX, y: offsetY }}>
-        <pixiGraphics
-          eventMode="none"
-          draw={(graphics: Graphics) => {
-            graphics.clear()
-            graphics.rect(0, 0, size, size).fill({ color: 0x0f172a, alpha: 0.8 })
-          }}
-        />
+        
         <pixiContainer
           position={{
             x: -squareBounds.x * scaleInfo.scale,
@@ -196,6 +197,28 @@ const DiceTrackLayer = memo(
           scale={{ x: scaleInfo.scale, y: scaleInfo.scale }}
           sortableChildren
         >
+          {hasInnerLoop ? (
+            <pixiGraphics
+              eventMode="none"
+              label="dice-track-overlay-mask"
+              draw={(graphics: Graphics) => {
+                graphics.clear()
+                const padding = GRID_CONFIG.hexDimensions * 4
+                const rectX = squareBounds.x - padding
+                const rectY = squareBounds.y - padding
+                const rectSize = squareBounds.size + padding * 2
+
+                graphics.beginPath()
+                graphics.rect(rectX, rectY, rectSize, rectSize)
+                graphics.fill({ color: OVERLAY_FILL_COLOR, alpha: OVERLAY_ALPHA })
+
+                graphics.beginPath()
+                buildRoundedPolygon(graphics, innerLoop, INNER_LOOP_RADIUS, 1)
+                graphics.cut()
+              }}
+            />
+          ) : null}
+
           {track.hexes.map((hex: Hex, index) => {
             const space = trackSpaces[index] ?? { index, type: 'event', label: 'Event' }
             const corners = (hex.corners as Point[]) ?? []
