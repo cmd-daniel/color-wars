@@ -26,6 +26,65 @@ const HEX_DETAIL_THRESHOLD = 4
 const EMPTY_TERRITORY_OWNERSHIP = Object.freeze({}) as Record<TerritoryId, string | null>
 const EMPTY_PLAYER_COLORS = Object.freeze({}) as Record<string, string>
 
+export interface ViewportBounds {
+  left: number
+  right: number
+  top: number
+  bottom: number
+}
+
+type BoundsListener = (bounds: ViewportBounds) => void
+type ScaleListener = (scale: number) => void
+
+export interface ViewportEvents {
+  emitBounds: (bounds: ViewportBounds) => void
+  emitScale: (scale: number) => void
+  subscribeToBounds: (listener: BoundsListener) => () => void
+  subscribeToScale: (listener: ScaleListener) => () => void
+  getLatestBounds: () => ViewportBounds | null
+  getLatestScale: () => number
+}
+
+const createViewportEvents = (initialScale = 1): ViewportEvents => {
+  let latestBounds: ViewportBounds | null = null
+  let latestScale = initialScale
+  const boundsListeners = new Set<BoundsListener>()
+  const scaleListeners = new Set<ScaleListener>()
+
+  return {
+    emitBounds(bounds) {
+      latestBounds = bounds
+      boundsListeners.forEach((listener) => listener(bounds))
+    },
+    emitScale(scale) {
+      latestScale = scale
+      scaleListeners.forEach((listener) => listener(scale))
+    },
+    subscribeToBounds(listener) {
+      boundsListeners.add(listener)
+      if (latestBounds) {
+        listener(latestBounds)
+      }
+      return () => {
+        boundsListeners.delete(listener)
+      }
+    },
+    subscribeToScale(listener) {
+      scaleListeners.add(listener)
+      listener(latestScale)
+      return () => {
+        scaleListeners.delete(listener)
+      }
+    },
+    getLatestBounds() {
+      return latestBounds
+    },
+    getLatestScale() {
+      return latestScale
+    },
+  }
+}
+
 interface WorldBounds {
   minX: number
   minY: number
@@ -41,7 +100,7 @@ interface InteractiveViewportProps {
   width: number
   height: number
   worldBounds: WorldBounds
-  onBoundsChange?: (bounds: { left: number; right: number; top: number; bottom: number }) => void
+  onBoundsChange?: (bounds: ViewportBounds) => void
   onScaleChange?: (scale: number) => void
   fitPadding: number
   initialZoomFactor: number
@@ -64,6 +123,19 @@ const InteractiveViewport = ({
   const ticker = app.ticker
   const isReady = Boolean(renderer?.events && ticker)
 
+  const fitAppliedKeyRef = useRef<string | null>(null)
+
+  useLayoutEffect(() => {
+    return () => {
+      const viewport = viewportRef.current
+      if (!viewport) return
+
+      viewport.plugins.removeAll()
+      viewport.hitArea = null
+      viewport.forceHitArea = undefined
+    }
+  }, [])
+
   useLayoutEffect(() => {
     if (!isReady) {
       return
@@ -74,33 +146,12 @@ const InteractiveViewport = ({
 
     viewport.options.events = renderer.events
     viewport.options.ticker = ticker
-    const dominantDimension = Math.max(worldBounds.width, worldBounds.height, 1)
-    // Pad the hit area well beyond the rendered map so the entire canvas responds to drag/zoom.
-    const hitAreaPadding = dominantDimension * 2
-    const hitArea = new Rectangle(
-      worldBounds.minX - hitAreaPadding,
-      worldBounds.minY - hitAreaPadding,
-      worldBounds.width + hitAreaPadding * 2,
-      worldBounds.height + hitAreaPadding * 2,
-    )
-    viewport.forceHitArea = hitArea
-    viewport.hitArea = hitArea
-    viewport.drag().pinch().wheel().decelerate()
     viewport.clampZoom({ minScale: 0.25, maxScale: 4 })
-    viewport.resize(width, height, worldBounds.width, worldBounds.height)
-    viewport.moveCenter(worldBounds.centerX, worldBounds.centerY)
 
-    const paddedWorldWidth = worldBounds.width + fitPadding * 2
-    const paddedWorldHeight = worldBounds.height + fitPadding * 2
-
-    if (paddedWorldWidth > 0 && paddedWorldHeight > 0 && width > 0 && height > 0) {
-      const baseScale = Math.min(width / paddedWorldWidth, height / paddedWorldHeight)
-      const fitScale = baseScale * initialZoomFactor
-      if (Number.isFinite(fitScale) && fitScale > 0) {
-        viewport.setZoom(fitScale, true)
-        viewport.moveCenter(worldBounds.centerX, worldBounds.centerY)
-      }
-    }
+    if (!viewport.plugins.get('drag')) viewport.drag()
+    if (!viewport.plugins.get('pinch')) viewport.pinch()
+    if (!viewport.plugins.get('wheel')) viewport.wheel()
+    if (!viewport.plugins.get('decelerate')) viewport.decelerate()
 
     const notify = () => {
       if (!onBoundsChange) return
@@ -124,24 +175,59 @@ const InteractiveViewport = ({
     notifyScale()
 
     return () => {
-      viewport.plugins.removeAll()
-      viewport.hitArea = null
-      viewport.forceHitArea = undefined
       viewport.off('moved', notify)
       viewport.off('zoomed', notifyScale)
     }
-  }, [
-    fitPadding,
-    height,
-    initialZoomFactor,
-    isReady,
-    onBoundsChange,
-    onScaleChange,
-    ticker,
-    renderer,
-    width,
-    worldBounds,
-  ])
+  }, [isReady, onBoundsChange, onScaleChange, renderer, ticker])
+
+  useLayoutEffect(() => {
+    if (!isReady) {
+      return
+    }
+
+    const viewport = viewportRef.current
+    if (!viewport) return
+
+    const dominantDimension = Math.max(worldBounds.width, worldBounds.height, 1)
+    // Pad the hit area well beyond the rendered map so the entire canvas responds to drag/zoom.
+    const hitAreaPadding = dominantDimension * 2
+    const hitArea = new Rectangle(
+      worldBounds.minX - hitAreaPadding,
+      worldBounds.minY - hitAreaPadding,
+      worldBounds.width + hitAreaPadding * 2,
+      worldBounds.height + hitAreaPadding * 2,
+    )
+    viewport.forceHitArea = hitArea
+    viewport.hitArea = hitArea
+    viewport.resize(width, height, worldBounds.width, worldBounds.height)
+
+    const paddedWorldWidth = worldBounds.width + fitPadding * 2
+    const paddedWorldHeight = worldBounds.height + fitPadding * 2
+    const fitKey = [
+      worldBounds.minX,
+      worldBounds.minY,
+      worldBounds.maxX,
+      worldBounds.maxY,
+      fitPadding,
+      initialZoomFactor,
+    ].join(':')
+
+    if (
+      (!fitAppliedKeyRef.current || fitAppliedKeyRef.current !== fitKey) &&
+      paddedWorldWidth > 0 &&
+      paddedWorldHeight > 0 &&
+      width > 0 &&
+      height > 0
+    ) {
+      const baseScale = Math.min(width / paddedWorldWidth, height / paddedWorldHeight)
+      const fitScale = baseScale * initialZoomFactor
+      if (Number.isFinite(fitScale) && fitScale > 0) {
+        viewport.setZoom(fitScale, true)
+        viewport.moveCenter(worldBounds.centerX, worldBounds.centerY)
+        fitAppliedKeyRef.current = fitKey
+      }
+    }
+  }, [fitPadding, height, initialZoomFactor, isReady, width, worldBounds])
 
   if (!isReady) {
     return null
@@ -193,13 +279,11 @@ const MapViewport = ({
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [viewportSize, setViewportSize] = useState({ width: 800, height: 600 })
   const [resolution, setResolution] = useState(1)
-  const [viewportScale, setViewportScale] = useState(1)
-  const [visibleBounds, setVisibleBounds] = useState<{
-    left: number
-    right: number
-    top: number
-    bottom: number
-  } | null>(null)
+  const viewportEventsRef = useRef<ViewportEvents | null>(null)
+  if (!viewportEventsRef.current) {
+    viewportEventsRef.current = createViewportEvents(initialZoomFactor)
+  }
+  const viewportEvents = viewportEventsRef.current
   const { map, positionedHexes, loading, displayConfig } = useMapStore(
     useShallow((state) => ({
       map: state.map,
@@ -234,18 +318,33 @@ const MapViewport = ({
   }, [])
 
   const handleBoundsChange = useCallback(
-    (bounds: { left: number; right: number; top: number; bottom: number }) => {
+    (bounds: ViewportBounds) => {
       if (!map) return
+      if (!viewportEvents) return
       const padding = map.grid.hexSize * 4
-      setVisibleBounds({
+      const quantizeUnit = Math.max(1, map.grid.hexSize * 2)
+
+      const expanded: ViewportBounds = {
         left: bounds.left - padding,
         right: bounds.right + padding,
         top: bounds.top - padding,
         bottom: bounds.bottom + padding,
-      })
+      }
+
+      const quantized: ViewportBounds = {
+        left: Math.floor(expanded.left / quantizeUnit) * quantizeUnit,
+        right: Math.ceil(expanded.right / quantizeUnit) * quantizeUnit,
+        top: Math.floor(expanded.top / quantizeUnit) * quantizeUnit,
+        bottom: Math.ceil(expanded.bottom / quantizeUnit) * quantizeUnit,
+      }
+
+      viewportEvents.emitBounds(quantized)
     },
-    [map],
+    [map, viewportEvents],
   )
+  const handleScaleChange = useCallback((scale: number) => {
+    viewportEvents?.emitScale(scale)
+  }, [viewportEvents])
 
   useEffect(() => {
     const mapContainer = containerRef.current
@@ -348,23 +447,6 @@ const MapViewport = ({
     }
   }, [positionedHexes])
 
-  const showHexFill = viewportScale >= HEX_DETAIL_THRESHOLD
-
-  const visibleHexes = useMemo(() => {
-    if (!map || !showHexFill) return []
-    if (!visibleBounds) {
-      return positionedHexes
-    }
-
-    const padding = map.grid.hexSize * 8
-    return positionedHexes.filter((hex) =>
-      hex.center.x >= visibleBounds.left - padding &&
-      hex.center.x <= visibleBounds.right + padding &&
-      hex.center.y >= visibleBounds.top - padding &&
-      hex.center.y <= visibleBounds.bottom + padding,
-    )
-  }, [map, positionedHexes, visibleBounds, showHexFill])
-
   const territoryRenderList = useMemo(() => {
     if (!map) return []
     return computeTerritoryRenderInfo(map.territories, positionedHexes, map.grid.hexSize)
@@ -406,6 +488,7 @@ const MapViewport = ({
     <div ref={containerRef} className={containerClass}>
       {map && !loading && worldBounds ? (
         <Application
+          preference='webgl'
           width={viewportSize.width}
           height={viewportSize.height}
           background={backgroundColor}
@@ -421,12 +504,15 @@ const MapViewport = ({
               height={viewportSize.height}
               worldBounds={worldBounds}
               onBoundsChange={handleBoundsChange}
-              onScaleChange={setViewportScale}
+              onScaleChange={handleScaleChange}
               fitPadding={fitPadding}
               initialZoomFactor={initialZoomFactor}
             >
               <MapHexLayer
-                hexes={showHexFill ? visibleHexes : []}
+                positionedHexes={positionedHexes}
+                viewportEvents={viewportEvents}
+                hexDetailThreshold={HEX_DETAIL_THRESHOLD}
+                hexSize={hexSize}
                 territoryColorLookup={territoryColorLookup}
                 hoveredTerritory={hoveredTerritory}
                 selectedTerritory={selectedTerritory}
@@ -437,8 +523,6 @@ const MapViewport = ({
                 territoryRenderMap={territoryRenderMap}
                 hexGap={hexGap}
                 outlineWidth={outlineWidth}
-                visibleBounds={visibleBounds}
-                showHexFill={showHexFill}
                 showTerritoryLabels={displayConfig.showTerritoryLabels}
               />
             </InteractiveViewport>

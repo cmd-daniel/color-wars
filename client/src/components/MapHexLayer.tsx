@@ -1,9 +1,10 @@
-import { memo, useMemo } from 'react'
+import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { Polygon } from 'pixi.js'
 import type { Graphics, FederatedPointerEvent } from 'pixi.js'
 import type { PositionedHex, TerritoryId } from '@/types/map'
 import { hexPolygonCommands } from '@/utils/pixiGeometry'
 import type { Bounds, TerritoryRenderInfo } from '@/utils/territoryGeometry'
+import type { ViewportBounds, ViewportEvents } from './MapViewport'
 
 const TERRITORY_FILL_ALPHA = 0.82
 const PASSIVE_OUTLINE_ALPHA = 0.65
@@ -13,15 +14,13 @@ const HOVER_OUTLINE_COLOR = 0xfacc15
 const HIGHLIGHT_OUTLINE_COLOR = 0x22c55e
 const DEFAULT_TERRITORY_COLOR = 0x1f2937
 
-interface VisibleBounds {
-  left: number
-  right: number
-  top: number
-  bottom: number
-}
+type VisibleBounds = ViewportBounds
 
 interface MapHexLayerProps {
-  hexes: PositionedHex[]
+  positionedHexes: PositionedHex[]
+  viewportEvents: ViewportEvents
+  hexDetailThreshold: number
+  hexSize: number
   territoryColorLookup: Map<TerritoryId, string>
   hoveredTerritory: TerritoryId | null
   selectedTerritory: TerritoryId | null
@@ -32,8 +31,6 @@ interface MapHexLayerProps {
   territoryRenderMap: Map<TerritoryId, TerritoryRenderInfo>
   hexGap: number
   outlineWidth: number
-  visibleBounds: VisibleBounds | null
-  showHexFill: boolean
   showTerritoryLabels: boolean
 }
 
@@ -99,7 +96,10 @@ const buildHitAreaLookup = (territories: TerritoryRenderInfo[]) => {
 }
 
 const MapHexLayer = ({
-  hexes,
+  positionedHexes,
+  viewportEvents,
+  hexDetailThreshold,
+  hexSize,
   territoryColorLookup,
   hoveredTerritory,
   selectedTerritory,
@@ -110,10 +110,39 @@ const MapHexLayer = ({
   territoryRenderMap,
   hexGap,
   outlineWidth,
-  visibleBounds,
-  showHexFill,
   showTerritoryLabels,
 }: MapHexLayerProps) => {
+  const [visibleBounds, setVisibleBounds] = useState<VisibleBounds | null>(() => viewportEvents.getLatestBounds())
+  const [showHexFill, setShowHexFill] = useState(() => viewportEvents.getLatestScale() >= hexDetailThreshold)
+  const boundsRef = useRef<VisibleBounds | null>(visibleBounds)
+  const showHexFillRef = useRef(showHexFill)
+
+  useEffect(() => {
+    return viewportEvents.subscribeToBounds((nextBounds) => {
+      const previous = boundsRef.current
+      if (
+        !previous ||
+        previous.left !== nextBounds.left ||
+        previous.right !== nextBounds.right ||
+        previous.top !== nextBounds.top ||
+        previous.bottom !== nextBounds.bottom
+      ) {
+        boundsRef.current = nextBounds
+        setVisibleBounds(nextBounds)
+      }
+    })
+  }, [viewportEvents])
+
+  useEffect(() => {
+    return viewportEvents.subscribeToScale((scale) => {
+      const next = scale >= hexDetailThreshold
+      if (showHexFillRef.current !== next) {
+        showHexFillRef.current = next
+        setShowHexFill(next)
+      }
+    })
+  }, [hexDetailThreshold, viewportEvents])
+
   const labelEntries = useMemo(() => {
     if (!showTerritoryLabels) return []
     if (!visibleBounds) return territoryRenderList
@@ -155,10 +184,24 @@ const MapHexLayer = ({
     onSelect(territoryId)
   }
 
+  const visibleHexes = useMemo(() => {
+    if (!showHexFill) return []
+    if (!visibleBounds) return positionedHexes
+
+    const padding = hexSize > 0 ? hexSize * 8 : 0
+    return positionedHexes.filter(
+      (hex) =>
+        hex.center.x >= visibleBounds.left - padding &&
+        hex.center.x <= visibleBounds.right + padding &&
+        hex.center.y >= visibleBounds.top - padding &&
+        hex.center.y <= visibleBounds.bottom + padding,
+    )
+  }, [hexSize, positionedHexes, showHexFill, visibleBounds])
+
   return (
     <pixiContainer>
       {showHexFill &&
-        hexes.map((hex) => {
+        visibleHexes.map((hex) => {
           const baseColor = colorToNumber(hex.territoryId ? territoryColorLookup.get(hex.territoryId) : undefined)
           const corners = shrinkHexCorners(hex, hexGap)
           const commands = hexPolygonCommands(corners)
