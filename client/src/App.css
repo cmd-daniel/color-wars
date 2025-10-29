@@ -1,5 +1,7 @@
 * {
   box-sizing: border-box;
+  --background-color: #222;
+  --background-color2: #3C3C3C;
 }
 
 html,
@@ -12,8 +14,7 @@ body,
 }
 
 body {
-  background: radial-gradient(circle at top left, #0f172a, #020617 70%);
-  color: #e2e8f0;
+  background: var(--background-color);
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
@@ -45,10 +46,6 @@ body {
 .game-board {
   position: relative;
   width: 100%;
-  --background: rgba(15, 23, 42, 0.78);
-  --radius: 28px;
-  border-radius: var(--radius);
-  box-shadow: 0 24px 48px rgba(2, 6, 23, 0.45);
   overflow: hidden;
 }
 
@@ -58,7 +55,7 @@ body {
 }
 
 .hud-panel {
-  background: rgba(15, 23, 42, 0.82);
+  background: var(--background-color2);
   border: 1px solid rgba(51, 65, 85, 0.6);
   border-radius: 20px;
   padding: clamp(0.9rem, 2vw, 1.25rem);
@@ -90,7 +87,7 @@ body {
 }
 
 .hud-panel__config select {
-  background: rgba(15, 23, 42, 0.9);
+  background: var(--background-color2);
   color: #e2e8f0;
   border: 1px solid rgba(148, 163, 184, 0.4);
   border-radius: 10px;

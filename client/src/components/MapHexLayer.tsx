@@ -6,13 +6,13 @@ import { hexPolygonCommands } from '@/utils/pixiGeometry'
 import type { Bounds, TerritoryRenderInfo } from '@/utils/territoryGeometry'
 import type { ViewportBounds, ViewportEvents } from './MapViewport'
 
-const TERRITORY_FILL_ALPHA = 0.82
-const PASSIVE_OUTLINE_ALPHA = 0.65
+const TERRITORY_FILL_ALPHA = 1
+const PASSIVE_OUTLINE_ALPHA = 1
 const PASSIVE_OUTLINE_LIGHTEN = 0.2
 const SELECTED_OUTLINE_COLOR = 0xffffff
-const HOVER_OUTLINE_COLOR = 0xfacc15
-const HIGHLIGHT_OUTLINE_COLOR = 0x22c55e
-const DEFAULT_TERRITORY_COLOR = 0x1f2937
+const HOVER_OUTLINE_COLOR = 0xfff
+const HIGHLIGHT_OUTLINE_COLOR = 0x111
+const DEFAULT_TERRITORY_COLOR = 0x3c3c3c
 
 type VisibleBounds = ViewportBounds
 
@@ -236,7 +236,7 @@ const MapHexLayer = ({
                 graphics.fill({ color: territoryColor, alpha: baseFillAlpha })
                 graphics.stroke({
                   width: baseOutlineWidth,
-                  color: outlineColor,
+                  color: 0x222222,
                   alignment: 0.5,
                   join: 'round',
                   cap: 'round',

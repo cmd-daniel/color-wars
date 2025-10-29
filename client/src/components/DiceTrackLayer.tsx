@@ -49,15 +49,15 @@ const START_TILE_STYLE = {
 }
 
 const INNER_LOOP_RADIUS = 3
-const OVERLAY_FILL_COLOR = 0x020617
+const OVERLAY_FILL_COLOR = 0x222222
 const OVERLAY_ALPHA = 1
 
 const EVENT_TILE_STYLE: Record<TrackEventKind, { fill: string; stroke: string; icon: string; textColor: string }> = {
-  bonus: { fill: '#14532d', stroke: '#22c55e', icon: '💰', textColor: '#dcfce7' },
-  penalty: { fill: '#7f1d1d', stroke: '#f97316', icon: '⚠️', textColor: '#fee2e2' },
-  'chest-bonus': { fill: '#1e3a8a', stroke: '#60a5fa', icon: '🎁', textColor: '#e0f2fe' },
-  'chest-penalty': { fill: '#4c1d95', stroke: '#c084fc', icon: '☠️', textColor: '#ede9fe' },
-  'roll-again': { fill: '#0f172a', stroke: '#facc15', icon: '↻', textColor: '#facc15' },
+  bonus: { fill: '#3c3c3c', stroke: '#222222', icon: '💰', textColor: '#dcfce7' },
+  penalty: { fill: '#3c3c3c', stroke: '#222222', icon: '⚠️', textColor: '#fee2e2' },
+  'chest-bonus': { fill: '#3c3c3c', stroke: '#222222', icon: '🎁', textColor: '#e0f2fe' },
+  'chest-penalty': { fill: '#3c3c3c', stroke: '#222222', icon: '☠️', textColor: '#ede9fe' },
+  'roll-again': { fill: '#3c3c3c', stroke: '#222222', icon: '↻', textColor: '#facc15' },
 }
 
 const getTileStyle = (type: 'start' | 'event', eventKind?: TrackEventKind) => {
@@ -234,7 +234,7 @@ const DiceTrackLayer = memo(
                 <pixiGraphics
                   draw={(graphics: Graphics) => {
                     graphics.clear()
-                    buildRoundedPolygon(graphics, corners, 1.8, GRID_CONFIG.hexScale)
+                    buildRoundedPolygon(graphics, corners, 3, GRID_CONFIG.hexScale)
                     graphics.fill({ color: fillColor, alpha: 0.85 })
                     graphics.stroke({
                       width: space.type === 'start' ? 1.6 : 1.1,

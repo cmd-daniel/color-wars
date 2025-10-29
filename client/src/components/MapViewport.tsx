@@ -21,7 +21,7 @@ import styles from './PixiViewport.module.css'
 
 extend({ Container, Graphics, Viewport, Text })
 
-const BACKGROUND_COLOR = 0x0b1120
+const BACKGROUND_COLOR = 0x222222
 const HEX_DETAIL_THRESHOLD = 4
 const EMPTY_TERRITORY_OWNERSHIP = Object.freeze({}) as Record<TerritoryId, string | null>
 const EMPTY_PLAYER_COLORS = Object.freeze({}) as Record<string, string>
@@ -491,7 +491,7 @@ const MapViewport = ({
           preference='webgl'
           width={viewportSize.width}
           height={viewportSize.height}
-          background={backgroundColor}
+          background={0x222222}
           antialias
           eventMode="static"
           autoDensity

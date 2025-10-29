@@ -341,7 +341,7 @@ const DiceTrack = () => {
     })
   }, [players, renderTokens, tileCenters])
 
-  const tokenRadius = GRID_CONFIG.hexDimensions * 0.4
+  const tokenRadius = GRID_CONFIG.hexDimensions * 0.3
 
   const renderOverlay = useCallback(
     ({
