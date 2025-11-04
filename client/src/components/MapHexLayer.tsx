@@ -8,7 +8,6 @@ import type { ViewportBounds, ViewportEvents } from './MapViewport'
 
 const TERRITORY_FILL_ALPHA = 1
 const PASSIVE_OUTLINE_ALPHA = 1
-const PASSIVE_OUTLINE_LIGHTEN = 0.2
 const SELECTED_OUTLINE_COLOR = 0xffffff
 const HOVER_OUTLINE_COLOR = 0xfff
 const HIGHLIGHT_OUTLINE_COLOR = 0x111
@@ -40,16 +39,6 @@ const colorToNumber = (color: string | undefined): number => {
   const normalized = color.startsWith('#') ? color.slice(1) : color
   const value = Number.parseInt(normalized, 16)
   return Number.isNaN(value) ? DEFAULT_TERRITORY_COLOR : value
-}
-
-const lightenColor = (color: number, amount: number) => {
-  const r = (color >> 16) & 0xff
-  const g = (color >> 8) & 0xff
-  const b = color & 0xff
-
-  const mix = (channel: number) => Math.round(channel + (255 - channel) * amount)
-
-  return (mix(r) << 16) | (mix(g) << 8) | mix(b)
 }
 
 const shrinkPoint = (point: { x: number; y: number }, center: { x: number; y: number }, amount: number) => {
@@ -222,7 +211,6 @@ const MapHexLayer = ({
       {territoryRenderList.map((entry) => {
         const commands = outlineCommandLookup.get(entry.id) ?? []
         const territoryColor = colorToNumber(territoryColorLookup.get(entry.id))
-        const outlineColor = lightenColor(territoryColor, PASSIVE_OUTLINE_LIGHTEN)
         const baseFillAlpha = showHexFill ? 0.001 : TERRITORY_FILL_ALPHA
 
         return (

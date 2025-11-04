@@ -1,11 +1,20 @@
 import { memo, useEffect, useMemo } from 'react'
-import { useApplication } from '@pixi/react'
+import { extend, useApplication } from '@pixi/react'
+import '@pixi/layout'
+import '@pixi/layout/react'
+import { LayoutContainer } from '@pixi/layout/components'
+import { Container } from 'pixi.js'
 import type { Hex } from 'honeycomb-grid'
 import type { Graphics } from 'pixi.js'
 import type { Point } from '@/utils/geometryUtils'
 import { GRID_CONFIG } from '@/utils/diceTrackConfig'
 import type { TrackEventKind, TrackSpace } from '@/types/game'
 import type { GamePlayer } from '@/stores/sessionStore'
+
+extend({
+  Container,
+  LayoutContainer
+})
 
 interface TrackGeometry {
   hexes: Hex[]
@@ -138,6 +147,12 @@ const DiceTrackLayer = memo(
   }: DiceTrackLayerProps) => {
     const { app } = useApplication()
 
+    // Set up PIXI debugger
+    useEffect(() => {
+      if (!app) return
+      ;(globalThis as any).__PIXI_APP__ = app
+    }, [app])
+
     const scaleInfo = useMemo(() => {
       const boxWidth = track.viewBox.width || 1
       const boxHeight = track.viewBox.height || 1
@@ -166,12 +181,6 @@ const DiceTrackLayer = memo(
       const scaled = base * Math.max(1, scaleInfo.scale)
       return Math.min(12, scaled)
     }, [resolution, scaleInfo.scale])
-
-    useEffect(() => {
-      if (!app) return
-      const renderer = app.renderer
-      if (!renderer) return
-    }, [app])
 
     const occupancy = useMemo(() => {
       const map = new Map<number, string[]>()
@@ -229,12 +238,22 @@ const DiceTrackLayer = memo(
             const fontSize = GRID_CONFIG.hexDimensions * 0.55
             const labelFontSize = GRID_CONFIG.hexDimensions * 0.32
 
+            // Convert absolute corners to relative coordinates
+            const relativeCorners = corners.map((corner) => ({
+              x: corner.x - center.x,
+              y: corner.y - center.y,
+            }))
+
+            // Calculate layout container bounds based on hex dimensions
+            const hexHeight = GRID_CONFIG.hexDimensions * 1.8
+            const hexWidth = GRID_CONFIG.hexDimensions * 1.8
+
             return (
-              <pixiContainer key={`${hex.q},${hex.r}`} x={0} y={0}>
+              <pixiContainer key={`${hex.q},${hex.r}`} position={{ x: center.x, y: center.y }}>
                 <pixiGraphics
                   draw={(graphics: Graphics) => {
                     graphics.clear()
-                    buildRoundedPolygon(graphics, corners, 3, GRID_CONFIG.hexScale)
+                    buildRoundedPolygon(graphics, relativeCorners, 3, GRID_CONFIG.hexScale)
                     graphics.fill({ color: fillColor, alpha: 0.85 })
                     graphics.stroke({
                       width: space.type === 'start' ? 1.6 : 1.1,
@@ -245,49 +264,67 @@ const DiceTrackLayer = memo(
                     })
                   }}
                 />
-
-                <pixiText
-                  text={style.icon}
-                  x={center.x}
-                  y={center.y + fontSize * 0.15 - 3}
-                  anchor={{ x: 0.5, y: 0.5 }}
-                  resolution={textResolution}
-                  style={{
-                    fontSize,
-                    fill: style.textColor,
-                    fontFamily: "'Noto Emoji', 'Segoe UI Emoji', sans-serif",
+                <layoutContainer
+                  x={-hexWidth / 2}
+                  y={-hexHeight / 2}
+                  layout={{
+                    width: hexWidth,
+                    height: hexHeight,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flexDirection: 'column',
+                    gap: 2,
                   }}
-                />
+                >
+                  <pixiContainer layout={{ width: fontSize, height: fontSize }}>
+                    <pixiText
+                      text={style.icon}
+                      anchor={{ x: 0.5, y: 0.5 }}
+                      x={fontSize / 2}
+                      y={fontSize / 2}
+                      resolution={textResolution}
+                      style={{
+                        fontSize,
+                        fill: style.textColor,
+                        fontFamily: "'Noto Emoji', 'Segoe UI Emoji', sans-serif",
+                      }}
+                    />
+                  </pixiContainer>
 
-                {space.type === 'event' && space.label ? (
-                  <pixiText
-                    text={space.label}
-                    x={center.x}
-                    y={center.y + fontSize * 0.65}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    resolution={textResolution}
-                    style={{
-                      fontSize: labelFontSize,
-                      fill: style.textColor,
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                    }}
-                  />
-                ) : null}
+                  {space.type === 'event' && (space.event?.kind == "bonus" || space.event?.kind == "penalty")  && space.label ? (
+                    <pixiContainer layout={{ width: hexWidth * 0.8, height: labelFontSize }}>
+                      <pixiText
+                        text={space.label}
+                        anchor={{ x: 0.5, y: 0.5 }}
+                        x={hexWidth * 0.4}
+                        y={labelFontSize / 2}
+                        resolution={textResolution}
+                        style={{
+                          fontSize: labelFontSize,
+                          fill: style.textColor,
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                        }}
+                      />
+                    </pixiContainer>
+                  ) : null}
 
-                {space.type === 'start' ? (
-                  <pixiText
-                    text="START"
-                    x={center.x}
-                    y={center.y + fontSize * 0.75}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    resolution={textResolution}
-                    style={{
-                      fontSize: labelFontSize,
-                      fill: style.textColor,
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                    }}
-                  />
-                ) : null}
+                  {space.type === 'start' ? (
+                    <pixiContainer layout={{ width: hexWidth * 0.8, height: labelFontSize }}>
+                      <pixiText
+                        text="START"
+                        anchor={{ x: 0.5, y: 0.5 }}
+                        x={hexWidth * 0.4}
+                        y={labelFontSize / 2}
+                        resolution={textResolution}
+                        style={{
+                          fontSize: labelFontSize,
+                          fill: style.textColor,
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                        }}
+                      />
+                    </pixiContainer>
+                  ) : null}
+                </layoutContainer>
               </pixiContainer>
             )
           })}

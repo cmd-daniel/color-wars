@@ -43,8 +43,7 @@ const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2
 
 const DiceTrack = () => {
   const roomView = useSessionStore((state) => state.roomView)
-
-  const trackGeometry = useMemo(() => {
+    const trackGeometry = useMemo(() => {
     const grid = createHollowGrid()
     const hexes = Array.from(grid)
     const [minX, minY, width, height] = computeViewBox(grid)
@@ -369,17 +368,17 @@ const DiceTrack = () => {
   )
 
   return (
-    <div className={styles.container}>
-      <div className={styles.mapViewport}>
-        <MapViewport
-          className={styles.overlayViewport}
-          background={0x000000}
-          transparent
-          resolutionMultiplier={OVERLAY_RESOLUTION_MULTIPLIER}
-          overlay={renderOverlay}
-        />
-      </div>
-    </div>
+        <div className={styles.container}>
+          <div className={styles.mapViewport}>
+            <MapViewport
+              className={styles.overlayViewport}
+              background={0x000000}
+              transparent
+              resolutionMultiplier={OVERLAY_RESOLUTION_MULTIPLIER}
+              overlay={renderOverlay}
+            />
+          </div>
+        </div>
   )
 }
 

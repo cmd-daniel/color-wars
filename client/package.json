@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@colyseus/schema": "^3.0.62",
+    "@pixi/layout": "^3.2.0",
     "@pixi/react": "^8.0.3",
     "@tailwindcss/vite": "^4.1.13",
     "class-variance-authority": "^0.7.1",
