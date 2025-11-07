@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
 import type { GamePlayer } from '@/stores/sessionStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
 import type { TrackSpace, TerritoryInfo } from '@/types/game'
 import type { TerritoryId } from '@/types/map'
+import Dice from './Dice'
 
 const currency = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -17,6 +18,9 @@ const EMPTY_TERRITORY_INFO = Object.freeze({}) as Record<TerritoryId, TerritoryI
 const EMPTY_TERRITORY_OWNERSHIP = Object.freeze({}) as Record<TerritoryId, string | null>
 
 const TurnControls = () => {
+  const [isDiceRolling, setIsDiceRolling] = useState(false)
+  const [showDice, setShowDice] = useState(false)
+  
   const roomView = useSessionStore((state) => state.roomView)
   const sessionId = useSessionStore((state) => state.sessionId)
   const rollDice = useSessionStore((state) => state.rollDice)
@@ -69,6 +73,21 @@ const TurnControls = () => {
     }
   }
 
+  const handleRollDice = () => {
+    setShowDice(true)
+    setIsDiceRolling(true)
+  }
+
+  const handleDiceRollComplete = (value: number) => {
+    // Call the actual roll dice action
+    rollDice()
+    setIsDiceRolling(false)
+    // Hide dice after a short delay to show the result
+    setTimeout(() => {
+      setShowDice(false)
+    }, 1500)
+  }
+
   const eventAmountLabel =
     lastEvent && (lastEvent.kind === 'bonus' || lastEvent.kind === 'chest-bonus' || lastEvent.kind === 'roll-again')
       ? `+${currency.format(lastEvent.amount)}`
@@ -78,6 +97,22 @@ const TurnControls = () => {
 
   return (
     <section className='turn-controls-container' >
+      {showDice && (
+        <div style={{ 
+          position: 'fixed', 
+          top: '50%', 
+          left: '50%', 
+          transform: 'translate(-50%, -50%)',
+          zIndex: 1000,
+          pointerEvents: 'none'
+        }}>
+          <Dice 
+            autoRoll={isDiceRolling}
+            onRollComplete={handleDiceRollComplete}
+            diceType="default"
+          />
+        </div>
+      )}
       {lastEvent && (
         <div className={`event-banner event-banner--${lastEvent.kind}`}>
           <div>
@@ -98,7 +133,7 @@ const TurnControls = () => {
         </div>
       )}
       <div className="turn-actions">
-        <button type="button" onClick={rollDice} disabled={!canRoll}>Roll dice</button>
+        <button type="button" onClick={handleRollDice} disabled={!canRoll}>Roll dice</button>
         {!selectedOwnershipLabel && selectedOffer && (
           <button
             type="button"
