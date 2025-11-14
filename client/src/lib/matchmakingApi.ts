@@ -86,11 +86,17 @@ const ensureSuccess = async <T>(response: Response, fallbackMessage: string) => 
 }
 
 export const quickMatch = async (payload: QuickMatchPayload) => {
-  const response = await fetch(`${getHttpEndpoint()}/matchmaking/quick`, {
+  const endpoint = `${getHttpEndpoint()}/matchmaking/quick`
+  console.log('[matchmakingApi] Calling quickMatch endpoint:', endpoint)
+  console.log('[matchmakingApi] Payload:', payload)
+  
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: JSON_HEADERS,
     body: JSON.stringify(payload),
   })
+  
+  console.log('[matchmakingApi] Got response:', response.status, response.statusText)
 
   return ensureSuccess<ReservationResponse>(response, 'Unable to find an open lobby right now.')
 }

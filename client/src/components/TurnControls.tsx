@@ -23,6 +23,7 @@ const TurnControls = () => {
   
   const roomView = useSessionStore((state) => state.roomView)
   const sessionId = useSessionStore((state) => state.sessionId)
+  const isSpectator = useSessionStore((state) => state.isSpectator)
   const rollDice = useSessionStore((state) => state.rollDice)
   const endTurn = useSessionStore((state) => state.endTurn)
   const purchaseTerritory = useSessionStore((state) => state.purchaseTerritory)
@@ -56,10 +57,10 @@ const TurnControls = () => {
     return selectedTerritory ?? null
   }, [selectedOwnership, selectedTerritory, selectedTerritoryId])
 
-  const canActThisTurn = currentPlayer?.sessionId === sessionId
+  const canActThisTurn = !isSpectator && currentPlayer?.sessionId === sessionId
   const canRoll = canActThisTurn && turnPhase === 'awaiting-roll'
   const canEndTurn = canActThisTurn && turnPhase === 'awaiting-end-turn'
-  const canPurchaseSelected = Boolean(selectedOffer) && Boolean(currentPlayer) && currentPlayer!.money >= (selectedOffer?.cost ?? Infinity)
+  const canPurchaseSelected = !isSpectator && Boolean(selectedOffer) && Boolean(currentPlayer) && currentPlayer!.money >= (selectedOffer?.cost ?? Infinity)
   const selectedOwnershipLabel = selectedOwnership
     ? selectedOwnership === sessionId
       ? 'Owned by you'

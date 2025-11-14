@@ -24,6 +24,13 @@ export type AnalyticsEvent =
   | "room_disposed"
   | "player_joined"
   | "player_left"
+  | "spectator_joined"
+  | "spectator_left"
+  | "leader_assigned"
+  | "leader_reassigned"
+  | "player_icon_set"
+  | "room_settings_updated"
+  | "player_kicked"
   | "game_started"
   | "game_finished";
 

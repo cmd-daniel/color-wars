@@ -1,0 +1,151 @@
+.room-page {
+  min-height: 100vh;
+  background: #0f0f23;
+  display: flex;
+  flex-direction: column;
+}
+
+.room-page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 2rem;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.game-board-container {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  justify-content: center;
+}
+
+.game-status-container {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  justify-content: center;
+}
+
+.game-hud-container {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.room-page--loading,
+.room-page--error,
+.room-page--finished {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.room-loading,
+.room-error,
+.room-finished {
+  text-align: center;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 3rem;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 500px;
+}
+
+.room-spinner {
+  width: 60px;
+  height: 60px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.room-loading p {
+  margin: 0;
+  color: #666;
+  font-size: 1.2rem;
+}
+
+.room-error h2,
+.room-finished h2 {
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.room-error p,
+.room-finished p {
+  margin: 0 0 1.5rem 0;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.room-error__redirect {
+  font-style: italic;
+  font-size: 0.9rem !important;
+  opacity: 0.7;
+}
+
+.room-error button,
+.room-finished__actions button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 0.875rem 2rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.room-error button:hover,
+.room-finished__actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+}
+
+.room-spectator-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 193, 7, 0.95);
+  color: #000;
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: 600;
+  z-index: 1000;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.room-spectator-banner span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.room-page--lobby {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.room-finished__actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+

@@ -12,8 +12,8 @@ export class PlayerState extends Schema {
   @type("string")
   name: string;
 
-  @type("boolean")
-  ready: boolean;
+  @type("string")
+  icon: string;
 
   @type("boolean")
   connected: boolean;
@@ -37,7 +37,7 @@ export class PlayerState extends Schema {
     super();
     this.sessionId = sessionId;
     this.name = name;
-    this.ready = false;
+    this.icon = ""; // Player will choose after joining
     this.connected = true;
     this.joinedAt = Date.now();
     this.color = "#38bdf8";
@@ -184,11 +184,17 @@ export class GameState extends Schema {
   @type("boolean")
   isPrivate: boolean;
 
+  @type("boolean")
+  isPublic: boolean;
+
   @type("string")
   joinCode: string;
 
   @type("string")
   phase: RoomPhase;
+
+  @type("string")
+  leaderId: string;
 
   @type("number")
   maxPlayers: number;
@@ -196,17 +202,14 @@ export class GameState extends Schema {
   @type("number")
   minPlayers: number;
 
+  @type("number")
+  startingCash: number;
+
   @type({ map: PlayerState })
   players = new MapSchema<PlayerState>();
 
   @type("number")
   connectedPlayers: number;
-
-  @type("number")
-  lobbyEndsAt: number;
-
-  @type("number")
-  waitTimeoutAt: number;
 
   @type([ChatMessage])
   chatLog = new ArraySchema<ChatMessage>();
@@ -248,13 +251,14 @@ export class GameState extends Schema {
     super();
     this.roomId = roomId;
     this.isPrivate = isPrivate;
+    this.isPublic = !isPrivate; // Public by default for non-private rooms
     this.joinCode = joinCode;
+    this.leaderId = ""; // Will be set to first player who joins
     this.maxPlayers = maxPlayers;
     this.minPlayers = minPlayers;
-    this.phase = "waiting";
+    this.startingCash = 1500; // Default starting cash
+    this.phase = "lobby"; // Changed from "waiting" - rooms start in lobby immediately
     this.connectedPlayers = 0;
-    this.lobbyEndsAt = 0;
-    this.waitTimeoutAt = 0;
     this.mapId = "";
     this.turnPhase = "awaiting-roll";
     this.currentTurn = "";

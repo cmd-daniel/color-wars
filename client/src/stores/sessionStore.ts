@@ -2,7 +2,8 @@ import { create } from 'zustand'
 import type { StoreApi } from 'zustand'
 import type { Room } from 'colyseus.js'
 import { getColyseusClient } from '@/lib/colyseusClient'
-import { quickMatch, createPrivateRoom, joinPrivateRoom } from '@/lib/matchmakingApi'
+import { quickMatch as quickMatchApi, createPrivateRoom as createPrivateRoomApi, joinPrivateRoom as joinPrivateRoomApi } from '@/lib/matchmakingApi'
+import { getHttpEndpoint } from '@/lib/serverConfig'
 import type {
   GameLogEntry,
   GameLogEntryType,
@@ -42,7 +43,7 @@ export type SessionStatus = 'idle' | 'matchmaking' | 'connecting' | 'connected' 
 export interface GamePlayer {
   sessionId: string
   name: string
-  ready: boolean
+  icon: string
   connected: boolean
   joinedAt: number
   color: string
@@ -64,15 +65,16 @@ export interface ChatEntry {
 export interface GameRoomView {
   roomId: string
   isPrivate: boolean
+  isPublic: boolean
   joinCode?: string
   phase: RoomPhase
-  lobbyEndsAt: number
-  waitTimeoutAt: number
+  leaderId: string
+  maxPlayers: number
+  minPlayers: number
+  startingCash: number
   players: LobbyPlayer[]
   chat: ChatEntry[]
   connectedPlayers: number
-  maxPlayers: number
-  minPlayers: number
   turnPhase: TurnPhase
   currentTurn?: string
   lastRoll?: number
@@ -97,18 +99,22 @@ interface SessionState {
   roomView?: GameRoomView
   sessionId?: string
   gameNotice?: GameNotice
+  isSpectator: boolean
   setPlayerName: (name: string) => void
   setRequestedJoinCode: (code: string) => void
   clearError: () => void
   setGameNotice: (notice?: GameNotice) => void
   clearGameNotice: () => void
-  quickMatch: () => Promise<void>
-  createPrivateRoom: () => Promise<void>
-  joinPrivateRoom: () => Promise<void>
+  quickMatch: () => Promise<string | null>
+  createPrivateRoom: () => Promise<string | null>
+  joinPrivateRoom: () => Promise<string | null>
+  joinRoomById: (roomId: string, joinCode?: string) => Promise<void>
   leaveRoom: () => Promise<void>
   sendChat: (message: string) => void
-  setReady: (ready: boolean) => void
-  toggleReady: () => void
+  setIcon: (icon: string) => void
+  updateRoomSettings: (settings: { maxPlayers?: number; startingCash?: number; isPublic?: boolean }) => void
+  kickPlayer: (sessionId: string) => void
+  startGame: () => void
   rollDice: () => void
   endTurn: () => void
   purchaseTerritory: (territoryId: TerritoryId) => void
@@ -151,7 +157,7 @@ const transformRoomState = (state: any): GameRoomView | undefined => {
       players.push({
         sessionId,
         name: player.name ?? 'Player',
-        ready: Boolean(player.ready),
+        icon: player.icon ?? '',
         connected: Boolean(player.connected),
         joinedAt: Number(player.joinedAt ?? 0),
         color: typeof player.color === 'string' && player.color ? player.color : '#38bdf8',
@@ -271,15 +277,16 @@ const transformRoomState = (state: any): GameRoomView | undefined => {
   return {
     roomId: state.roomId ?? '',
     isPrivate: Boolean(state.isPrivate),
+    isPublic: Boolean(state.isPublic),
     joinCode: state.joinCode ?? undefined,
-    phase: (state.phase ?? 'waiting') as RoomPhase,
-    lobbyEndsAt: Number(state.lobbyEndsAt ?? 0),
-    waitTimeoutAt: Number(state.waitTimeoutAt ?? 0),
+    phase: (state.phase ?? 'lobby') as RoomPhase,
+    leaderId: state.leaderId ?? '',
+    maxPlayers: Number(state.maxPlayers ?? players.length),
+    minPlayers: Number(state.minPlayers ?? 0),
+    startingCash: Number(state.startingCash ?? 1500),
     players,
     chat,
     connectedPlayers: Number(state.connectedPlayers ?? players.length),
-    maxPlayers: Number(state.maxPlayers ?? players.length),
-    minPlayers: Number(state.minPlayers ?? 0),
     turnPhase: (state.turnPhase ?? 'awaiting-roll') as TurnPhase,
     currentTurn: state.currentTurn ?? undefined,
     lastRoll: Number.isFinite(state.lastRoll) ? Number(state.lastRoll) : undefined,
@@ -305,26 +312,57 @@ const resetState = {
   roomView: undefined,
   sessionId: undefined,
   gameNotice: undefined,
+  isSpectator: false,
+}
+
+// Guest-only mode: Only persist player name for UX convenience
+const PLAYER_NAME_KEY = 'color-wars-player-name'
+
+const savePlayerName = (name: string) => {
+  try {
+    localStorage.setItem(PLAYER_NAME_KEY, name)
+  } catch (error) {
+    console.warn('Failed to save player name to localStorage:', error)
+  }
+}
+
+const loadPlayerName = (): string => {
+  try {
+    return localStorage.getItem(PLAYER_NAME_KEY) || DEFAULT_PLAYER_NAME
+  } catch (error) {
+    console.warn('Failed to load player name from localStorage:', error)
+    return DEFAULT_PLAYER_NAME
+  }
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
   ...resetState,
-  setPlayerName: (name: string) => set({ playerName: name }),
+  playerName: loadPlayerName(), // Load saved name on initialization
+  setPlayerName: (name: string) => {
+    savePlayerName(name)
+    set({ playerName: name })
+  },
   setRequestedJoinCode: (code: string) => set({ requestedJoinCode: code.toUpperCase() }),
   clearError: () => set({ error: undefined }),
   setGameNotice: (notice) => set({ gameNotice: notice }),
   clearGameNotice: () => set({ gameNotice: undefined }),
   quickMatch: async () => {
+    console.log('[sessionStore] quickMatch started')
     const { playerName } = get()
     set({ status: 'matchmaking', error: undefined, hostedJoinCode: undefined, roomView: undefined })
 
     try {
       const payloadName = playerName.trim().length > 0 ? playerName.trim() : DEFAULT_PLAYER_NAME
-      const reservation = await quickMatch({ playerName: payloadName })
-      await attachToRoom(reservation, set)
+      console.log('[sessionStore] Calling API with playerName:', payloadName)
+      const reservation = await quickMatchApi({ playerName: payloadName })
+      console.log('[sessionStore] Got reservation:', reservation)
+      const roomId = await attachToRoom(reservation, set, get, undefined)
+      console.log('[sessionStore] attachToRoom returned roomId:', roomId)
+      return roomId
     } catch (error) {
-      console.error(error)
+      console.error('Failed to quick match:', error)
       set({ status: 'error', error: (error as Error).message })
+      return null
     }
   },
   createPrivateRoom: async () => {
@@ -332,29 +370,101 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     set({ status: 'matchmaking', error: undefined, hostedJoinCode: undefined, roomView: undefined })
     try {
       const payloadName = playerName.trim().length > 0 ? playerName.trim() : DEFAULT_PLAYER_NAME
-      const { joinCode, reservation } = await createPrivateRoom({ playerName: payloadName })
+      const { joinCode, reservation } = await createPrivateRoomApi({ playerName: payloadName })
       set({ hostedJoinCode: joinCode })
-      await attachToRoom(reservation, set)
+      const roomId = await attachToRoom(reservation, set, get, joinCode)
+      return roomId
     } catch (error) {
       console.error(error)
       set({ status: 'error', error: (error as Error).message })
+      return null
     }
   },
   joinPrivateRoom: async () => {
     const { playerName, requestedJoinCode } = get()
     if (!requestedJoinCode.trim()) {
       set({ error: 'Enter a join code to continue.' })
-      return
+      return null
     }
 
     set({ status: 'matchmaking', error: undefined, roomView: undefined })
     try {
       const payloadName = playerName.trim().length > 0 ? playerName.trim() : DEFAULT_PLAYER_NAME
-      const reservation = await joinPrivateRoom({ joinCode: requestedJoinCode.trim(), playerName: payloadName })
-      await attachToRoom(reservation, set)
+      const trimmedCode = requestedJoinCode.trim()
+      const reservation = await joinPrivateRoomApi({ joinCode: trimmedCode, playerName: payloadName })
+      const roomId = await attachToRoom(reservation, set, get, trimmedCode)
+      return roomId
     } catch (error) {
       console.error(error)
       set({ status: 'error', error: (error as Error).message })
+      return null
+    }
+  },
+  joinRoomById: async (roomId: string, joinCode?: string) => {
+    const { playerName, status, room: existingRoom } = get()
+    
+    // Guard: Prevent duplicate join attempts
+    if (status === 'connecting' || status === 'matchmaking') {
+      console.log('[joinRoomById] Already connecting, skipping duplicate join')
+      return
+    }
+    
+    // Guard: If already connected to this exact room, don't rejoin
+    if (existingRoom && existingRoom.roomId === roomId && status === 'connected') {
+      console.log('[joinRoomById] Already connected to this room')
+      return
+    }
+    
+    // If connected to a different room, leave first
+    if (existingRoom && status === 'connected') {
+      console.log('[joinRoomById] Leaving current room before joining new one')
+      try {
+        await existingRoom.leave(true)
+      } catch (error) {
+        console.warn('Error leaving current room:', error)
+      }
+    }
+
+    set({ status: 'connecting', error: undefined, roomView: undefined, room: undefined })
+
+    try {
+      // Guest-only mode: Always join fresh, no reconnection attempts
+      const response = await fetch(`${getHttpEndpoint()}/matchmaking/room/${roomId}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerName: playerName.trim() || DEFAULT_PLAYER_NAME,
+          joinCode: joinCode,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `Failed to join room (${response.status})`)
+      }
+
+      const data = await response.json()
+      
+      if (data.isSpectator) {
+        // Join as spectator if room is full or game is active/finished
+        const client = getColyseusClient()
+        const room = await client.joinById(roomId, { spectator: true })
+        
+        const updateFromState = (state: any) => {
+          const roomView = transformRoomState(state)
+          set({ status: 'connected', room, roomView, sessionId: room.sessionId, isSpectator: true })
+        }
+
+        setupRoomHandlers(room, set, get, updateFromState)
+        updateFromState(room.state)
+      } else {
+        // Join as player
+        await attachToRoom(data.reservation, set, get, joinCode)
+      }
+    } catch (error) {
+      console.error('Failed to join room by ID:', error)
+      set({ status: 'error', error: (error as Error).message })
+      throw error
     }
   },
   leaveRoom: async () => {
@@ -363,9 +473,10 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       try {
         await room.leave(true)
       } catch (error) {
-        console.warn('Error leaving room', error)
+        console.warn('Error leaving room:', error)
       }
     }
+    // Guest-only mode: No session to clear, just reset state
     set((state) => ({ ...resetState, playerName: state.playerName }))
   },
   sendChat: (message: string) => {
@@ -381,17 +492,37 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       console.warn('Unable to send chat message', error)
     }
   },
-  setReady: (ready: boolean) => {
+  setIcon: (icon: string) => {
     const { room } = get()
-    room?.send('ready', { ready })
-  },
-  toggleReady: () => {
-    const { room, roomView, sessionId } = get()
-    if (!room || !roomView || !sessionId) {
-      return
+    try {
+      room?.send('setIcon', { icon })
+    } catch (error) {
+      console.warn('Unable to set icon', error)
     }
-    const self = roomView.players.find((player) => player.sessionId === sessionId)
-    room.send('ready', { ready: !self?.ready })
+  },
+  updateRoomSettings: (settings: { maxPlayers?: number; startingCash?: number; isPublic?: boolean }) => {
+    const { room } = get()
+    try {
+      room?.send('updateRoomSettings', settings)
+    } catch (error) {
+      console.warn('Unable to update room settings', error)
+    }
+  },
+  kickPlayer: (sessionId: string) => {
+    const { room } = get()
+    try {
+      room?.send('kickPlayer', { sessionId })
+    } catch (error) {
+      console.warn('Unable to kick player', error)
+    }
+  },
+  startGame: () => {
+    const { room } = get()
+    try {
+      room?.send('startGame')
+    } catch (error) {
+      console.warn('Unable to start game', error)
+    }
   },
   rollDice: () => {
     const { room } = get()
@@ -424,28 +555,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 }))
 
 type SetStateFn = StoreApi<SessionState>['setState']
+type GetStateFn = StoreApi<SessionState>['getState']
 
-const attachToRoom = async (reservation: any, set: SetStateFn) => {
-  set({ status: 'connecting', error: undefined })
-  const client = getColyseusClient()
-
-  let room: Room
-  try {
-    room = await client.consumeSeatReservation(reservation)
-  } catch (error) {
-    console.error('Unable to connect to room', error)
-    set({
-      status: 'error',
-      error: (error as Error).message || 'Unable to connect to the room. Please try again.',
-    })
-    return
-  }
-
-  const updateFromState = (state: any) => {
-    const roomView = transformRoomState(state)
-    set({ status: 'connected', room, roomView, sessionId: room.sessionId })
-  }
-
+const setupRoomHandlers = (
+  room: Room,
+  set: SetStateFn,
+  get: GetStateFn,
+  updateFromState: (state: any) => void
+) => {
   room.onStateChange(updateFromState)
 
   room.onError((code, message) => {
@@ -482,8 +599,38 @@ const attachToRoom = async (reservation: any, set: SetStateFn) => {
   })
 
   room.onLeave(() => {
+    // Guest-only mode: No session to clear, just reset state
     set((state) => ({ ...resetState, playerName: state.playerName }))
   })
+}
 
+const attachToRoom = async (reservation: any, set: SetStateFn, get: GetStateFn, joinCode?: string): Promise<string | null> => {
+  console.log('[attachToRoom] Starting with reservation:', reservation)
+  set({ status: 'connecting', error: undefined })
+  const client = getColyseusClient()
+
+  let room: Room
+  try {
+    room = await client.consumeSeatReservation(reservation)
+    console.log('[attachToRoom] Connected to room:', room.roomId)
+  } catch (error) {
+    console.error('Unable to connect to room:', error)
+    set({
+      status: 'error',
+      error: (error as Error).message || 'Unable to connect to the room. Please try again.',
+    })
+    return null
+  }
+
+  const updateFromState = (state: any) => {
+    const roomView = transformRoomState(state)
+    set({ status: 'connected', room, roomView, sessionId: room.sessionId, isSpectator: false })
+  }
+
+  setupRoomHandlers(room, set, get, updateFromState)
   updateFromState(room.state)
+
+  // Guest-only mode: No session persistence needed
+  console.log('[attachToRoom] Returning roomId:', room.roomId)
+  return room.roomId
 }

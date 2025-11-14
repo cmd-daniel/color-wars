@@ -45,6 +45,56 @@ export function createMatchmakingRouter() {
     }
   });
 
+  router.get("/room/:roomId/info", async (req, res) => {
+    const { roomId } = req.params;
+
+    if (!roomId) {
+      res.status(400).json({ error: "roomId is required" });
+      return;
+    }
+
+    try {
+      const roomInfo = await RoomManager.getRoomInfo(roomId);
+      res.json(roomInfo);
+    } catch (error) {
+      logger.warn("room_info_failed", { message: (error as Error).message, roomId });
+      res.status(404).json({ error: "Room not found" });
+    }
+  });
+
+  router.post("/room/:roomId/join", async (req, res) => {
+    const { roomId } = req.params;
+    const { playerName, joinCode } = req.body ?? {};
+
+    if (!roomId) {
+      res.status(400).json({ error: "roomId is required" });
+      return;
+    }
+
+    try {
+      const result = await RoomManager.joinRoomById(roomId, { playerName, joinCode });
+      
+      if (result.isSpectator) {
+        res.json({ isSpectator: true, roomId });
+      } else {
+        res.json({ isSpectator: false, reservation: formatReservationResponse(result.reservation) });
+      }
+    } catch (error) {
+      logger.warn("room_join_by_id_failed", { message: (error as Error).message, roomId });
+      const message = (error as Error).message;
+      
+      if (message.includes("not found") || message.includes("does not exist")) {
+        res.status(404).json({ error: "Room not found" });
+      } else if (message.includes("full")) {
+        res.status(400).json({ error: "Room is full" });
+      } else if (message.includes("private") || message.includes("join code")) {
+        res.status(403).json({ error: "Invalid join code for private room" });
+      } else {
+        res.status(500).json({ error: "Unable to join room" });
+      }
+    }
+  });
+
   return router;
 }
 

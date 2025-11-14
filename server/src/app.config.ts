@@ -22,16 +22,19 @@ const registerClientBuild = (app: express.Express) => {
 
   app.use(express.static(buildDir, { index: false }));
 
+  // Handle client-side routing - serve index.html for all non-API routes
   app.get("*", (req, res, next) => {
     if (req.method !== "GET") {
       return next();
     }
 
-    const disallowedPrefixes = ["/matchmaking", "/monitor", "/health"];
+    // Don't intercept API routes
+    const disallowedPrefixes = ["/matchmaking", "/monitor", "/health", "/api"];
     if (disallowedPrefixes.some((prefix) => req.path.startsWith(prefix))) {
       return next();
     }
 
+    // Serve index.html for all client routes (including /room/:roomId)
     res.sendFile(indexFile, (error) => {
       if (error) {
         next(error);
