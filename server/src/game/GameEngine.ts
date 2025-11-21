@@ -186,11 +186,16 @@ export interface PurchaseResult {
 
 export class GameEngine {
   private mapDefinition: MapDefinition | null;
+  private roomClock?: { setTimeout: (callback: () => void, delay: number) => any };
 
   constructor(private readonly state: GameState) {
     this.mapDefinition = loadDefaultMapDefinition();
     this.initializeTrack();
     this.initializeTerritories();
+  }
+
+  setRoomClock(clock: { setTimeout: (callback: () => void, delay: number) => any }) {
+    this.roomClock = clock;
   }
 
   handlePlayerJoined(player: PlayerState) {
@@ -229,7 +234,7 @@ export class GameEngine {
     this.resetPlayersForMatch();
     this.state.turnPhase = "awaiting-roll";
     this.state.round = 1;
-    this.state.lastRoll = 0;
+    this.state.lastRoll.clear();
     this.state.lastEvent = undefined;
 
     const firstSessionId = this.state.playerOrder[0] ?? "";
@@ -264,105 +269,124 @@ export class GameEngine {
       return;
     }
 
-    const roll = Math.floor(Math.random() * 6) + 1;
+    const die1 = Math.floor(Math.random() * 6) + 1;
+    const die2 = Math.floor(Math.random() * 6) + 1;
+    const roll = die1 + die2;
     const previousPosition = player.position;
     const newPosition = (previousPosition + roll) % trackLength;
     const passedStart = newPosition < previousPosition;
 
-    let passStartReward = 0;
-    if (passedStart) {
-      passStartReward = this.computePassStartIncome(player);
-      if (passStartReward > 0) {
-        player.money += passStartReward;
-      }
-    }
+    // Store dice values immediately for client animation
+    this.state.lastRoll.clear();
+    this.state.lastRoll.push(die1);
+    this.state.lastRoll.push(die2);
 
-    player.position = newPosition;
+    // Delay player movement to allow dice animation and roll result text to display
+    // Dice animation: 700ms, text display: ~1.5s, total: ~2.2s
+    const MOVEMENT_DELAY_MS = 2200;
 
-    const space = this.state.trackSpaces[newPosition];
-    const detailParts: string[] = [];
-    if (space?.label) {
-      detailParts.push(`Landed on ${space.label}`);
-    }
-    if (passStartReward > 0) {
-      detailParts.push(`Collected ${formatCurrency(passStartReward)} for passing Launch`);
-    }
-
-    this.addLog(`${player.name} rolled a ${roll}`, {
+    // Add log immediately
+    this.addLog(`${player.name} rolled ${die1} and ${die2} (${roll} total)`, {
       type: "roll",
-      detail: detailParts.length > 0 ? detailParts.join(" • ") : undefined
     });
 
-    let nextPhase: TurnPhase = "awaiting-end-turn";
-    let lastEventResult: TrackEventResultState | undefined;
-
-    if (space?.type === "event" && space.event) {
-      const baseEvent = space.event;
-      let amount = baseEvent.amount;
-      let delta = 0;
-      let detail = baseEvent.description;
-
-      switch (baseEvent.kind) {
-        case "bonus":
-          delta = amount;
-          detail = baseEvent.description || `Bonus ${formatCurrency(amount)}`;
-          break;
-        case "penalty":
-          delta = -amount;
-          detail = baseEvent.description || `Penalty ${formatCurrency(amount)}`;
-          break;
-        case "chest-bonus": {
-          const min = baseEvent.min > 0 ? baseEvent.min : 150;
-          const max = baseEvent.max > 0 ? baseEvent.max : 400;
-          amount = pickRandom(min, max);
-          delta = amount;
-          detail = `${baseEvent.description}: ${formatCurrency(amount)}`;
-          break;
+    const movePlayerAndProcessSpace = () => {
+      let passStartReward = 0;
+      if (passedStart) {
+        passStartReward = this.computePassStartIncome(player);
+        if (passStartReward > 0) {
+          player.money += passStartReward;
         }
-        case "chest-penalty": {
-          const min = baseEvent.min > 0 ? baseEvent.min : 80;
-          const max = baseEvent.max > 0 ? baseEvent.max : 320;
-          amount = pickRandom(min, max);
-          delta = -amount;
-          detail = `${baseEvent.description}: ${formatCurrency(amount)}`;
-          break;
-        }
-        case "roll-again":
-          nextPhase = "awaiting-roll";
-          detail = baseEvent.description || "Roll again";
-          amount = 0;
-          delta = 0;
-          break;
-        default:
-          break;
       }
 
-      if (delta !== 0) {
-        player.money = Math.max(0, player.money + delta);
+      player.position = newPosition;
+
+      const space = this.state.trackSpaces[newPosition];
+      const detailParts: string[] = [];
+      if (space?.label) {
+        detailParts.push(`Landed on ${space.label}`);
+      }
+      if (passStartReward > 0) {
+        detailParts.push(`Collected ${formatCurrency(passStartReward)} for passing Launch`);
       }
 
-      lastEventResult = new TrackEventResultState();
-      lastEventResult.kind = baseEvent.kind as TrackEventKind;
-      lastEventResult.label = baseEvent.label;
-      lastEventResult.description = baseEvent.description;
-      lastEventResult.amount = amount;
-      lastEventResult.min = baseEvent.min;
-      lastEventResult.max = baseEvent.max;
-      lastEventResult.targetPlayerId = player.sessionId;
+      let nextPhase: TurnPhase = "awaiting-end-turn";
+      let lastEventResult: TrackEventResultState | undefined;
 
-      const logVerb = delta >= 0 ? "gained" : "lost";
-      const magnitude = Math.abs(delta);
-      const summary =
-        baseEvent.kind === "roll-again"
-          ? `${player.name} earned another roll`
-          : `${player.name} ${logVerb} ${formatCurrency(magnitude)}`;
+      if (space?.type === "event" && space.event) {
+        const baseEvent = space.event;
+        let amount = baseEvent.amount;
+        let delta = 0;
+        let detail = baseEvent.description;
 
-      this.addLog(summary, { type: "event", detail });
+        switch (baseEvent.kind) {
+          case "bonus":
+            delta = amount;
+            detail = baseEvent.description || `Bonus ${formatCurrency(amount)}`;
+            break;
+          case "penalty":
+            delta = -amount;
+            detail = baseEvent.description || `Penalty ${formatCurrency(amount)}`;
+            break;
+          case "chest-bonus": {
+            const min = baseEvent.min > 0 ? baseEvent.min : 150;
+            const max = baseEvent.max > 0 ? baseEvent.max : 400;
+            amount = pickRandom(min, max);
+            delta = amount;
+            detail = `${baseEvent.description}: ${formatCurrency(amount)}`;
+            break;
+          }
+          case "chest-penalty": {
+            const min = baseEvent.min > 0 ? baseEvent.min : 80;
+            const max = baseEvent.max > 0 ? baseEvent.max : 320;
+            amount = pickRandom(min, max);
+            delta = -amount;
+            detail = `${baseEvent.description}: ${formatCurrency(amount)}`;
+            break;
+          }
+          case "roll-again":
+            nextPhase = "awaiting-roll";
+            detail = baseEvent.description || "Roll again";
+            amount = 0;
+            delta = 0;
+            break;
+          default:
+            break;
+        }
+
+        if (delta !== 0) {
+          player.money = Math.max(0, player.money + delta);
+        }
+
+        lastEventResult = new TrackEventResultState();
+        lastEventResult.kind = baseEvent.kind as TrackEventKind;
+        lastEventResult.label = baseEvent.label;
+        lastEventResult.description = baseEvent.description;
+        lastEventResult.amount = amount;
+        lastEventResult.min = baseEvent.min;
+        lastEventResult.max = baseEvent.max;
+        lastEventResult.targetPlayerId = player.sessionId;
+
+        const logVerb = delta >= 0 ? "gained" : "lost";
+        const magnitude = Math.abs(delta);
+        const summary =
+          baseEvent.kind === "roll-again"
+            ? `${player.name} earned another roll`
+            : `${player.name} ${logVerb} ${formatCurrency(magnitude)}`;
+
+        this.addLog(summary, { type: "event", detail });
+      }
+
+      this.state.turnPhase = nextPhase;
+      this.state.lastEvent = lastEventResult;
+    };
+
+    if (this.roomClock) {
+      this.roomClock.setTimeout(movePlayerAndProcessSpace, MOVEMENT_DELAY_MS);
+    } else {
+      // Fallback: move immediately if no clock available
+      movePlayerAndProcessSpace();
     }
-
-    this.state.lastRoll = roll;
-    this.state.turnPhase = nextPhase;
-    this.state.lastEvent = lastEventResult;
   }
 
   handlePurchaseTerritory(client: Client, territoryId: string): PurchaseResult {
@@ -439,7 +463,7 @@ export class GameEngine {
     const nextSessionId = order[nextIndex];
     this.state.currentTurn = nextSessionId ?? "";
     this.state.turnPhase = "awaiting-roll";
-    this.state.lastRoll = 0;
+    this.state.lastRoll.clear();
     this.state.lastEvent = undefined;
 
     if (nextIndex === 0) {
@@ -505,7 +529,7 @@ export class GameEngine {
     if (this.state.playerOrder.length === 0) {
       this.state.currentTurn = "";
       this.state.turnPhase = "awaiting-roll";
-      this.state.lastRoll = 0;
+      this.state.lastRoll.clear();
       this.state.lastEvent = undefined;
       return;
     }
@@ -513,7 +537,7 @@ export class GameEngine {
     const nextIndex = previousIndex >= 0 ? previousIndex % this.state.playerOrder.length : 0;
     this.state.currentTurn = this.state.playerOrder[nextIndex] ?? "";
     this.state.turnPhase = "awaiting-roll";
-    this.state.lastRoll = 0;
+    this.state.lastRoll.clear();
     this.state.lastEvent = undefined;
   }
 

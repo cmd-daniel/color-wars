@@ -61,6 +61,7 @@ export class GameRoom extends Room<GameState> {
     await this.updateMetadata();
 
     this.gameEngine = new GameEngine(this.state);
+    this.gameEngine.setRoomClock(this.clock);
     this.registerMessageHandlers();
     RoomManager.registerRoom(this);
     RoomManager.updateRoomPhase(this);

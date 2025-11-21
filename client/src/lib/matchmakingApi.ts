@@ -90,15 +90,32 @@ export const quickMatch = async (payload: QuickMatchPayload) => {
   console.log('[matchmakingApi] Calling quickMatch endpoint:', endpoint)
   console.log('[matchmakingApi] Payload:', payload)
   
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: JSON_HEADERS,
-    body: JSON.stringify(payload),
-  })
-  
-  console.log('[matchmakingApi] Got response:', response.status, response.statusText)
+  // Add timeout to prevent hanging indefinitely
+  const FETCH_TIMEOUT_MS = 15000 // 15 seconds
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => {
+    controller.abort()
+  }, FETCH_TIMEOUT_MS)
 
-  return ensureSuccess<ReservationResponse>(response, 'Unable to find an open lobby right now.')
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: JSON_HEADERS,
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    
+    clearTimeout(timeoutId)
+    console.log('[matchmakingApi] Got response:', response.status, response.statusText)
+
+    return ensureSuccess<ReservationResponse>(response, 'Unable to find an open lobby right now.')
+  } catch (error) {
+    clearTimeout(timeoutId)
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout: The server took too long to respond. Please check if the server is running and try again.')
+    }
+    throw error
+  }
 }
 
 export const createPrivateRoom = async (payload: PrivateRoomPayload) => {

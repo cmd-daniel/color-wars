@@ -223,8 +223,8 @@ export class GameState extends Schema {
   @type("string")
   currentTurn: string;
 
-  @type("number")
-  lastRoll: number;
+  @type(["number"])
+  lastRoll = new ArraySchema<number>();
 
   @type(TrackEventResultState)
   lastEvent?: TrackEventResultState;
@@ -262,7 +262,7 @@ export class GameState extends Schema {
     this.mapId = "";
     this.turnPhase = "awaiting-roll";
     this.currentTurn = "";
-    this.lastRoll = 0;
+    this.lastRoll = new ArraySchema<number>();
     this.round = 1;
   }
 }

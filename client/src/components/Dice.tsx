@@ -1,85 +1,88 @@
-import { useState, useEffect, useRef } from 'react'
-import styles from './Dice.module.css'
+import { useState, useEffect, useRef, useMemo } from "react";
+import styles from "./Dice.module.css";
 
 interface DiceProps {
-  onRollComplete?: (value: number) => void
-  autoRoll?: boolean
-  diceType?: 'default' | 'red' | 'blue' | 'black' | 'pink'
-  disabled?: boolean
+  value?: number | null;
+  diceType?: "default" | "red" | "blue" | "black" | "pink";
 }
 
-// Each face of the dice corresponds to a specific rotation
-const perFaceRotations = [
-  [-0.1, 0.3, -1],      // Face 1
-  [-0.1, 0.6, -0.4],    // Face 2
-  [-0.85, -0.42, 0.73], // Face 3
-  [-0.8, 0.3, -0.75],   // Face 4
-  [0.3, 0.45, 0.9],     // Face 5
-  [-0.16, 0.6, 0.18]    // Face 6
-]
+// Your manually-tuned face rotations (kept untouched)
+const FACE_ROTATIONS = [
+  { x: 30, y: 0, z: 30 },
+  { x: -60, y: -30, z: 0 },
+  { x: -60, y: 45, z: 90 },
+  { x: -60, y: 150, z: -90 },
+  { x: 120, y: 30, z: 0 },
+  { x: 210, y: 0, z: 45 },
+];
 
-const Dice = ({ onRollComplete, autoRoll = false, diceType = 'default', disabled = false }: DiceProps) => {
-  const [isRolling, setIsRolling] = useState(false)
-  const [isThrowing, setIsThrowing] = useState(false)
-  const [currentValue, setCurrentValue] = useState<number | null>(null)
-  const diceRef = useRef<HTMLDivElement>(null)
+type DiceState = "idle" | "rolling" | "settled";
 
+export default function Dice({
+  value = null,
+  diceType = "default",
+}: DiceProps) {
+  const [state, setState] = useState<DiceState>("settled");
+  const [displayValue, setDisplayValue] = useState(6);
+
+  const prevValue = useRef<number | null>(null);
+  const diceRef = useRef<HTMLDivElement | null>(null);
+
+  // ----------------------------
+  // Compute final transform
+  // ----------------------------
+  const finalTransform = useMemo(() => {
+    const idx = Math.max(0, Math.min(5, displayValue - 1));
+    const { x, y, z } = FACE_ROTATIONS[idx];
+    return `rotateX(${x}deg) rotateY(${y}deg) rotateZ(${z}deg)`;
+  }, [displayValue]);
+
+  // ----------------------------
+  // Handle value change → roll → settle
+  // ----------------------------
   useEffect(() => {
-    if (autoRoll && !disabled) {
-      handleRoll()
+    // Reset dice if null
+    if (value == null) {
+      setState("settled");
+      setDisplayValue(6);
+      prevValue.current = null;
+      return;
     }
-  }, [autoRoll, disabled])
 
-  const setFaceRotation = (faceNum: number) => {
-    if (diceRef.current && faceNum >= 1 && faceNum <= 6) {
-      const rotation = perFaceRotations[faceNum - 1]
-      diceRef.current.style.transform = `rotate3d(${rotation[0]}, ${rotation[1]}, ${rotation[2]}, 180deg)`
-    }
-  }
+    // Avoid redundant rolls
+    if (value === prevValue.current) return;
 
-  const handleRoll = () => {
-    if (disabled || isThrowing) return
+    // Start roll
+    setState("rolling");
 
-    const diceValue = Math.floor(Math.random() * 6) + 1
-    
-    // Reset animations
-    setIsThrowing(false)
-    setIsRolling(false)
-    setCurrentValue(null)
+    const dice = diceRef.current;
+    if (!dice) return;
 
-    // Set the target face
-    setFaceRotation(diceValue)
+    // Listen for animation end (clean solution)
+    const handleEnd = () => {
+      setDisplayValue(value);
+      setState("settled");
+      prevValue.current = value;
 
-    // Trigger throw animation after a small delay
-    setTimeout(() => {
-      setIsThrowing(true)
-    }, 50)
+      dice.removeEventListener("animationend", handleEnd);
+    };
 
-    // Show result and call callback after animation
-    setTimeout(() => {
-      setCurrentValue(diceValue)
-      setIsThrowing(false)
-      if (onRollComplete) {
-        onRollComplete(diceValue)
-      }
-    }, 700)
-  }
+    dice.addEventListener("animationend", handleEnd, { once: true });
+  }, [value]);
 
-  const getDiceClassName = () => {
-    const classes = [styles.dice]
-    
-    if (isRolling) classes.push(styles.rolling)
-    if (isThrowing) classes.push(styles.throw)
-    if (diceType !== 'default') classes.push(styles[diceType])
-    
-    return classes.join(' ')
-  }
+  // ----------------------------
+  // Build class names
+  // ----------------------------
+  const diceClass = `${styles.dice} ${
+    state === "rolling" ? styles.rolling : ""
+  } ${diceType !== "default" ? styles[diceType] : ""}`;
 
   return (
     <div className={styles.diceWrap}>
-      <div 
+      <div
         ref={diceRef}
-        className={getDiceClassName()}
+        className={diceClass}
+        style={state === "settled" ? { transform: finalTransform } : {}}
       >
         <div className={`${styles.diceFace} ${styles.front}`}></div>
         <div className={`${styles.diceFace} ${styles.up}`}></div>
@@ -89,8 +92,5 @@ const Dice = ({ onRollComplete, autoRoll = false, diceType = 'default', disabled
         <div className={`${styles.diceFace} ${styles.back}`}></div>
       </div>
     </div>
-  )
+  );
 }
-
-export default Dice
-

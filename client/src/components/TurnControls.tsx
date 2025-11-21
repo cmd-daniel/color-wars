@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
 import type { GamePlayer } from '@/stores/sessionStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
 import type { TrackSpace, TerritoryInfo } from '@/types/game'
 import type { TerritoryId } from '@/types/map'
+import { useDiceRoll } from '@/hooks/useDiceRoll'
 import Dice from './Dice'
 
 const currency = new Intl.NumberFormat('en-US', {
@@ -18,9 +19,6 @@ const EMPTY_TERRITORY_INFO = Object.freeze({}) as Record<TerritoryId, TerritoryI
 const EMPTY_TERRITORY_OWNERSHIP = Object.freeze({}) as Record<TerritoryId, string | null>
 
 const TurnControls = () => {
-  const [isDiceRolling, setIsDiceRolling] = useState(false)
-  const [showDice, setShowDice] = useState(false)
-  
   const roomView = useSessionStore((state) => state.roomView)
   const sessionId = useSessionStore((state) => state.sessionId)
   const isSpectator = useSessionStore((state) => state.isSpectator)
@@ -43,6 +41,12 @@ const TurnControls = () => {
   const currentPlayer = players.find((player) => player.sessionId === roomView?.currentTurn) ?? null
   const lastEvent = roomView?.lastEvent ?? null
   const turnPhase = roomView?.turnPhase ?? 'awaiting-roll'
+  const lastRoll = roomView?.lastRoll
+
+  // Use custom hook for dice roll state management
+  const { isRolling, showRollResult, rollResultText, handleRoll: handleRollDice } = useDiceRoll(rollDice, {
+    lastRoll,
+  })
 
   const selectedOwnership = selectedTerritoryId ? ownershipByTerritory[selectedTerritoryId] ?? null : null
   const selectedTerritory = selectedTerritoryId ? territoryInfo[selectedTerritoryId] ?? null : null
@@ -74,21 +78,6 @@ const TurnControls = () => {
     }
   }
 
-  const handleRollDice = () => {
-    setShowDice(true)
-    setIsDiceRolling(true)
-  }
-
-  const handleDiceRollComplete = (value: number) => {
-    // Call the actual roll dice action
-    rollDice()
-    setIsDiceRolling(false)
-    // Hide dice after a short delay to show the result
-    setTimeout(() => {
-      setShowDice(false)
-    }, 1500)
-  }
-
   const eventAmountLabel =
     lastEvent && (lastEvent.kind === 'bonus' || lastEvent.kind === 'chest-bonus' || lastEvent.kind === 'roll-again')
       ? `+${currency.format(lastEvent.amount)}`
@@ -98,23 +87,27 @@ const TurnControls = () => {
 
   return (
     <section className='turn-controls-container' >
-      {showDice && (
-        <div style={{ 
-          position: 'fixed', 
-          top: '50%', 
-          left: '50%', 
-          transform: 'translate(-50%, -50%)',
-          zIndex: 1000,
-          pointerEvents: 'none'
-        }}>
-          <Dice 
-            autoRoll={isDiceRolling}
-            onRollComplete={handleDiceRollComplete}
-            diceType="default"
-          />
+      <div className="dice-container">
+        {isRolling && !lastRoll && (
+          <div className="dice-loading-spinner">
+            <div className="spinner"></div>
+          </div>
+        )}
+        <Dice 
+          value={lastRoll?.[0] ?? null}
+          diceType="default"
+        />
+        <Dice 
+          value={lastRoll?.[1] ?? null}
+          diceType="default"
+        />
+      </div>
+      {/* {showRollResult && (
+        <div className="roll-result-banner">
+          <span>{rollResultText}</span>
         </div>
-      )}
-      {lastEvent && (
+      )} */}
+      {/* {lastEvent && (
         <div className={`event-banner event-banner--${lastEvent.kind}`}>
           <div>
             <strong>{lastEvent.kind === 'bonus' || lastEvent.kind === 'chest-bonus' ? 'Reward' : 'Penalty'}</strong>
@@ -124,7 +117,7 @@ const TurnControls = () => {
             <span className="event-banner__amount">{eventAmountLabel}</span>
           )}
         </div>
-      )}
+      )} */}
       {gameNotice && (
         <div className={`turn-feedback turn-feedback--${gameNotice.kind}`}>
           <span>{gameNotice.message}</span>
@@ -134,7 +127,7 @@ const TurnControls = () => {
         </div>
       )}
       <div className="turn-actions">
-        <button type="button" onClick={handleRollDice} disabled={!canRoll}>Roll dice</button>
+        <button type="button" onClick={handleRollDice} disabled={!canRoll || isRolling}>Roll dice</button>
         {!selectedOwnershipLabel && selectedOffer && (
           <button
             type="button"

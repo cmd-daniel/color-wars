@@ -2,11 +2,11 @@
 .diceFace {
   box-sizing: border-box;
   position: absolute;
-  width: 100px;
-  height: 100px;
+  width: 60px;
+  height: 60px;
   background-color: #f6f3f0;
   border: 2px solid #faf8f6;
-  border-radius: 20px;
+  border-radius: 12px;
   transform-style: preserve-3d;
   transition: 0.5s;
 }
@@ -26,11 +26,11 @@
 .diceFace::after {
   position: absolute;
   content: "";
-  width: 20px;
-  height: 20px;
+  width: 12px;
+  height: 12px;
   top: 50%;
   left: 50%;
-  margin: -10px 0 0 -10px;
+  margin: -6px 0 0 -6px;
   background-color: #131210;
   border-radius: 100%;
   transform: translateZ(1px);
@@ -38,106 +38,95 @@
 
 /* Face 1 - Single large red dot */
 .front {
-  transform: translateZ(50px);
+  transform: translateZ(30px);
 }
 
 .front::after {
-  width: 40px;
-  height: 40px;
-  margin: -20px 0 0 -20px;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
   background-color: #f63330;
 }
 
 /* Face 2 - Two dots */
 .up {
-  transform: rotateX(90deg) translateZ(50px);
+  transform: rotateX(90deg) translateZ(30px);
 }
 
 .up::after {
-  margin: -30px 0 0 -30px;
-  box-shadow: 40px 40px #131210;
+  margin: -18px 0 0 -18px;
+  box-shadow: 24px 24px #131210;
 }
 
 /* Face 3 - Three dots */
 .left {
-  transform: rotateY(-90deg) translateZ(50px);
+  transform: rotateY(-90deg) translateZ(30px);
 }
 
 .left::after {
-  margin: -40px 0 0 -40px;
-  box-shadow: 30px 30px #131210, 60px 60px #131210;
+  margin: -24px 0 0 -24px;
+  box-shadow: 18px 18px #131210, 36px 36px #131210;
 }
 
 /* Face 4 - Four red dots */
 .right {
-  transform: rotateY(90deg) translateZ(50px);
+  transform: rotateY(90deg) translateZ(30px);
 }
 
 .right::after {
-  margin: -30px 0 0 -30px;
-  background-color: #f63330;
-  box-shadow: 40px 0px #f63330, 0px 40px #f63330, 40px 40px #f63330;
+  margin: -18px 0 0 -18px;
+  background-color: #131210;
+  box-shadow: 24px 0px #131210, 0px 24px #131210, 24px 24px #131210;
 }
 
 /* Face 5 - Five dots */
 .bottom {
-  transform: rotateX(-90deg) translateZ(50px);
+  transform: rotateX(-90deg) translateZ(30px);
 }
 
 .bottom::after {
-  margin: -36px 0 0 -36px;
-  box-shadow: 26px 26px #131210, 52px 52px #131210, 52px 0px #131210, 0px 52px #131210;
+  margin: -22px 0 0 -22px;
+  box-shadow: 16px 16px #131210, 32px 32px #131210, 32px 0px #131210, 0px 32px #131210;
 }
 
 /* Face 6 - Six dots */
 .back {
-  transform: rotateX(180deg) translateZ(50px);
+  transform: rotateX(180deg) translateZ(30px);
 }
 
 .back::after {
-  margin: -40px 0 0 -30px;
-  box-shadow: 40px 0px #131210, 0px 30px #131210, 40px 30px #131210, 0px 60px #131210, 40px 60px #131210;
+  margin: -24px 0 0 -18px;
+  box-shadow: 24px 0px #131210, 0px 18px #131210, 24px 18px #131210, 0px 36px #131210, 24px 36px #131210;
 }
 
 /* Dice container */
 .dice {
   position: absolute;
-  width: 100px;
-  height: 100px;
-  top: calc(50% - 50px);
-  left: calc(50% - 50px);
+  width: 60px;
+  height: 60px;
+  top: calc(50% - 30px);
+  left: calc(50% - 30px);
   transform-style: preserve-3d;
-  transform: rotate3d(0, 0.9, 0.9, 90deg);
-  transition: 0.5s cubic-bezier(0.42, 1.57, 0.62, 0.86);
+  transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg);
 }
 
-/* Rolling animation */
+/* Rolling animation - combines rotation and bounce */
 .dice.rolling {
-  animation: rotatePerFace 3s cubic-bezier(0.42, 1.57, 0.62, 0.86) infinite;
+  animation: diceRoll 0.5s ease-in-out;
+  animation-fill-mode: none; /* Don't persist animation state - we'll apply final transform after */
+  /* No transition during animation - animation handles it */
 }
 
-/* Throw animation */
-.dice.throw {
-  animation: rotateDice 0.7s ease-in reverse, throwDice 1s linear;
+/* When settled, allow smooth transitions for face changes */
+.dice:not(.rolling) {
+  transition: transform 0.5s cubic-bezier(0.42, 1.57, 0.62, 0.86);
 }
 
-/* Dice wrapper with shadow */
+/* Dice wrapper */
 .diceWrap {
   position: relative;
-  width: 200px;
-  height: 200px;
-}
-
-.diceWrap::before {
-  position: absolute;
-  content: "";
-  width: 70%;
-  height: 10%;
-  top: 90%;
-  left: 15%;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 100%;
-  filter: blur(10px);
+  width: 100px;
+  height: 100px;
 }
 
 /* Red dice variant */
@@ -305,60 +294,16 @@
 }
 
 /* Animations */
-@keyframes rotateDice {
-  30% {
-    transform: rotate3d(1, 1, 1, 0deg);
+@keyframes diceRoll {
+  0% {
+    transform: rotateX(0deg) rotateY(81deg) rotateZ(81deg) translateY(0);
+  }
+  50% {
+    transform: rotateX(-504deg) rotateY(189deg) rotateZ(-472deg) translateY(0);
   }
   100% {
-    transform: rotate3d(1, 1, 1, 720deg);
+    transform: rotateX(0deg) rotateY(81deg) rotateZ(81deg) translateY(0);
   }
 }
 
-@keyframes rotatePerFace {
-  16% {
-    transform: rotate3d(-0.1, 0.6, -0.4, 180deg);
-  }
-  32% {
-    transform: rotate3d(-0.85, -0.42, 0.73, 180deg);
-  }
-  48% {
-    transform: rotate3d(-0.8, 0.3, -0.75, 180deg);
-  }
-  64% {
-    transform: rotate3d(0.3, 0.45, 0.9, 180deg);
-  }
-  80% {
-    transform: rotate3d(-0.16, 0.6, 0.18, 180deg);
-  }
-  100% {
-    transform: rotate3d(-0.1, 0.3, -1, 180deg);
-  }
-}
-
-@keyframes throwDice {
-  20% {
-    margin-top: -100px;
-  }
-  40% {
-    margin-top: 0px;
-  }
-  60% {
-    margin-top: -30px;
-  }
-  80% {
-    margin-top: 0px;
-  }
-  85% {
-    margin-top: -10px;
-  }
-  90% {
-    margin-top: 0px;
-  }
-  95% {
-    margin-top: -3px;
-  }
-  100% {
-    margin-top: 0px;
-  }
-}
 

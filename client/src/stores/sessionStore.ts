@@ -77,7 +77,7 @@ export interface GameRoomView {
   connectedPlayers: number
   turnPhase: TurnPhase
   currentTurn?: string
-  lastRoll?: number
+  lastRoll?: [number, number]
   round: number
   lastEvent?: TrackEventResult
   trackSpaces: TrackSpace[]
@@ -289,7 +289,28 @@ const transformRoomState = (state: any): GameRoomView | undefined => {
     connectedPlayers: Number(state.connectedPlayers ?? players.length),
     turnPhase: (state.turnPhase ?? 'awaiting-roll') as TurnPhase,
     currentTurn: state.currentTurn ?? undefined,
-    lastRoll: Number.isFinite(state.lastRoll) ? Number(state.lastRoll) : undefined,
+    lastRoll: (() => {
+      // Handle Colyseus ArraySchema - it has forEach method
+      if (state.lastRoll?.forEach) {
+        const values: number[] = []
+        state.lastRoll.forEach((value: any) => {
+          const num = Number(value)
+          if (Number.isFinite(num) && num >= 1 && num <= 6) {
+            values.push(num)
+          }
+        })
+        return values.length === 2 ? [values[0], values[1]] : undefined
+      }
+      // Fallback for regular arrays
+      if (Array.isArray(state.lastRoll) && state.lastRoll.length === 2) {
+        const die1 = Number(state.lastRoll[0])
+        const die2 = Number(state.lastRoll[1])
+        if (Number.isFinite(die1) && Number.isFinite(die2) && die1 >= 1 && die1 <= 6 && die2 >= 1 && die2 <= 6) {
+          return [die1, die2]
+        }
+      }
+      return undefined
+    })(),
     round: Number.isFinite(state.round) ? Number(state.round) : 1,
     lastEvent,
     trackSpaces,
@@ -526,10 +547,15 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
   rollDice: () => {
     const { room } = get()
+    if (!room) {
+      console.warn('[rollDice] No room connection available')
+      return
+    }
     try {
-      room?.send('rollDice')
+      console.log('[rollDice] Sending rollDice message to server')
+      room.send('rollDice')
     } catch (error) {
-      console.warn('Unable to roll dice', error)
+      console.error('[rollDice] Error sending rollDice message:', error)
     }
   },
   endTurn: () => {
@@ -611,7 +637,16 @@ const attachToRoom = async (reservation: any, set: SetStateFn, get: GetStateFn, 
 
   let room: Room
   try {
-    room = await client.consumeSeatReservation(reservation)
+    // Add timeout to prevent hanging indefinitely
+    const CONNECTION_TIMEOUT_MS = 10000 // 10 seconds
+    const connectionPromise = client.consumeSeatReservation(reservation)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Connection timeout: Unable to connect to room after 10 seconds. Please check your connection and try again.'))
+      }, CONNECTION_TIMEOUT_MS)
+    })
+
+    room = await Promise.race([connectionPromise, timeoutPromise])
     console.log('[attachToRoom] Connected to room:', room.roomId)
   } catch (error) {
     console.error('Unable to connect to room:', error)

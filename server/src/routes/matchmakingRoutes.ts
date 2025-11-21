@@ -5,15 +5,46 @@ import { logger } from "../utils/logger";
 export function createMatchmakingRouter() {
   const router = Router();
 
+  // Explicitly handle OPTIONS preflight requests
+  router.options("/quick", (req, res) => {
+    logger.info("options_preflight_received", { 
+      path: req.path, 
+      origin: req.headers.origin,
+      method: req.method 
+    });
+    res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
+    res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.header("Access-Control-Allow-Credentials", "true");
+    res.status(204).send();
+    logger.info("options_preflight_sent", { path: req.path });
+  });
+
   router.post("/quick", async (req, res) => {
+    // Add timeout to prevent hanging
+    const timeout = setTimeout(() => {
+      if (!res.headersSent) {
+        logger.error("quick_match_timeout", { message: "Request timed out after 10 seconds" });
+        res.status(504).json({ error: "Request timeout: The matchmaking service took too long to respond" });
+      }
+    }, 10000); // 10 second timeout
+
     try {
       const { playerName, preferences } = req.body ?? {};
       const normalizedPreferences = typeof preferences === "object" && preferences !== null ? preferences : undefined;
+      logger.info("quick_match_started", { playerName });
       const reservation = await RoomManager.quickMatch({ playerName }, normalizedPreferences);
-      res.json(formatReservationResponse(reservation));
+      clearTimeout(timeout);
+      if (!res.headersSent) {
+        logger.info("quick_match_success", { roomId: reservation.room.roomId });
+        res.json(formatReservationResponse(reservation));
+      }
     } catch (error) {
-      logger.error("quick_match_failed", { message: (error as Error).message });
-      res.status(500).json({ error: "Unable to find a room" });
+      clearTimeout(timeout);
+      logger.error("quick_match_failed", { message: (error as Error).message, stack: (error as Error).stack });
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Unable to find a room" });
+      }
     }
   });
 
