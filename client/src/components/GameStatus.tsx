@@ -21,7 +21,7 @@ const GameStatus = ({ onLeave }: GameStatusProps) => {
     startGame,
   } = useSessionStore()
 
-  const [selectedIcon, setSelectedIcon] = useState<string>('')
+  const [_selectedIcon, setSelectedIcon] = useState<string>('')
   const [showIconSelector, setShowIconSelector] = useState(false)
   const [maxPlayersInput, setMaxPlayersInput] = useState('')
   const [startingCashInput, setStartingCashInput] = useState('')

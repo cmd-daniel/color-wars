@@ -30,6 +30,9 @@ export class PlayerState extends Schema {
   @type("number")
   position: number;
 
+  @type("boolean")
+  ready: boolean;
+
   @type(["string"])
   ownedTerritories = new ArraySchema<string>();
 
@@ -43,6 +46,7 @@ export class PlayerState extends Schema {
     this.color = "#38bdf8";
     this.money = 0;
     this.position = 0;
+    this.ready = false;
   }
 }
 
@@ -232,6 +236,12 @@ export class GameState extends Schema {
   @type("number")
   round: number;
 
+  @type("number")
+  lobbyEndsAt: number;
+
+  @type("number")
+  waitTimeoutAt: number;
+
   @type({ map: TerritoryInfoState })
   territoryInfo = new MapSchema<TerritoryInfoState>();
 
@@ -264,5 +274,7 @@ export class GameState extends Schema {
     this.currentTurn = "";
     this.lastRoll = new ArraySchema<number>();
     this.round = 1;
+    this.lobbyEndsAt = 0;
+    this.waitTimeoutAt = 0;
   }
 }

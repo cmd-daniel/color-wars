@@ -20,18 +20,18 @@ type PurchaseFailureReason = 'invalid-territory' | 'not-active' | 'not-your-turn
 
 type PurchaseResultMessage =
   | {
-      success: true
-      territoryId?: TerritoryId
-      territoryName?: string
-      cost?: number
-      balance?: number
-    }
+    success: true
+    territoryId?: TerritoryId
+    territoryName?: string
+    cost?: number
+    balance?: number
+  }
   | {
-      success: false
-      reason?: PurchaseFailureReason
-      cost?: number
-      balance?: number
-    }
+    success: false
+    reason?: PurchaseFailureReason
+    cost?: number
+    balance?: number
+  }
 
 export type GameNotice = {
   kind: 'success' | 'error'
@@ -50,6 +50,7 @@ export interface GamePlayer {
   money: number
   position: number
   ownedTerritories: TerritoryId[]
+  ready: boolean
 }
 
 export type RoomPhase = 'waiting' | 'lobby' | 'active' | 'finished'
@@ -87,6 +88,8 @@ export interface GameRoomView {
   playerColors: Record<string, string>
   playerOrder: string[]
   mapId?: string
+  lobbyEndsAt: number
+  waitTimeoutAt: number
 }
 
 interface SessionState {
@@ -118,6 +121,7 @@ interface SessionState {
   rollDice: () => void
   endTurn: () => void
   purchaseTerritory: (territoryId: TerritoryId) => void
+  toggleReady: () => void
 }
 
 const DEFAULT_PLAYER_NAME = 'Commander'
@@ -164,6 +168,7 @@ const transformRoomState = (state: any): GameRoomView | undefined => {
         money: Number.isFinite(player.money) ? Number(player.money) : 0,
         position: Number.isFinite(player.position) ? Number(player.position) : 0,
         ownedTerritories,
+        ready: Boolean(player.ready),
       })
     })
   }
@@ -320,6 +325,8 @@ const transformRoomState = (state: any): GameRoomView | undefined => {
     playerColors,
     playerOrder,
     mapId: state.mapId ?? undefined,
+    lobbyEndsAt: Number(state.lobbyEndsAt ?? 0),
+    waitTimeoutAt: Number(state.waitTimeoutAt ?? 0),
   }
 }
 
@@ -423,19 +430,19 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   },
   joinRoomById: async (roomId: string, joinCode?: string) => {
     const { playerName, status, room: existingRoom } = get()
-    
+
     // Guard: Prevent duplicate join attempts
     if (status === 'connecting' || status === 'matchmaking') {
       console.log('[joinRoomById] Already connecting, skipping duplicate join')
       return
     }
-    
+
     // Guard: If already connected to this exact room, don't rejoin
     if (existingRoom && existingRoom.roomId === roomId && status === 'connected') {
       console.log('[joinRoomById] Already connected to this room')
       return
     }
-    
+
     // If connected to a different room, leave first
     if (existingRoom && status === 'connected') {
       console.log('[joinRoomById] Leaving current room before joining new one')
@@ -465,12 +472,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       }
 
       const data = await response.json()
-      
+
       if (data.isSpectator) {
         // Join as spectator if room is full or game is active/finished
         const client = getColyseusClient()
         const room = await client.joinById(roomId, { spectator: true })
-        
+
         const updateFromState = (state: any) => {
           const roomView = transformRoomState(state)
           set({ status: 'connected', room, roomView, sessionId: room.sessionId, isSpectator: true })
@@ -578,6 +585,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       console.warn('Unable to purchase territory', error)
     }
   },
+  toggleReady: () => {
+    const { room } = get()
+    try {
+      room?.send('toggleReady')
+    } catch (error) {
+      console.warn('Unable to toggle ready', error)
+    }
+  },
 }))
 
 type SetStateFn = StoreApi<SessionState>['setState']
@@ -586,7 +601,7 @@ type GetStateFn = StoreApi<SessionState>['getState']
 const setupRoomHandlers = (
   room: Room,
   set: SetStateFn,
-  get: GetStateFn,
+  _get: GetStateFn,
   updateFromState: (state: any) => void
 ) => {
   room.onStateChange(updateFromState)
@@ -630,7 +645,7 @@ const setupRoomHandlers = (
   })
 }
 
-const attachToRoom = async (reservation: any, set: SetStateFn, get: GetStateFn, joinCode?: string): Promise<string | null> => {
+const attachToRoom = async (reservation: any, set: SetStateFn, get: GetStateFn, _joinCode?: string): Promise<string | null> => {
   console.log('[attachToRoom] Starting with reservation:', reservation)
   set({ status: 'connecting', error: undefined })
   const client = getColyseusClient()

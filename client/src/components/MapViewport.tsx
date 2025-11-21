@@ -21,7 +21,7 @@ import styles from './PixiViewport.module.css'
 
 extend({ Container, Graphics, Viewport, Text })
 
-const BACKGROUND_COLOR = 0x222222
+// const BACKGROUND_COLOR = 0x222222
 const HEX_DETAIL_THRESHOLD = 4
 const EMPTY_TERRITORY_OWNERSHIP = Object.freeze({}) as Record<TerritoryId, string | null>
 const EMPTY_PLAYER_COLORS = Object.freeze({}) as Record<string, string>
@@ -268,7 +268,7 @@ interface MapViewportProps {
 
 const MapViewport = ({
   className,
-  background,
+  // background,
   transparent = false,
   initialZoomFactor = 1,
   fitPadding = 0,
@@ -482,7 +482,7 @@ const MapViewport = ({
   ]
     .filter(Boolean)
     .join(' ')
-  const backgroundColor = background ?? BACKGROUND_COLOR
+  // const backgroundColor = background ?? BACKGROUND_COLOR
 
   return (
     <div ref={containerRef} className={containerClass}>

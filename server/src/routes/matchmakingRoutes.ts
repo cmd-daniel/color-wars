@@ -7,10 +7,10 @@ export function createMatchmakingRouter() {
 
   // Explicitly handle OPTIONS preflight requests
   router.options("/quick", (req, res) => {
-    logger.info("options_preflight_received", { 
-      path: req.path, 
+    logger.info("options_preflight_received", {
+      path: req.path,
       origin: req.headers.origin,
-      method: req.method 
+      method: req.method
     });
     res.header("Access-Control-Allow-Origin", req.headers.origin || "*");
     res.header("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -104,16 +104,20 @@ export function createMatchmakingRouter() {
 
     try {
       const result = await RoomManager.joinRoomById(roomId, { playerName, joinCode });
-      
+
       if (result.isSpectator) {
         res.json({ isSpectator: true, roomId });
       } else {
-        res.json({ isSpectator: false, reservation: formatReservationResponse(result.reservation) });
+        if (result.reservation) {
+          res.json({ isSpectator: false, reservation: formatReservationResponse(result.reservation) });
+        } else {
+          res.status(500).json({ error: "Reservation not found" });
+        }
       }
     } catch (error) {
       logger.warn("room_join_by_id_failed", { message: (error as Error).message, roomId });
       const message = (error as Error).message;
-      
+
       if (message.includes("not found") || message.includes("does not exist")) {
         res.status(404).json({ error: "Room not found" });
       } else if (message.includes("full")) {

@@ -2,19 +2,19 @@ import { useMemo } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
 import type { GamePlayer } from '@/stores/sessionStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
-import type { TrackSpace, TerritoryInfo } from '@/types/game'
+import type { TerritoryInfo } from '@/types/game'
 import type { TerritoryId } from '@/types/map'
 import { useDiceRoll } from '@/hooks/useDiceRoll'
 import Dice from './Dice'
 
-const currency = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  maximumFractionDigits: 0,
-})
+// const currency = new Intl.NumberFormat('en-US', {
+//   style: 'currency',
+//   currency: 'USD',
+//   maximumFractionDigits: 0,
+// })
 
 const EMPTY_PLAYERS: GamePlayer[] = []
-const EMPTY_TRACK_SPACES: TrackSpace[] = []
+// const EMPTY_TRACK_SPACES: TrackSpace[] = []
 const EMPTY_TERRITORY_INFO = Object.freeze({}) as Record<TerritoryId, TerritoryInfo>
 const EMPTY_TERRITORY_OWNERSHIP = Object.freeze({}) as Record<TerritoryId, string | null>
 
@@ -34,17 +34,17 @@ const TurnControls = () => {
   } = useMapInteractionsStore()
 
   const players = roomView?.players ?? EMPTY_PLAYERS
-  const trackSpaces = roomView?.trackSpaces ?? EMPTY_TRACK_SPACES
+  // const _trackSpaces = roomView?.trackSpaces ?? EMPTY_TRACK_SPACES
   const territoryInfo = roomView?.territoryInfo ?? EMPTY_TERRITORY_INFO
   const ownershipByTerritory = roomView?.territoryOwnership ?? EMPTY_TERRITORY_OWNERSHIP
 
   const currentPlayer = players.find((player) => player.sessionId === roomView?.currentTurn) ?? null
-  const lastEvent = roomView?.lastEvent ?? null
+  // const lastEvent = roomView?.lastEvent ?? null
   const turnPhase = roomView?.turnPhase ?? 'awaiting-roll'
   const lastRoll = roomView?.lastRoll
 
   // Use custom hook for dice roll state management
-  const { isRolling, showRollResult, rollResultText, handleRoll: handleRollDice } = useDiceRoll(rollDice, {
+  const { isRolling, showRollResult: _showRollResult, rollResultText: _rollResultText, handleRoll: handleRollDice } = useDiceRoll(rollDice, {
     lastRoll,
   })
 
@@ -78,12 +78,12 @@ const TurnControls = () => {
     }
   }
 
-  const eventAmountLabel =
-    lastEvent && (lastEvent.kind === 'bonus' || lastEvent.kind === 'chest-bonus' || lastEvent.kind === 'roll-again')
-      ? `+${currency.format(lastEvent.amount)}`
-      : lastEvent
-        ? `-${currency.format(lastEvent.amount)}`
-        : ''
+  // const _eventAmountLabel =
+  //   lastEvent && (lastEvent.kind === 'bonus' || lastEvent.kind === 'chest-bonus' || lastEvent.kind === 'roll-again')
+  //     ? `+${currency.format(lastEvent.amount)}`
+  //     : lastEvent
+  //       ? `-${currency.format(lastEvent.amount)}`
+  //       : ''
 
   return (
     <section className='turn-controls-container' >

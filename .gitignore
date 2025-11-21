@@ -1,3 +1,5 @@
 demo-tic-tac-toe
 tutorial-phaser
 color-wars-key.pem
+node_modules
+server/dist
