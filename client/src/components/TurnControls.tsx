@@ -6,6 +6,7 @@ import type { TerritoryInfo } from '@/types/game'
 import type { TerritoryId } from '@/types/map'
 import { useDiceRoll } from '@/hooks/useDiceRoll'
 import Dice from './Dice'
+import BetterDice from './BetterDicePanel'
 
 // const currency = new Intl.NumberFormat('en-US', {
 //   style: 'currency',
@@ -141,6 +142,7 @@ const TurnControls = () => {
         )}
         <button type="button" onClick={endTurn} disabled={!canEndTurn}>End turn</button>
       </div>
+      <BetterDice/>
     </section>
   )
 }
