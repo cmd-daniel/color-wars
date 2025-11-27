@@ -32,6 +32,10 @@ interface SetIconPayload {
   icon: string;
 }
 
+interface SetColorPayload {
+  color: string
+}
+
 interface UpdateRoomSettingsPayload {
   maxPlayers?: number;
   startingCash?: number;
@@ -219,6 +223,13 @@ export class GameRoom extends Room<GameState> {
       }
       this.handleSetIcon(client, payload);
     });
+
+    this.onMessage("setColor", (client, payload: SetColorPayload) => {
+      if (this.spectators.has(client.sessionId)) {
+        return;
+      }
+      this.handleSetColor(client, payload);
+    });
     
     this.onMessage("updateRoomSettings", (client, payload: UpdateRoomSettingsPayload) => {
       if (this.spectators.has(client.sessionId)) {
@@ -310,6 +321,34 @@ export class GameRoom extends Room<GameState> {
 
     player.icon = icon;
     logAnalyticsEvent("player_icon_set", { roomId: this.roomId, playerId: client.sessionId, icon });
+  }
+
+  private handleSetColor(client: Client, payload: SetColorPayload) {
+    if (this.state.phase !== "lobby") {
+      return; // Can only change icon in lobby
+    }
+    
+    const player = this.state.players.get(client.sessionId);
+    if (!player) {
+      return;
+    }
+
+    const color = typeof payload?.color === "string" ? payload.color.trim() : "";
+    if (!color) {
+      return;
+    }
+    // Check if color is already taken by another player
+    const iconTaken = Array.from(this.state.players.values()).some(
+      p => p.sessionId !== client.sessionId && p.color === color
+    );
+
+    if (iconTaken) {
+      client.send("iconError", { error: "color already taken" });
+      return;
+    }
+
+    player.color = color;
+    logAnalyticsEvent("player_color_set", { roomId: this.roomId, playerId: client.sessionId, color });
   }
 
   private handleUpdateRoomSettings(client: Client, payload: UpdateRoomSettingsPayload) {

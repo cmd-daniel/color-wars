@@ -18,7 +18,34 @@ import { env } from "../config/env";
 
 const STARTING_CASH = 600;
 const PASS_START_INCOME_FALLBACK = 120;
-const PLAYER_COLORS = ["#38bdf8", "#f472b6", "#facc15", "#a855f7"];
+const PLAYER_ICONS = [
+  "🎯",
+  "⚔️",
+  "🛡️",
+  "👑",
+  "🏰",
+  "🗡️",
+  "🎪",
+  "🎭",
+  "🎨",
+  "🎬",
+  "🎲",
+];
+
+const PLAYER_COLORS = [
+  "#D71E22",
+  "#1D3CE9",
+  "#FF63D4",
+  "#FF8D1C",
+  "#FFFF67",
+  "#4A565E",
+  "#5470FF",
+  "#1B913E",
+  "#80582D",
+  "#44FFF7",
+  "#6C2B3D",
+  "#EC7578"
+]
 const TRACK_LENGTH = 35;
 const MAX_LOGS = 200;
 
@@ -206,6 +233,9 @@ export class GameEngine {
     const playerIndex = this.state.playerOrder.indexOf(player.sessionId);
     if (playerIndex >= 0) {
       player.color = PLAYER_COLORS[playerIndex % PLAYER_COLORS.length];
+    }
+    if (playerIndex >= 0) {
+      player.icon = PLAYER_ICONS[playerIndex % PLAYER_ICONS.length];
     }
 
     if (player.money === 0 && player.position === 0 && player.ownedTerritories.length === 0) {

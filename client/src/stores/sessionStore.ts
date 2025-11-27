@@ -115,6 +115,7 @@ interface SessionState {
   leaveRoom: () => Promise<void>
   sendChat: (message: string) => void
   setIcon: (icon: string) => void
+  setColor: (color:string) => void
   updateRoomSettings: (settings: { maxPlayers?: number; startingCash?: number; isPublic?: boolean }) => void
   kickPlayer: (sessionId: string) => void
   startGame: () => void
@@ -526,6 +527,14 @@ export const useSessionStore = create<SessionState>((set, get) => ({
       room?.send('setIcon', { icon })
     } catch (error) {
       console.warn('Unable to set icon', error)
+    }
+  },
+  setColor: (color: string) => {
+    const { room } = get()
+    try {
+      room?.send('setColor', { color })
+    } catch (error) {
+      console.warn('Unable to set color', error)
     }
   },
   updateRoomSettings: (settings: { maxPlayers?: number; startingCash?: number; isPublic?: boolean }) => {

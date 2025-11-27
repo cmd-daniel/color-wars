@@ -29,6 +29,7 @@ export type AnalyticsEvent =
   | "leader_assigned"
   | "leader_reassigned"
   | "player_icon_set"
+  | "player_color_set"
   | "room_settings_updated"
   | "player_kicked"
   | "game_started"

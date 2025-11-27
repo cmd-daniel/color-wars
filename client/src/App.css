@@ -98,10 +98,13 @@ body {
   position: fixed;
   z-index: 11;
   background-color:#3c3c3c;
+  border-radius: 4px;
   padding: 8px;
   bottom: 0;
   left: 0;
   right: 0;
+  z-index: 999;
+  filter: drop-shadow(black 0 -1px 12px);
 }
 
 .dice-container {
@@ -506,6 +509,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.75rem;
+  flex-direction: row-reverse;
 }
 
 .turn-actions button {

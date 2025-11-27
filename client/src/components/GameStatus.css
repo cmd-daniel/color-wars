@@ -1,124 +1,33 @@
 .game-status {
-  background: rgba(15, 15, 35, 0.95);
-  border: 2px solid #667eea;
+  background: #3c3c3c;
   border-radius: 12px;
-  padding: 1.5rem;
   color: white;
-  max-width: 500px;
-  max-height: 80vh;
+  width: 100%;
   overflow-y: auto;
-}
-
-.game-status-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 2px solid #667eea;
-}
-
-.game-status-header h3 {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.game-status-room-info {
-  font-size: 0.9rem;
-  color: #aaa;
-}
-
-/* Settings */
-.game-status-settings {
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid #667eea;
-  border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.game-status-settings h4 {
-  margin: 0 0 1rem 0;
-  font-size: 1.1rem;
-}
-
-.settings-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.setting-item label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-}
-
-.setting-input {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.setting-input input {
-  flex: 1;
-  padding: 0.5rem;
-  border: 1px solid #667eea;
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.3);
-  color: white;
-}
-
-.setting-input button {
-  padding: 0.5rem 1rem;
-  background: #667eea;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.setting-input button:hover {
-  background: #5568d3;
+  padding: 16px 16px
 }
 
 /* Players List */
-.game-status-players {
-  margin-bottom: 1.5rem;
-}
-
-.players-header {
-  margin-bottom: 1rem;
-}
-
-.players-header h4 {
-  margin: 0;
-  font-size: 1.2rem;
-}
 
 .players-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  margin-bottom: 16px;
 }
 
 .player-item {
   display: flex;
+ 
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+
   transition: all 0.2s;
 }
 
-.player-item--you {
-  background: rgba(102, 126, 234, 0.2);
-  border-color: #667eea;
+.player-item.selected{
+  border: #fff 1px solid;
+  border-radius: 2px;
 }
 
 .player-item--disconnected {
@@ -128,7 +37,7 @@
 .player-info {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 8px;
   flex: 1;
 }
 
@@ -137,10 +46,9 @@
 }
 
 .player-color {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  width: 12px;
+  border-radius: 2px;
+  align-self: stretch;
 }
 
 .player-name {
@@ -160,8 +68,6 @@
 
 .kick-button {
   padding: 0.25rem 0.5rem;
-  background: rgba(239, 68, 68, 0.2);
-  border: 1px solid #ef4444;
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.9rem;
@@ -196,26 +102,38 @@
 }
 
 .icon-grid {
+  width: fit-content;
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+.color-grid {
+  width: fit-content;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+.color-option {
+  aspect-ratio: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.color-option:hover {
+  transform: scale(1.3);
 }
 
 .icon-option {
   aspect-ratio: 1;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 2px solid transparent;
-  border-radius: 8px;
   font-size: 1.5rem;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .icon-option:hover {
-  background: rgba(102, 126, 234, 0.3);
-  border-color: #667eea;
-  transform: scale(1.1);
+  transform: scale(1.3);
 }
 
 /* Actions */

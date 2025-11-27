@@ -9,9 +9,19 @@ const normalize = (value?: string | null) => {
 
 const stripTrailingSlashes = (value: string) => value.replace(/\/+$/, '');
 
+const isLocalhost = (hostname: string) => {
+  return hostname === 'localhost' || 
+         hostname === '127.0.0.1' || 
+         hostname === '::1' ||
+         hostname.startsWith('127.');
+};
+
 const resolveHttpEndpoint = () => {
   if (import.meta.env.DEV) {
-    const fromEnv = normalize(import.meta.env.VITE_API_BASE_URL as string | undefined);
+    if(isLocalhost(window.location.hostname)){
+      return stripTrailingSlashes(`${window.location.protocol}//${window.location.hostname}:${import.meta.env.VITE_SERVER_PORT}`)
+    }
+    const fromEnv = normalize(`${import.meta.env.VITE_SERVER_URL}:${import.meta.env.VITE_SERVER_PORT}` as string | undefined);
     if (!fromEnv) {
       throw new Error('VITE_API_BASE_URL must be set when running the client in development mode.');
     }
