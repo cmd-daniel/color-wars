@@ -1,14 +1,33 @@
+/* Dice wrapper */
+.diceWrap {
+  transform-style: preserve-3d;
+  transform: rotateX(-60deg) rotateY(45deg);
+}
+
+/* Dice container */
+.dice {
+  --dice-side: 100px;             /* <— change this to resize the whole dice */
+  --pip-size: calc(var(--dice-side) * 0.2);
+  --pip-offset: calc(var(--dice-side) * 0.2);
+  --pip-color: #131210;
+  --face-color: #f6f3f0;
+
+  position: relative;
+  width: var(--dice-side);
+  height: var(--dice-side);
+  transform-style: preserve-3d;
+}
+
 /* Base dice face styles */
 .diceFace {
   box-sizing: border-box;
   position: absolute;
-  width: 100px;
-  height: 100px;
-  background-color: #f6f3f0;
-  border: 2px solid #000000;
-  border-radius: 12px;
+  width: calc(var(--dice-side) );
+  height: calc(var(--dice-side) );
+  background-color: var(--face-color);
+  border: calc(var(--dice-side) * 0.01) solid #000;
+  border-radius: calc(var(--dice-side) * 0.2);
   transform-style: preserve-3d;
-  transition: 0.5s;
 }
 
 /* Background layer for depth */
@@ -17,278 +36,103 @@
   content: "";
   width: 100%;
   height: 100%;
-  background-color: #faf8f6;
-  border-radius: 20px;
-  transform: translateZ(-1px);
+  background-color: var(--face-color);
+  border-radius: calc(var(--dice-side) * 0.001);
+  transform: translateZ(calc(var(--dice-side) * -0.2));
 }
 
-/* Default dot in center */
+/* Default dot */
 .diceFace::after {
-  position: absolute;
   content: "";
-  width: 12px;
-  height: 12px;
+  position: absolute;
+  width: var(--pip-size);
+  height: var(--pip-size);
+  background-color: var(--pip-color);
+  border-radius: 50%;
   top: 50%;
   left: 50%;
-  margin: -6px 0 0 -6px;
-  background-color: #131210;
-  border-radius: 100%;
-  transform: translateZ(1px);
+  transform: translateZ(2px)
+             translate(-50%, -50%);
+  
 }
 
-/* Face 1 - Single large red dot */
+/* ----------------------------------
+    FACE POSITIONS (3D transforms)
+----------------------------------- */
 .face1 {
-  transform: rotateX(-90deg) translateZ(50px);
+  transform: rotateX(-90deg) translateZ(calc(var(--dice-side) / 2));
 }
-
-.face1::after {
-  width: 24px;
-  height: 24px;
-  margin: -12px 0 0 -12px;
-  background-color: #f63330;
-}
-
-/* Face 2 - Two dots */
 .face2 {
-  transform: rotateY(-90deg) translateZ(50px);
+  transform: rotateY(-90deg) translateZ(calc(var(--dice-side) / 2));
 }
-
-.face2::after {
-  margin: -18px 0 0 -18px;
-  box-shadow: 24px 24px #131210;
-}
-
-/* Face 3 - Three dots */
 .face3 {
-  transform: rotateY(180deg) translateZ(50px);
+  transform: rotateY(180deg) translateZ(calc(var(--dice-side) / 2));
 }
-
-.face3::after {
-  margin: -24px 0 0 -24px;
-  box-shadow: 18px 18px #131210, 36px 36px #131210;
-}
-
-/* Face 4 - Four red dots */
 .face4 {
-  transform: rotateY(0deg) translateZ(50px);
+  transform: rotateY(0deg) translateZ(calc(var(--dice-side) / 2));
 }
-
-.face4::after {
-  margin: -18px 0 0 -18px;
-  background-color: #131210;
-  box-shadow: 24px 0px #131210, 0px 24px #131210, 24px 24px #131210;
-}
-
-/* Face 5 - Five dots */
 .face5 {
-  transform: rotateY(90deg) translateZ(50px);
+  transform: rotateY(90deg) translateZ(calc(var(--dice-side) / 2));
 }
-
-.face5::after {
-  margin: -22px 0 0 -22px;
-  box-shadow: 16px 16px #131210, 32px 32px #131210, 32px 0px #131210, 0px 32px #131210;
-}
-
-/* Face 6 - Six dots */
 .face6 {
-  transform: rotateX(90deg) translateZ(50px);
+  transform: rotateX(90deg) translateZ(calc(var(--dice-side) / 2));
 }
 
+/* 1 */
+.face1::after {
+  width: calc(var(--pip-size) * 1.5);
+  height: calc(var(--pip-size) * 1.5);
+  box-shadow: none;
+}
+
+/* 2 (top-left & bottom-right) */
+.face2::after {
+  box-shadow:
+    calc(-1 * var(--pip-offset)) calc(-1 * var(--pip-offset)) var(--pip-color),
+    var(--pip-offset) var(--pip-offset) var(--pip-color);
+}
+
+/* 3 (top-left, center, bottom-right) */
+.face3::after {
+  box-shadow:
+    calc(-1 * var(--pip-offset)) calc(-1 * var(--pip-offset)) var(--pip-color),
+    0 0 var(--pip-color),
+    var(--pip-offset) var(--pip-offset) var(--pip-color);
+}
+
+/* 4 (all 4 corners) */
+.face4::after {
+  box-shadow:
+    calc(-1 * var(--pip-offset)) calc(-1 * var(--pip-offset)) var(--pip-color),
+    var(--pip-offset) calc(-1 * var(--pip-offset)) var(--pip-color),
+    calc(-1 * var(--pip-offset)) var(--pip-offset) var(--pip-color),
+    var(--pip-offset) var(--pip-offset) var(--pip-color);
+}
+
+/* 5 (4 corners + center) */
+.face5::after {
+  box-shadow:
+    calc(-1 * var(--pip-offset)) calc(-1 * var(--pip-offset)) var(--pip-color),
+    var(--pip-offset) calc(-1 * var(--pip-offset)) var(--pip-color),
+    calc(-1 * var(--pip-offset)) var(--pip-offset) var(--pip-color),
+    var(--pip-offset) var(--pip-offset) var(--pip-color),
+    0 0 var(--pip-color);
+}
+
+/* 6 (3 left, 3 right, vertically aligned) */
 .face6::after {
-  margin: -24px 0 0 -18px;
-  box-shadow: 24px 0px #131210, 0px 18px #131210, 24px 18px #131210, 0px 36px #131210, 24px 36px #131210;
+  box-shadow:
+    calc(-1 * var(--pip-offset)) calc(-1.2 * var(--pip-offset)) var(--pip-color),
+    calc(-1 * var(--pip-offset)) 0 var(--pip-color),
+    calc(-1 * var(--pip-offset)) calc(1.2 * var(--pip-offset)) var(--pip-color),
+
+    var(--pip-offset) calc(-1.2 * var(--pip-offset)) var(--pip-color),
+    var(--pip-offset) 0 var(--pip-color),
+    var(--pip-offset) calc(1.2 * var(--pip-offset)) var(--pip-color);
 }
 
-/* Dice container */
-.dice {
-  position: relative;
-  width: 100px;
-  height: 100px;
-  transform-style: preserve-3d;
+.face2::after,
+.face4::after,
+.face6::after {
+  background-color: transparent;   /* or background-color */
 }
-
-
-/* Dice wrapper */
-.diceWrap {
-  transform-style: preserve-3d;
-  transform: rotateX(-60deg) rotateY(45deg)
-}
-
-/* Red dice variant */
-.dice.red .diceFace {
-  background-color: rgba(250, 0, 0, 0.45);
-  border-color: rgba(250, 0, 0, 0.55);
-  border-radius: 30px;
-}
-
-.dice.red .diceFace::before {
-  background-color: rgba(250, 0, 0, 0.55);
-  border-radius: 30px;
-}
-
-.dice.red .diceFace::after {
-  background-color: white;
-  box-shadow: none;
-}
-
-.dice.red .face1::after {
-  background-color: white;
-}
-
-.dice.red .face2::after {
-  box-shadow: 40px 40px white;
-}
-
-.dice.red .face3::after {
-  box-shadow: 30px 30px white, 60px 60px white;
-}
-
-.dice.red .face4::after {
-  background-color: white;
-  box-shadow: 40px 0px white, 0px 40px white, 40px 40px white;
-}
-
-.dice.red .face5::after {
-  box-shadow: 26px 26px white, 52px 52px white, 52px 0px white, 0px 52px white;
-}
-
-.dice.red .face6::after {
-  box-shadow: 40px 0px white, 0px 30px white, 40px 30px white, 0px 60px white, 40px 60px white;
-}
-
-/* Blue dice variant */
-.dice.blue .diceFace {
-  background-color: rgba(0, 0, 255, 0.45);
-  border-color: rgba(0, 0, 255, 0.55);
-}
-
-.dice.blue .diceFace::before {
-  background-color: rgba(0, 0, 255, 0.55);
-}
-
-.dice.blue .diceFace::after {
-  background-color: white;
-  box-shadow: none;
-}
-
-.dice.blue .face1::after {
-  background-color: white;
-}
-
-.dice.blue .face2::after {
-  box-shadow: 40px 40px white;
-}
-
-.dice.blue .face3::after {
-  box-shadow: 30px 30px white, 60px 60px white;
-}
-
-.dice.blue .face4::after {
-  background-color: white;
-  box-shadow: 40px 0px white, 0px 40px white, 40px 40px white;
-}
-
-.dice.blue .face5::after {
-  box-shadow: 26px 26px white, 52px 52px white, 52px 0px white, 0px 52px white;
-}
-
-.dice.blue .face6::after {
-  box-shadow: 40px 0px white, 0px 30px white, 40px 30px white, 0px 60px white, 40px 60px white;
-}
-
-/* Black dice variant */
-.dice.black .diceFace {
-  background-color: #111;
-  border-color: #222;
-}
-
-.dice.black .diceFace::before {
-  background-color: #222;
-}
-
-.dice.black .diceFace::after {
-  background-color: #db0;
-  box-shadow: none;
-}
-
-.dice.black .face1::after {
-  background-color: #3ef;
-}
-
-.dice.black .face2::after {
-  box-shadow: 40px 40px #db0;
-}
-
-.dice.black .face3::after {
-  box-shadow: 30px 30px #db0, 60px 60px #db0;
-}
-
-.dice.black .face4::after {
-  background-color: #3ef;
-  box-shadow: 40px 0px #3ef, 0px 40px #3ef, 40px 40px #3ef;
-}
-
-.dice.black .face5::after {
-  box-shadow: 26px 26px #db0, 52px 52px #db0, 52px 0px #db0, 0px 52px #db0;
-}
-
-.dice.black .face6::after {
-  box-shadow: 40px 0px #db0, 0px 30px #db0, 40px 30px #db0, 0px 60px #db0, 40px 60px #db0;
-}
-
-/* Pink dice variant */
-.dice.pink .diceFace {
-  background-color: #f69;
-  border-color: #f8a;
-  border-radius: 40px;
-}
-
-.dice.pink .diceFace::before {
-  background-color: #f8a;
-  border-radius: 40px;
-}
-
-.dice.pink .diceFace::after {
-  background-color: #ffe;
-  box-shadow: none;
-}
-
-.dice.pink .face1::after {
-  background-color: #fe9;
-}
-
-.dice.pink .face2::after {
-  box-shadow: 40px 40px #ffe;
-}
-
-.dice.pink .face3::after {
-  box-shadow: 30px 30px #ffe, 60px 60px #ffe;
-}
-
-.dice.pink .face4::after {
-  background-color: #fe9;
-  box-shadow: 40px 0px #fe9, 0px 40px #fe9, 40px 40px #fe9;
-}
-
-.dice.pink .face5::after {
-  box-shadow: 26px 26px #ffe, 52px 52px #ffe, 52px 0px #ffe, 0px 52px #ffe;
-}
-
-.dice.pink .face6::after {
-  box-shadow: 40px 0px #ffe, 0px 30px #ffe, 40px 30px #ffe, 0px 60px #ffe, 40px 60px #ffe;
-}
-
-/* Animations */
-@keyframes diceRoll {
-  0% {
-    transform: rotateX(0deg) rotateY(81deg) rotateZ(81deg) translateY(0);
-  }
-  50% {
-    transform: rotateX(-504deg) rotateY(189deg) rotateZ(-472deg) translateY(0);
-  }
-  100% {
-    transform: rotateX(0deg) rotateY(81deg) rotateZ(81deg) translateY(0);
-  }
-}
-
-

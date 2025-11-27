@@ -15,12 +15,12 @@ export const Dice: React.FC<DiceProps> = ({ quaternion }) => {
   return (
     <div className={styles.diceWrap}>
       <div className={styles.dice} style={{ transform }}>
-        <div className={`${styles.diceFace} ${styles.face4}`}></div>
-        <div className={`${styles.diceFace} ${styles.face3}`}></div>
-        <div className={`${styles.diceFace} ${styles.face5}`}></div>
-        <div className={`${styles.diceFace} ${styles.face2}`}></div>
-        <div className={`${styles.diceFace} ${styles.face6}`}></div>
         <div className={`${styles.diceFace} ${styles.face1}`}></div>
+        <div className={`${styles.diceFace} ${styles.face2}`}></div>
+        <div className={`${styles.diceFace} ${styles.face3}`}></div>
+        <div className={`${styles.diceFace} ${styles.face4}`}></div>
+        <div className={`${styles.diceFace} ${styles.face5}`}></div>
+        <div className={`${styles.diceFace} ${styles.face6}`}></div>
       </div>
     </div>
   );
