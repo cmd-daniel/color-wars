@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSessionStore } from "@/stores/sessionStore";
 import type { GamePlayer } from "@/stores/sessionStore";
 import {
@@ -49,14 +49,14 @@ const GameStatus = ({ onLeave }: GameStatusProps) => {
     isSpectator,
     setIcon,
     setColor,
-    updateRoomSettings,
+    // updateRoomSettings,
     kickPlayer,
     startGame,
   } = useSessionStore();
 
-  const [showIconSelector, setShowIconSelector] = useState(false);
-  const [maxPlayersInput, setMaxPlayersInput] = useState("");
-  const [startingCashInput, setStartingCashInput] = useState("");
+  const [_, setShowIconSelector] = useState(false);
+  // const [maxPlayersInput, setMaxPlayersInput] = useState("");
+  // const [startingCashInput, setStartingCashInput] = useState("");
   const [openColor, setOpenColor] = useState(false)
   const [openIcon, setOpenIcon] = useState(false)
 
@@ -66,8 +66,6 @@ const GameStatus = ({ onLeave }: GameStatusProps) => {
 
   const isLeader = roomView.leaderId === sessionId;
   const isLobbyPhase = roomView.phase === "lobby";
-  const currentPlayer = roomView.players.find((p) => p.sessionId === sessionId);
-  const hasIcon = currentPlayer?.icon && currentPlayer.icon.length > 0;
 
   // Get icons that are already taken
   const takenIcons = roomView.players.map((p) => p.icon).filter(Boolean);
@@ -85,21 +83,21 @@ const GameStatus = ({ onLeave }: GameStatusProps) => {
     setShowIconSelector(false);
   };
 
-  const handleUpdateMaxPlayers = () => {
-    const value = parseInt(maxPlayersInput);
-    if (value >= 1 && value <= 12) {
-      updateRoomSettings({ maxPlayers: value });
-      setMaxPlayersInput("");
-    }
-  };
+  // const handleUpdateMaxPlayers = () => {
+  //   const value = parseInt(maxPlayersInput);
+  //   if (value >= 1 && value <= 12) {
+  //     updateRoomSettings({ maxPlayers: value });
+  //     setMaxPlayersInput("");
+  //   }
+  // };
 
-  const handleUpdateStartingCash = () => {
-    const value = parseInt(startingCashInput);
-    if (value >= 0) {
-      updateRoomSettings({ startingCash: value });
-      setStartingCashInput("");
-    }
-  };
+  // const handleUpdateStartingCash = () => {
+  //   const value = parseInt(startingCashInput);
+  //   if (value >= 0) {
+  //     updateRoomSettings({ startingCash: value });
+  //     setStartingCashInput("");
+  //   }
+  // };
 
   const handleStartGame = () => {
     // Check if all players have icons

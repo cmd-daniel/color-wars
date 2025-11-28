@@ -1,15 +1,7 @@
-.container {
-  text-align: center;
-  width: 100%;
-  margin-top: 16px;
-  display: flex;
-  justify-content: center;
-}
+
 
 .holdBtn {
   position: relative;
-  width: 200px;
-  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -19,6 +11,10 @@
   cursor: pointer;
   overflow: hidden;
   transition: box-shadow 0.2s ease;
+  user-select: none;     /* Standard */
+  -webkit-user-select: none; /* Safari */
+  -ms-user-select: none;     /* Old Edge/IE */
+  -webkit-touch-callout: none; /* Disable touch callout */
 }
 
 .holdBtn:hover {

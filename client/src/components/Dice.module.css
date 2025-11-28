@@ -6,7 +6,7 @@
 
 /* Dice container */
 .dice {
-  --dice-side: 100px;             /* <— change this to resize the whole dice */
+  --dice-side: 80px;             /* <— change this to resize the whole dice */
   --pip-size: calc(var(--dice-side) * 0.2);
   --pip-offset: calc(var(--dice-side) * 0.2);
   --pip-color: #131210;

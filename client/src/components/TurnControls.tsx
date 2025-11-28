@@ -1,18 +1,31 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useSessionStore } from '@/stores/sessionStore'
 import type { GamePlayer } from '@/stores/sessionStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
 import type { TerritoryInfo } from '@/types/game'
 import type { TerritoryId } from '@/types/map'
 import { useDiceRoll } from '@/hooks/useDiceRoll'
-import Dice from './Dice'
-import BetterDice from './BetterDicePanel'
+import Dice from './BetterDice'
+import { nanoid } from 'nanoid'
+import { useDicePhysics } from '@/hooks/useDicePhysics'
+import { HoldButton } from './HoldButton'
 
 // const currency = new Intl.NumberFormat('en-US', {
 //   style: 'currency',
 //   currency: 'USD',
 //   maximumFractionDigits: 0,
 // })
+
+function fakeApiRollForBothDice() {
+  return new Promise<{ faceA: number; faceB: number }>((res) => {
+    setTimeout(() => {
+      res({
+        faceA: Math.floor(Math.random() * 6) + 1,
+        faceB: Math.floor(Math.random() * 6) + 1,
+      });
+    }, 1500);
+  });
+}
 
 const EMPTY_PLAYERS: GamePlayer[] = []
 // const EMPTY_TRACK_SPACES: TrackSpace[] = []
@@ -34,6 +47,54 @@ const TurnControls = () => {
     setHighlightedTerritory,
   } = useMapInteractionsStore()
 
+  // -----------------------------------------------------
+  // DICE STATE
+  // -----------------------------------------------------
+  const diceA = useDicePhysics();
+  const diceB = useDicePhysics();
+  const holdStartRef = useRef(0);
+  const rollId = useRef("crypto.randomUUID()");
+
+  // -----------------------------------------------------
+  // HANDLE USER HOLD START
+  // -----------------------------------------------------
+  const handleHoldStart = () => {
+    if (diceA.isApiPending.current || diceB.isApiPending.current) return;
+
+    holdStartRef.current = Date.now();
+    rollId.current = nanoid();
+
+    diceA.setMode("accelerate");
+    diceB.setMode("accelerate");
+    
+    diceA.startPhysicsLoop(rollId.current);
+    diceB.startPhysicsLoop(rollId.current);
+  };
+
+  // -----------------------------------------------------
+  // HANDLE USER RELEASE
+  // -----------------------------------------------------
+  const handleHoldRelease = async () => {
+    const elapsed = Date.now() - holdStartRef.current;
+
+    // EARLY RELEASE: <2s → normal decel
+    if (elapsed < 1000) {
+      diceA.setMode("ragdoll");
+      diceB.setMode("ragdoll");
+      return;
+    }
+
+    // LATE RELEASE: ≥2s → enter WAITING FOR API
+    diceA.setMode("auto-spin");
+    diceB.setMode("auto-spin");
+
+    // ONE API REQUEST
+    const result = await fakeApiRollForBothDice();
+
+    diceA.setMode("spin-to-target", { face: result.faceA });
+    diceB.setMode("spin-to-target", { face: result.faceB });
+  };
+
   const players = roomView?.players ?? EMPTY_PLAYERS
   // const _trackSpaces = roomView?.trackSpaces ?? EMPTY_TRACK_SPACES
   const territoryInfo = roomView?.territoryInfo ?? EMPTY_TERRITORY_INFO
@@ -45,7 +106,7 @@ const TurnControls = () => {
   const lastRoll = roomView?.lastRoll
 
   // Use custom hook for dice roll state management
-  const { isRolling, showRollResult: _showRollResult, rollResultText: _rollResultText, handleRoll: handleRollDice } = useDiceRoll(rollDice, {
+  const { showRollResult: _showRollResult, rollResultText: _rollResultText } = useDiceRoll(rollDice, {
     lastRoll,
   })
 
@@ -63,7 +124,6 @@ const TurnControls = () => {
   }, [selectedOwnership, selectedTerritory, selectedTerritoryId])
 
   const canActThisTurn = !isSpectator && currentPlayer?.sessionId === sessionId
-  const canRoll = canActThisTurn && turnPhase === 'awaiting-roll'
   const canEndTurn = canActThisTurn && turnPhase === 'awaiting-end-turn'
   const canPurchaseSelected = !isSpectator && Boolean(selectedOffer) && Boolean(currentPlayer) && currentPlayer!.money >= (selectedOffer?.cost ?? Infinity)
   const selectedOwnershipLabel = selectedOwnership
@@ -89,19 +149,8 @@ const TurnControls = () => {
   return (
     <section className='turn-controls-container' >
       <div className="dice-container">
-        {isRolling && !lastRoll && (
-          <div className="dice-loading-spinner">
-            <div className="spinner"></div>
-          </div>
-        )}
-        <Dice 
-          value={lastRoll?.[0] ?? null}
-          diceType="default"
-        />
-        <Dice 
-          value={lastRoll?.[1] ?? null}
-          diceType="default"
-        />
+        <Dice quaternion={diceA.quat} />
+        <Dice quaternion={diceB.quat} />
       </div>
       {/* {showRollResult && (
         <div className="roll-result-banner">
@@ -128,7 +177,15 @@ const TurnControls = () => {
         </div>
       )}
       <div className="turn-actions">
-        <button type="button" onClick={handleRollDice} disabled={!canRoll || isRolling}>Roll dice</button>
+        <HoldButton 
+          onHoldStart={handleHoldStart}
+          onHoldEnd={handleHoldRelease}
+          onHoldCancel={() => {
+            diceA.setMode('ragdoll');
+            diceB.setMode('ragdoll');
+          }}
+        />
+        {/* <button type="button" onClick={handleRollDice} disabled={!canRoll || isRolling}>Roll dice</button> */}
         {!selectedOwnershipLabel && selectedOffer && (
           <button
             type="button"
@@ -142,7 +199,6 @@ const TurnControls = () => {
         )}
         <button type="button" onClick={endTurn} disabled={!canEndTurn}>End turn</button>
       </div>
-      <BetterDice/>
     </section>
   )
 }

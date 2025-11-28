@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useRef } from "react";
 import { Dice } from "../components/BetterDice";
 import { useDicePhysics } from "../hooks/useDicePhysics";
 import { HoldButton } from "./HoldButton";
@@ -64,13 +64,13 @@ export const DiceRotationApp: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white p-6 gap-6">
+    <div className="flex flex-col   text-white p-6 gap-6">
       <div className="flex-1 flex justify-center items-center gap-16" style={{ perspective: "1000px" }}>
         <Dice quaternion={diceA.quat} />
         <Dice quaternion={diceB.quat} />
       </div>
 
-      <div className="bg-gray-800 p-6 rounded-xl border border-gray-700 max-w-3xl mx-auto w-full">
+      <div className=" p-6 rounded-xl border border-gray-700 max-w-3xl mx-auto w-full">
         <h2 className="text-xl font-bold mb-4">You rolled : {diceA.rolledNumber} + {diceB.rolledNumber}</h2>
 
         {/* Face buttons */}
@@ -107,8 +107,8 @@ export const DiceRotationApp: React.FC = () => {
         </button> */}
 
         <HoldButton
-          onMouseDown={handleHoldStart}
-          onMouseUp={handleHoldRelease}
+          onHoldStart={handleHoldStart}
+          onHoldEnd={handleHoldRelease}
           />
       </div>
     </div>
