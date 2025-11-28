@@ -1,58 +1,10 @@
 import { readFileSync } from "fs";
 import path from "path";
 import type { Client } from "colyseus";
-import {
-  GameLogEntryState,
-  GameLogEntryType,
-  GameState,
-  PlayerState,
-  TrackEventDefinitionState,
-  TrackEventKind,
-  TrackEventResultState,
-  TrackSpaceState,
-  TurnPhase,
-  TerritoryInfoState
-} from "../state/GameState";
+import { GameState, PlayerState, TurnPhase } from "../state/GameState";
+import { GAME, PLAYER } from "../constants";
 import { logger } from "../utils/logger";
 import { env } from "../config/env";
-
-const STARTING_CASH = 600;
-const PASS_START_INCOME_FALLBACK = 120;
-const PLAYER_ICONS = [
-  "🎯",
-  "⚔️",
-  "🛡️",
-  "👑",
-  "🏰",
-  "🗡️",
-  "🎪",
-  "🎭",
-  "🎨",
-  "🎬",
-  "🎲",
-];
-
-const PLAYER_COLORS = [
-  "#D71E22",
-  "#1D3CE9",
-  "#FF63D4",
-  "#FF8D1C",
-  "#FFFF67",
-  "#4A565E",
-  "#5470FF",
-  "#1B913E",
-  "#80582D",
-  "#44FFF7",
-  "#6C2B3D",
-  "#EC7578"
-]
-const TRACK_LENGTH = 35;
-const MAX_LOGS = 200;
-
-type GameLogOptions = {
-  type?: GameLogEntryType;
-  detail?: string;
-};
 
 type TrackEventConfig =
   | {
@@ -87,21 +39,56 @@ type MapDefinition = {
 };
 
 const TRACK_EVENT_PATTERN: TrackEventConfig[] = [
-  { kind: "bonus", amount: 500, label: "+500", description: "Windfall supply payout" },
-  { kind: "penalty", amount: 200, label: "-200", description: "Logistics setback" },
-  { kind: "chest-bonus", min: 150, max: 450, label: "?", description: "Reward cache" },
+  {
+    kind: "bonus",
+    amount: 500,
+    label: "+500",
+    description: "Windfall supply payout",
+  },
+  {
+    kind: "penalty",
+    amount: 200,
+    label: "-200",
+    description: "Logistics setback",
+  },
+  {
+    kind: "chest-bonus",
+    min: 150,
+    max: 450,
+    label: "?",
+    description: "Reward cache",
+  },
   { kind: "roll-again", label: "↺", description: "Momentum surge" },
-  { kind: "chest-penalty", min: 120, max: 320, label: "☠", description: "Sabotage chest" },
+  {
+    kind: "chest-penalty",
+    min: 120,
+    max: 320,
+    label: "☠",
+    description: "Sabotage chest",
+  },
   { kind: "bonus", amount: 300, label: "+300", description: "Investor boost" },
-  { kind: "penalty", amount: 150, label: "-150", description: "Maintenance drain" }
+  {
+    kind: "penalty",
+    amount: 150,
+    label: "-150",
+    description: "Maintenance drain",
+  },
 ];
 
 const formatCurrency = (amount: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(amount);
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
 
-const pickRandom = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const pickRandom = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
-const buildTrackEventDefinition = (config: TrackEventConfig, seedIndex: number) => {
+const buildTrackEventDefinition = (
+  config: TrackEventConfig,
+  seedIndex: number
+) => {
   const definition = new TrackEventDefinitionState();
   definition.kind = config.kind as TrackEventKind;
   definition.description = config.description;
@@ -144,7 +131,8 @@ const buildTrackSpaces = () => {
       continue;
     }
 
-    const config = TRACK_EVENT_PATTERN[(index - 1) % TRACK_EVENT_PATTERN.length];
+    const config =
+      TRACK_EVENT_PATTERN[(index - 1) % TRACK_EVENT_PATTERN.length];
     trackSpace.type = "event";
     trackSpace.label = config.label;
     trackSpace.event = buildTrackEventDefinition(config, index);
@@ -176,9 +164,15 @@ const loadDefaultMapDefinition = (): MapDefinition | null => {
   try {
     const customPath = env.mapDefinitionPath;
     const filePath =
-      customPath ?? path.resolve(__dirname, "../../../client/public/sample-subcontinent.json");
+      customPath ??
+      path.resolve(
+        __dirname,
+        "../../../client/public/sample-subcontinent.json"
+      );
     const raw = readFileSync(filePath, "utf8");
-    const parsed = JSON.parse(raw) as Partial<MapDefinition> & { states?: unknown };
+    const parsed = JSON.parse(raw) as Partial<MapDefinition> & {
+      states?: unknown;
+    };
 
     const territories = normalizeTerritories(parsed);
     if (!territories.length) {
@@ -187,10 +181,12 @@ const loadDefaultMapDefinition = (): MapDefinition | null => {
 
     return {
       ...(parsed as object),
-      territories
+      territories,
     } as MapDefinition;
   } catch (error) {
-    logger.error("map_definition_load_failed", { message: (error as Error).message });
+    logger.error("map_definition_load_failed", {
+      message: (error as Error).message,
+    });
     return null;
   }
 };
@@ -213,7 +209,9 @@ export interface PurchaseResult {
 
 export class GameEngine {
   private mapDefinition: MapDefinition | null;
-  private roomClock?: { setTimeout: (callback: () => void, delay: number) => any };
+  private roomClock?: {
+    setTimeout: (callback: () => void, delay: number) => any;
+  };
 
   constructor(private readonly state: GameState) {
     this.mapDefinition = loadDefaultMapDefinition();
@@ -221,41 +219,50 @@ export class GameEngine {
     this.initializeTerritories();
   }
 
-  setRoomClock(clock: { setTimeout: (callback: () => void, delay: number) => any }) {
+  setRoomClock(clock: {
+    setTimeout: (callback: () => void, delay: number) => any;
+  }) {
     this.roomClock = clock;
   }
 
   handlePlayerJoined(player: PlayerState) {
-    if (!this.state.playerOrder.includes(player.sessionId)) {
-      this.state.playerOrder.push(player.sessionId);
-    }
+    this.state.playerOrder.push(player.id);
 
-    const playerIndex = this.state.playerOrder.indexOf(player.sessionId);
-    if (playerIndex >= 0) {
-      player.color = PLAYER_COLORS[playerIndex % PLAYER_COLORS.length];
-    }
-    if (playerIndex >= 0) {
-      player.icon = PLAYER_ICONS[playerIndex % PLAYER_ICONS.length];
-    }
+    const takenColors = new Set();
+    const takenIcons = new Set();
 
-    if (player.money === 0 && player.position === 0 && player.ownedTerritories.length === 0) {
-      player.money = STARTING_CASH;
+    this.state.players.forEach((p) => {
+      takenColors.add(p.color);
+      takenIcons.add(p.icon);
+    });
+
+    for (const color of PLAYER.COLORS) {
+      if (!takenColors.has(color)) {
+        player.color = color;
+        break;
+      }
+    }
+    for (const icon of PLAYER.ICONS) {
+      if (!takenIcons.has(icon)) {
+        player.icon = icon;
+        break;
+      }
     }
   }
 
   handlePlayerLeft(sessionId: string) {
     const orderIndex = this.state.playerOrder.indexOf(sessionId);
-    if (orderIndex !== -1) {
-      this.state.playerOrder.splice(orderIndex, 1);
-    }
 
+    
+
+    //release all player owned territories
     this.state.territoryOwnership.forEach((ownerSessionId, territoryId) => {
-      if (ownerSessionId === sessionId) {
-        this.state.territoryOwnership.set(territoryId, "");
-      }
+      if (ownerSessionId === sessionId) this.state.territoryOwnership.set(territoryId, "");
     });
 
-    if (this.state.currentTurn === sessionId) {
+    this.state.playerOrder.splice(orderIndex, 1);
+    
+    if (this.state.activePlayerId === sessionId) {
       this.advanceTurnAfterRemoval(orderIndex);
     }
   }
@@ -272,7 +279,9 @@ export class GameEngine {
 
     if (firstSessionId) {
       const player = this.state.players.get(firstSessionId);
-      this.addLog(`${player?.name ?? "Player"} begins the match`, { type: "turn" });
+      this.addLog(`${player?.name ?? "Player"} begins the match`, {
+        type: "turn",
+      });
     }
   }
 
@@ -337,7 +346,9 @@ export class GameEngine {
         detailParts.push(`Landed on ${space.label}`);
       }
       if (passStartReward > 0) {
-        detailParts.push(`Collected ${formatCurrency(passStartReward)} for passing Launch`);
+        detailParts.push(
+          `Collected ${formatCurrency(passStartReward)} for passing Launch`
+        );
       }
 
       let nextPhase: TurnPhase = "awaiting-end-turn";
@@ -356,7 +367,8 @@ export class GameEngine {
             break;
           case "penalty":
             delta = -amount;
-            detail = baseEvent.description || `Penalty ${formatCurrency(amount)}`;
+            detail =
+              baseEvent.description || `Penalty ${formatCurrency(amount)}`;
             break;
           case "chest-bonus": {
             const min = baseEvent.min > 0 ? baseEvent.min : 150;
@@ -444,7 +456,12 @@ export class GameEngine {
     }
 
     if (player.money < territory.cost) {
-      return { success: false, reason: "insufficient-funds", cost: territory.cost, balance: player.money };
+      return {
+        success: false,
+        reason: "insufficient-funds",
+        cost: territory.cost,
+        balance: player.money,
+      };
     }
 
     player.money -= territory.cost;
@@ -453,16 +470,21 @@ export class GameEngine {
     }
     this.state.territoryOwnership.set(territoryId, player.sessionId);
 
-    this.addLog(`${player.name} purchased ${territory.name} for ${formatCurrency(territory.cost)}`, {
-      type: "purchase"
-    });
+    this.addLog(
+      `${player.name} purchased ${territory.name} for ${formatCurrency(
+        territory.cost
+      )}`,
+      {
+        type: "purchase",
+      }
+    );
 
     return {
       success: true,
       territoryId,
       cost: territory.cost,
       balance: player.money,
-      territoryName: territory.name
+      territoryName: territory.name,
     };
   }
 
@@ -500,8 +522,12 @@ export class GameEngine {
       this.state.round += 1;
       this.addLog(`Round ${this.state.round} begins`, { type: "turn" });
     } else {
-      const nextPlayer = nextSessionId ? this.state.players.get(nextSessionId) : undefined;
-      this.addLog(`${nextPlayer?.name ?? "Next player"} is up`, { type: "turn" });
+      const nextPlayer = nextSessionId
+        ? this.state.players.get(nextSessionId)
+        : undefined;
+      this.addLog(`${nextPlayer?.name ?? "Next player"} is up`, {
+        type: "turn",
+      });
     }
   }
 
@@ -555,20 +581,10 @@ export class GameEngine {
     this.state.logs.splice(0, this.state.logs.length);
   }
 
-  private advanceTurnAfterRemoval(previousIndex: number) {
-    if (this.state.playerOrder.length === 0) {
-      this.state.currentTurn = "";
-      this.state.turnPhase = "awaiting-roll";
-      this.state.lastRoll.clear();
-      this.state.lastEvent = undefined;
-      return;
-    }
-
-    const nextIndex = previousIndex >= 0 ? previousIndex % this.state.playerOrder.length : 0;
-    this.state.currentTurn = this.state.playerOrder[nextIndex] ?? "";
-    this.state.turnPhase = "awaiting-roll";
+  private advanceTurnAfterRemoval(nextIndex: number) {
+    this.state.activePlayerId = this.state.playerOrder[nextIndex];
     this.state.lastRoll.clear();
-    this.state.lastEvent = undefined;
+    this.state.turnPhase = "awaiting-roll";
   }
 
   private computeTerritoryCost(territory: MapTerritory) {
@@ -593,7 +609,9 @@ export class GameEngine {
 
   private addLog(message: string, options: GameLogOptions = {}) {
     const entry = new GameLogEntryState();
-    entry.id = `log-${Date.now().toString(36)}-${Math.round(Math.random() * 1_000_000).toString(36)}`;
+    entry.id = `log-${Date.now().toString(36)}-${Math.round(
+      Math.random() * 1_000_000
+    ).toString(36)}`;
     entry.timestamp = Date.now();
     entry.message = message;
     entry.type = options.type ?? "info";

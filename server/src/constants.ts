@@ -1,10 +1,46 @@
-export const ROOM_TYPE = "color_wars";
+export const DEFAULT = {
+  MAX_PLAYERS: 6,
+  ROOM_TYPE: "COLOR-WARS",
+  PLAYER: {
+    STARTING_CASH: 600,
+  },
+};
 
-export const DEFAULT_MAX_PLAYERS = 6;
-export const DEFAULT_MIN_PLAYERS = 2;
+export const GAME = {
+    ROUND_INCOME : 120,
+    TRACK_LENGTH : 35
+}
 
-export const WAITING_TIMEOUT_MS = 60_000;
-export const LOBBY_DURATION_MS = 60_000;
-export const EMPTY_ROOM_GRACE_PERIOD_MS = 30_000;
+export const PLAYER = {
+  COLORS: [
+    "#D71E22",
+    "#1D3CE9",
+    "#FF63D4",
+    "#FF8D1C",
+    "#FFFF67",
+    "#4A565E",
+    "#5470FF",
+    "#1B913E",
+    "#80582D",
+    "#44FFF7",
+    "#6C2B3D",
+    "#EC7578",
+  ],
+  ICONS: [
+    "🎯",
+    "⚔️",
+    "🛡️",
+    "👑",
+    "🏰",
+    "🗡️",
+    "🎪",
+    "🎭",
+    "🎨",
+    "🎬",
+    "🎲",
+  ]
+};
 
-export const MAX_CHAT_LOG_LENGTH = 50;
+export enum BROADCAST_EVENT {
+    CHAT
+}

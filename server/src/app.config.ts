@@ -8,7 +8,7 @@ import { existsSync } from "fs";
 import { GameRoom } from "./rooms/GameRoom";
 import { createMatchmakingRouter } from "./routes/matchmakingRoutes";
 import { logger } from "./utils/logger";
-import { ROOM_TYPE } from "./constants";
+import { DEFAULT } from "./constants";
 import { env } from "./config/env";
 
 const registerClientBuild = (app: express.Express) => {
@@ -47,7 +47,9 @@ const registerClientBuild = (app: express.Express) => {
 
 export default config({
   initializeGameServer: (gameServer) => {
-    gameServer.define(ROOM_TYPE, GameRoom);
+    gameServer
+      .define(DEFAULT.ROOM_TYPE, GameRoom)
+      .enableRealtimeListing()
   },
 
   initializeExpress: (app) => {
