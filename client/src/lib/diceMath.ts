@@ -132,8 +132,38 @@ export class Quaternion {
       return new Vector3(this.x, this.y, this.z);
     }
   
+    set(x: number, y: number, z: number): this {
+      this.x = x;
+      this.y = y;
+      this.z = z;
+      return this;
+    }
+  
     dot(v: Vector3): number {
       return this.x * v.x + this.y * v.y + this.z * v.z;
+    }
+  
+    sub(v: Vector3): this {
+      this.x -= v.x;
+      this.y -= v.y;
+      this.z -= v.z;
+      return this;
+    }
+  
+    multiplyScalar(s: number): this {
+      this.x *= s;
+      this.y *= s;
+      this.z *= s;
+      return this;
+    }
+  
+    divideScalar(s: number): this {
+      if (s !== 0) {
+        this.x /= s;
+        this.y /= s;
+        this.z /= s;
+      }
+      return this;
     }
   
     normalize(): this {
@@ -162,6 +192,7 @@ export class Quaternion {
       return this;
     }
   }
+  
   
   export const swingTwistDecomposition = (quaternion: Quaternion, axis: Vector3) => {
     const d = axis.clone().normalize();
@@ -203,5 +234,17 @@ export class Quaternion {
     }
   
     return quaternion;
+  };
+
+  const VERTEX_AXES = [
+    new Vector3( 1,  1,  1),
+    new Vector3( 1,  1, -1),
+    new Vector3( 1, -1,  1),
+    new Vector3(-1,  1,  1),
+  ].map(v => v.normalize());
+  
+  export const getRandomVertexAxis = () => {
+    const i = Math.floor(Math.random() * VERTEX_AXES.length);
+    return VERTEX_AXES[i].clone();
   };
   
