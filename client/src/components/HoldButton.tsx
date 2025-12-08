@@ -4,27 +4,25 @@ import styles from './HoldButton.module.css';
 type HoldButtonProps = {
   onHoldStart: () => void;
   onHoldEnd: () => void;
-  onHoldCancel?: () => void;
+  onHoldCancel: () => void;
 };
 
 export const HoldButton = ({ onHoldStart, onHoldEnd, onHoldCancel }: HoldButtonProps) => {
-  const handleCancel = useCallback(() => {
-    onHoldCancel?.();
-    onHoldEnd(); // ensure cleanup even if pointercancel fires
-  }, [onHoldCancel, onHoldEnd]);
 
-  const supportsPointerEvents = typeof window !== 'undefined' && typeof window.PointerEvent !== 'undefined';
+
   return (
       <button 
         className={styles.holdBtn}
         onPointerDown={(e) => {e.preventDefault();onHoldStart();}}
         onTouchStart={(e) => {e.preventDefault();onHoldStart();}}
-        onMouseDown={(e) => {if (!supportsPointerEvents){e.preventDefault();  onHoldStart();}}}
-        onMouseUp={(e) => {if (!supportsPointerEvents){e.preventDefault(); onHoldEnd();}}}
+        onPointerLeave={(e) => {e.preventDefault(); onHoldEnd();}}
+        onMouseDown={(e) => {e.preventDefault();  onHoldStart;}}
+        onMouseLeave={(e) => {e.preventDefault(); onHoldEnd();}}
+        onMouseUp={(e) => {e.preventDefault(); onHoldEnd();}}
         onPointerUp={(e) => {e.preventDefault();onHoldEnd();}}
         onTouchEnd={(e) => {e.preventDefault();onHoldEnd();}}
-        onPointerCancel={(e) => {e.preventDefault(); handleCancel();}}
-        onTouchCancel={(e) => {e.preventDefault(); handleCancel();}}
+        onPointerCancel={(e) => {e.preventDefault(); onHoldCancel();}}
+        onTouchCancel={(e) => {e.preventDefault(); onHoldCancel();}}
       >
         <div className={styles.progressFill}></div>
         <span className={styles.btnText}>Hold to shake dice</span>
@@ -32,3 +30,57 @@ export const HoldButton = ({ onHoldStart, onHoldEnd, onHoldCancel }: HoldButtonP
       </button>
   );
 };
+
+type HoldButton2Props = {
+  isActive: boolean;
+  onHoldStart: () => void;
+  onHoldEnd: () => void;
+  onHoldCancel: () => void;
+};
+
+
+
+
+export const HoldButton2 = ({
+  isActive,
+  onHoldStart,
+  onHoldEnd,
+  onHoldCancel,
+}: HoldButton2Props) => {
+
+  const listeners = {
+    onPointerDown: (e: React.PointerEvent) => {
+      e.preventDefault();
+      onHoldStart();
+    },
+    onPointerUp: (e: React.PointerEvent) => {
+      e.preventDefault();
+      onHoldEnd();
+    },
+    onPointerLeave: (e: React.PointerEvent) => {
+      e.preventDefault();
+      onHoldEnd();
+    },
+    onPointerCancel: (e: React.PointerEvent) => {
+      e.preventDefault();
+      onHoldCancel();
+    },
+  };
+  return (
+    <div
+      {...listeners}
+      className={`
+        group
+        absolute inset-0 z-50 
+        flex items-center justify-center
+        transition-all duration-100
+        backdrop-blur-[0] bg-secondary/10 pointer-events-auto
+        active:backdrop-blur-[0]
+        active:bg-transparent
+      `}
+    >
+    </div>
+  );
+  
+};
+

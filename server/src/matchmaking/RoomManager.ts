@@ -1,8 +1,12 @@
 import { matchMaker } from "colyseus";
 import { nanoid } from "nanoid";
 import type { GameRoom } from "../rooms/GameRoom";
-import { DEFAULT_MAX_PLAYERS, DEFAULT_MIN_PLAYERS, ROOM_TYPE } from "../constants";
+//import { DEFAULT_MAX_PLAYERS, DEFAULT_MIN_PLAYERS, ROOM_TYPE } from "../constants";
 import { logger } from "../utils/logger";
+
+const DEFAULT_MAX_PLAYERS = 4
+const DEFAULT_MIN_PLAYERS = 4
+const ROOM_TYPE = 'COLOR-WARS'
 
 export interface QuickMatchOptions {
   playerName?: string;
@@ -40,15 +44,15 @@ export class RoomManager {
   private static joinCodes: Map<string, string> = new Map();
 
   static registerRoom(room: GameRoom) {
-    const isPrivate = room.getIsPrivate();
-    const isPublic = room.getIsPublic();
-    const joinCode = room.getJoinCode() || null;
+    const isPrivate = false
+    const isPublic = true
+    const joinCode = '1111';
     this.rooms.set(room.roomId, {
       room,
       isPrivate,
       isPublic,
       joinCode,
-      phase: room.getPhase()
+      phase: 'private'
     });
 
     if (joinCode) {
@@ -59,7 +63,7 @@ export class RoomManager {
   static unregisterRoom(room: GameRoom) {
     this.rooms.delete(room.roomId);
 
-    const joinCode = room.getJoinCode();
+    const joinCode = '1111';
     if (joinCode) {
       this.joinCodes.delete(joinCode);
     }
@@ -68,8 +72,8 @@ export class RoomManager {
   static updateRoomPhase(room: GameRoom) {
     const record = this.rooms.get(room.roomId);
     if (record) {
-      record.phase = room.getPhase();
-      record.isPublic = room.getIsPublic();
+      record.phase = 'awaiting-roll';
+      record.isPublic = true;
     }
   }
 

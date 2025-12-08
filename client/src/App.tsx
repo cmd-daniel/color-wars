@@ -1,18 +1,33 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import { ThemeProvider } from '@/components/theme-provider'
 import LobbyPage from '@/pages/LobbyPage'
 import RoomPage from '@/pages/RoomPage'
 import './App.css'
+import ErrorBoundary from './components/ErrorBoundary'
+import { bootstrapGame } from './lib/managers/gameBootstrap'
+
+bootstrapGame()
+
+export const router = createBrowserRouter([
+  {
+    errorElement: <ErrorBoundary />,
+    children: [
+      {
+        index: true,
+        element: <LobbyPage />,
+      },
+      {
+        path: "/room/:roomId",
+        element: <RoomPage />,
+      },
+    ],
+  },
+]);
 
 function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LobbyPage />} />
-          <Route path="/room/:roomId" element={<RoomPage />} />
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router}/>
     </ThemeProvider>
   )
 }

@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Quaternion, Vector3 } from '@/lib/diceMath';
 import { DiceRotationCalculator } from '../lib/rotationCalculator';
 import { getRandomVertexAxis } from '@/lib/diceMath';
+import { useStore } from '@/stores/sessionStore';
 export type DiceMode = 'idle' | 'accelerate' | 'ragdoll' | 'auto-spin' | 'spin-to-target' | 'ragdoll';
 
 const VELOCITY_CUTOFF_THRESHOLD = 0.0003;
@@ -17,11 +18,11 @@ export const useDicePhysics = () => {
 
 	const calculatorRef = useRef(new DiceRotationCalculator());
 	const animationRef = useRef<number | null>(null);
-
+	
 	// INTERNAL STATE MACHINE
 	const rollIdRef = useRef('');
 	const isApiPending = useRef(false);
-
+	
 	const stateRef = useRef<{
 		mode: DiceMode;
 		targetFace: number | null;
@@ -53,14 +54,13 @@ export const useDicePhysics = () => {
 	// START LOOP (App provides rollId)
 	// ---------------------------------------------------
 
-  const startPhysicsLoop = (rollId: string) => {
+	const startPhysicsLoop = (rollId: string) => {
 		rollIdRef.current = rollId;
 
 		if (animationRef.current) cancelAnimationFrame(animationRef.current);
 
 		//const rotationAxis = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
-    const rotationAxis = getRandomVertexAxis();
-
+		const rotationAxis = getRandomVertexAxis();
 
 		let SPEED = 0;
 		let last = Date.now();
@@ -122,86 +122,75 @@ export const useDicePhysics = () => {
 		loop();
 	};
 
-  const startSteering = (
-    targetFace: number,
-    initialSpeed: number,
-    vertexAxis: Vector3,
-    _startQuat: Quaternion
-  ) => {
-    console.log("targetFace", targetFace)
-  
-    const axis = vertexAxis.normalize();
-    let omega = initialSpeed;
-  
-    const targetQuat =
-      calculatorRef.current
-        .calculateRotationToFace(_startQuat, targetFace)
-        .normalize();
-  
-    // --------------------------------------------------
-    // 1. Exact analytic solution (FPS independent)
-    // --------------------------------------------------
-    const k = DECELERATION_RATE;
-    const w0 = initialSpeed;
-    const wCut = VELOCITY_CUTOFF_THRESHOLD;
-  
-    let tStop = 0;
-    let thetaExact = 0;
-  
-    if (w0 > wCut) {
-      tStop = Math.log(w0 / wCut) / k;
-      thetaExact = (w0 / k) * (1 - Math.exp(-k * tStop));
-    }
-  
-    // --------------------------------------------------
-    // 2. Correct starting pose (no bias, exact)
-    //    Q_start = R(-θ_exact) · Q_target
-    // --------------------------------------------------
-    const reverseRot = new Quaternion()
-      .setFromAxisAngle(axis, -thetaExact);
-  
-    let currentQuat =
-      reverseRot.multiply(targetQuat).normalize();
-  
-    setQuat(currentQuat.clone());
-  
-    // --------------------------------------------------
-    // 3. Normal forward ragdoll (unchanged runtime)
-    // --------------------------------------------------
-    let lastTime = Date.now();
+	const startSteering = (targetFace: number, initialSpeed: number, vertexAxis: Vector3, _startQuat: Quaternion) => {
+		console.log('targetFace', targetFace);
 
-    const inc = new Quaternion()
-    const negK = -k;
-  
-    const step = () => {
-      const now = Date.now();
-      const dt = now - lastTime;
-      lastTime = now;
-    
-      const omegaPrev = omega;
-    
-      // ✅ exact exponential decay (FPS independent)
-      omega *= Math.exp(negK * dt);
-    
-      // ✅ exact integrated angle for this frame
-      const stepAngle = (omegaPrev / k) * (1 - Math.exp(negK * dt));
-    
-      inc.setFromAxisAngle(axis, stepAngle)
-    
-      currentQuat = inc.multiply(currentQuat).normalize();
-      setQuat(currentQuat.clone());
-    
-      if (omega < wCut) {
-        setQuat(targetQuat.clone());
-        animationRef.current = null;
-        return;
-      }
-    
-      animationRef.current = requestAnimationFrame(step);
-    };
-    step();
-  };
-  
+		const axis = vertexAxis.normalize();
+		let omega = initialSpeed;
+
+		const targetQuat = calculatorRef.current.calculateRotationToFace(_startQuat, targetFace).normalize();
+
+		// --------------------------------------------------
+		// 1. Exact analytic solution (FPS independent)
+		// --------------------------------------------------
+		const k = DECELERATION_RATE;
+		const w0 = initialSpeed;
+		const wCut = VELOCITY_CUTOFF_THRESHOLD;
+
+		let tStop = 0;
+		let thetaExact = 0;
+
+		if (w0 > wCut) {
+			tStop = Math.log(w0 / wCut) / k;
+			thetaExact = (w0 / k) * (1 - Math.exp(-k * tStop));
+		}
+
+		// --------------------------------------------------
+		// 2. Correct starting pose (no bias, exact)
+		//    Q_start = R(-θ_exact) · Q_target
+		// --------------------------------------------------
+		const reverseRot = new Quaternion().setFromAxisAngle(axis, -thetaExact);
+
+		let currentQuat = reverseRot.multiply(targetQuat).normalize();
+
+		setQuat(currentQuat.clone());
+
+		// --------------------------------------------------
+		// 3. Normal forward ragdoll (unchanged runtime)
+		// --------------------------------------------------
+		let lastTime = Date.now();
+
+		const inc = new Quaternion();
+		const negK = -k;
+
+		const step = () => {
+			const now = Date.now();
+			const dt = now - lastTime;
+			lastTime = now;
+
+			const omegaPrev = omega;
+
+			// ✅ exact exponential decay (FPS independent)
+			omega *= Math.exp(negK * dt);
+
+			// ✅ exact integrated angle for this frame
+			const stepAngle = (omegaPrev / k) * (1 - Math.exp(negK * dt));
+
+			inc.setFromAxisAngle(axis, stepAngle);
+
+			currentQuat = inc.multiply(currentQuat).normalize();
+			setQuat(currentQuat.clone());
+
+			if (omega < wCut) {
+				setQuat(targetQuat.clone());
+				animationRef.current = null;
+				return;
+			}
+
+			animationRef.current = requestAnimationFrame(step);
+		};
+		step();
+	};
 
 	// CONTROL PANEL COMMANDS
 	const rotateToFace = (face: number) => {

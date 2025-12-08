@@ -19,7 +19,7 @@ extend({ Container, Graphics: PixiGraphics, Viewport })
 const NEUTRAL_FILL = 0x2a2a2a
 const STROKE_DEFAULT = 0x161616
 const STROKE_SELECTED = 0xffffff
-const STROKE_NEIGHBOUR = 0xfacc15
+const STROKE_NEIGHBOUR = 0xff1115
 const STROKE_WIDTH = 1.5
 const CANVAS_BACKGROUND = 0x080b12
 const PADDING_FACTOR = 2.2
@@ -203,8 +203,8 @@ const HexPreview = () => {
       return {
         key: hexKey,
         polygon,
-        fill,
-        stroke: strokeColor,
+        fill: strokeColor,
+        stroke: fill,
       }
     })
 
@@ -278,7 +278,7 @@ const HexPreview = () => {
                   graphics.clear()
                   graphics.poly(item.polygon)
                   graphics.fill({ color: item.fill })
-                  graphics.stroke({ color: item.stroke, width: STROKE_WIDTH })
+                  graphics.stroke({ color: item.stroke, width: 1 })
                 }}
                 eventMode="static"
                 cursor={interactionMode === 'edit' ? (paintMode === 'erase' ? 'not-allowed' : paintMode === 'delete-hex' ? 'cell' : 'pointer') : 'default'}

@@ -1,16 +1,10 @@
-import { useMemo, useRef } from 'react';
-import { useSessionStore } from '@/stores/sessionStore';
+import { useRef, useEffect } from 'react';
+import { useStore } from '@/stores/sessionStore';
 import { useDiceRoll } from '@/hooks/useDiceRoll';
 import Dice from './BetterDice';
 import { nanoid } from 'nanoid';
 import { useDicePhysics } from '@/hooks/useDicePhysics';
-import { HoldButton } from './HoldButton';
-
-// const currency = new Intl.NumberFormat('en-US', {
-//   style: 'currency',
-//   currency: 'USD',
-//   maximumFractionDigits: 0,
-// })
+import { HoldButton2 } from './HoldButton';
 
 function fakeApiRollForBothDice() {
 	return new Promise<{ faceA: number; faceB: number }>((res) => {
@@ -19,29 +13,42 @@ function fakeApiRollForBothDice() {
 				faceA: Math.floor(Math.random() * 6) + 1,
 				faceB: Math.floor(Math.random() * 6) + 1,
 			});
-		}, 1500);
+		}, 100);
 	});
 }
 
 const TurnControls = () => {
-	//const canEndTurn = useSessionStore((state) => (state.player.id == state.state.activePlayerId) && state.state.turnPhase == 'awaiting-end-turn')
+	//const canEndTurn = useStore((state) => (state.player.id == state.state.activePlayerId) && state.state.turnPhase == 'awaiting-end-turn')
 
-	const rollDice = useSessionStore((state) => state.rollDice);
-	const endTurn = useSessionStore((state) => state.endTurn);
-	// const {
-	//   selectedTerritory: selectedTerritoryId,
-	//   highlightedTerritory,
-	//   setHighlightedTerritory,
-	// } = useMapInteractionsStore()
-	// Use custom hook for dice roll state management
+	const rollDice = useStore((state) => state.rollDice);
+	const endTurn = useStore((state) => state.endTurn);
+	const sendDiceMode = useStore((z) => z.sendDiceMode);
 	const { showRollResult: _showRollResult, rollResultText: _rollResultText } = useDiceRoll(rollDice);
 	// -----------------------------------------------------
 	// DICE STATE
 	// -----------------------------------------------------
 	const diceA = useDicePhysics();
 	const diceB = useDicePhysics();
-	const holdStartRef = useRef(0);
+	const holdStartRef = useRef<number | null>(null);
 	const rollId = useRef('crypto.randomUUID()');
+
+	const diceMode = useStore((z) => z.state.game.diceState.mode);
+	const [a,b] = useStore((z) => z.state.game.diceState.rollTo);
+
+	useEffect(() => {
+		if (diceMode == 'ACCELERATING') {
+			diceA.setMode('accelerate');
+			diceB.setMode('accelerate');
+			diceA.startPhysicsLoop(nanoid());
+			diceB.startPhysicsLoop(nanoid());
+		} else if (diceMode == 'RAGDOLLING') {
+			diceA.setMode('ragdoll');
+			diceB.setMode('ragdoll');
+		} else if (diceMode == 'ROLLINGTOFACE'){
+			diceA.setMode('spin-to-target', { face: a });
+			diceB.setMode('spin-to-target', { face: b });
+		}
+	}, [diceMode]);
 
 	// -----------------------------------------------------
 	// HANDLE USER HOLD START
@@ -63,8 +70,8 @@ const TurnControls = () => {
 	// HANDLE USER RELEASE
 	// -----------------------------------------------------
 	const handleHoldRelease = async () => {
-		const elapsed = Date.now() - holdStartRef.current;
-
+		const elapsed = Date.now() - holdStartRef.current!;
+		holdStartRef.current = null;
 		// EARLY RELEASE: <2s → normal decel
 		if (elapsed < 1000) {
 			diceA.setMode('ragdoll');
@@ -78,63 +85,30 @@ const TurnControls = () => {
 		// ONE API REQUEST
 		const result = await fakeApiRollForBothDice();
 
-		diceA.setMode('spin-to-target', { face: result.faceA });
-		diceB.setMode('spin-to-target', { face: result.faceB });
+		diceA.setMode('spin-to-target', { face: 5 });
+		diceB.setMode('spin-to-target', { face: 5 });
 	};
 
-	// // const _trackSpaces = roomView?.trackSpaces ?? EMPTY_TRACK_SPACES
-	// const territoryInfo = state?.territoryInfo ?? EMPTY_TERRITORY_INFO
-	// const ownershipByTerritory = state?.territoryOwnership ?? EMPTY_TERRITORY_OWNERSHIP
+	const holdStart = () => {
+		console.log('holding')
+		holdStartRef.current = performance.now();
+		sendDiceMode('acc');
+	};
+	const holdEnd = () => {
+		if(holdStartRef.current == null) return
+		const elapsed = performance.now() - holdStartRef.current!;
+		holdStartRef.current = null;
+		if (elapsed < 1000) sendDiceMode('rag');
+		else sendDiceMode('roll')
+	};
 
-	// const lastEvent = roomView?.lastEvent ?? null
-
-	// const selectedOwnership = selectedTerritoryId ? ownershipByTerritory[selectedTerritoryId] ?? null : null
-	// const selectedTerritory = selectedTerritoryId ? territoryInfo[selectedTerritoryId] ?? null : null
-	// const selectedOwnerName = selectedOwnership
-	//   ? players.find((player) => player.sessionId === selectedOwnership)?.name ?? selectedOwnership
-	//   : null
-
-	// const selectedOffer = useMemo(() => {
-	//   if (!selectedTerritoryId || selectedOwnership) {
-	//     return null
-	//   }
-	//   return selectedTerritory ?? null
-	// }, [selectedOwnership, selectedTerritory, selectedTerritoryId])
-
-	// const _eventAmountLabel =
-	//   lastEvent && (lastEvent.kind === 'bonus' || lastEvent.kind === 'chest-bonus' || lastEvent.kind === 'roll-again')
-	//     ? `+${currency.format(lastEvent.amount)}`
-	//     : lastEvent
-	//       ? `-${currency.format(lastEvent.amount)}`
-	//       : ''
 	return (
-		<section className="turn-controls-container">
-			<div className="dice-container">
+		<section className="flex flex-col relative">
+			<div className="flex ">
 				<Dice quaternion={diceA.quat} />
 				<Dice quaternion={diceB.quat} />
 			</div>
-			{/* {showRollResult && (
-        <div className="roll-result-banner">
-          <span>{rollResultText}</span>
-        </div>
-      )} */}
-			{/* {lastEvent && (
-        <div className={`event-banner event-banner--${lastEvent.kind}`}>
-          <div>
-            <strong>{lastEvent.kind === 'bonus' || lastEvent.kind === 'chest-bonus' ? 'Reward' : 'Penalty'}</strong>
-            <p>{lastEvent.description}</p>
-          </div>
-          {lastEvent.kind !== 'roll-again' && (
-            <span className="event-banner__amount">{eventAmountLabel}</span>
-          )}
-        </div>
-      )} */}
-
-			<div className="turn-actions">
-				<HoldButton onHoldStart={handleHoldStart} onHoldEnd={handleHoldRelease} onHoldCancel={handleHoldRelease} />
-			</div>
-			{/* <button type="button" onClick={handleRollDice} disabled={!canRoll || isRolling}>Roll dice</button> */}
-			{/* <button type="button" onClick={endTurn} disabled={!canEndTurn}>End turn</button> */}
+			<HoldButton2 isActive={true} onHoldStart={holdStart} onHoldEnd={holdEnd} onHoldCancel={holdEnd} />
 		</section>
 	);
 };

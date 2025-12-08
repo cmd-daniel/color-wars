@@ -8,7 +8,7 @@ import { existsSync } from "fs";
 import { GameRoom } from "./rooms/GameRoom";
 import { createMatchmakingRouter } from "./routes/matchmakingRoutes";
 import { logger } from "./utils/logger";
-import { DEFAULT } from "./constants";
+import { DEFAULT_ROOM_TYPE } from "@color-wars/shared/src/config/room";
 import { env } from "./config/env";
 
 const registerClientBuild = (app: express.Express) => {
@@ -47,46 +47,15 @@ const registerClientBuild = (app: express.Express) => {
 
 export default config({
   initializeGameServer: (gameServer) => {
+    gameServer.simulateLatency(300)
     gameServer
-      .define(DEFAULT.ROOM_TYPE, GameRoom)
+      .define(DEFAULT_ROOM_TYPE, GameRoom)
       .enableRealtimeListing()
+      .sortBy({clients:-1})
   },
 
   initializeExpress: (app) => {
-    // Handle OPTIONS requests globally - must be before CORS middleware
-    app.options("*", (req, res) => {
-      const origin = req.headers.origin;
-      logger.info("global_options_request", { 
-        path: req.path, 
-        origin: origin,
-        method: req.method,
-        accessControlRequestMethod: req.headers['access-control-request-method'],
-        accessControlRequestHeaders: req.headers['access-control-request-headers']
-      });
-      
-      // Set CORS headers
-      if (origin) {
-        res.header("Access-Control-Allow-Origin", origin);
-      } else {
-        res.header("Access-Control-Allow-Origin", "*");
-      }
-      res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-      res.header("Access-Control-Allow-Headers", req.headers['access-control-request-headers'] || "Content-Type, Authorization");
-      res.header("Access-Control-Allow-Credentials", "true");
-      res.header("Access-Control-Max-Age", "86400"); // 24 hours
-      
-      res.status(204).end();
-      logger.info("global_options_response_sent", { path: req.path });
-    });
 
-    // Configure CORS with explicit options
-    app.use(cors({
-      origin: true, // Allow all origins
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization'],
-      preflightContinue: false, // Don't continue to next middleware after handling preflight
-    }));
     app.use(express.json());
 
     app.use("/matchmaking", createMatchmakingRouter());

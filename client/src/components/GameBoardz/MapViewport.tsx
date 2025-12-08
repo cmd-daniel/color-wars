@@ -13,11 +13,15 @@ import { Viewport } from 'pixi-viewport'
 import { useShallow } from 'zustand/shallow'
 import { useMapStore } from '@/stores/mapStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
-import { useSessionStore } from '@/stores/sessionStore'
+import { useStore } from '@/stores/sessionStore'
 import MapHexLayer from './MapHexLayer'
 import { computeTerritoryRenderInfo, mapTerritoryRenderInfo } from '@/utils/territoryGeometry'
 import type { TerritoryId } from '@/types/map'
 import styles from './PixiViewport.module.css'
+import DiceTrackLayer from './DiceTrackLayer'
+import { computeViewBox, createHollowGrid} from '@/utils/gridUtils'
+import { buildInnerPathFromSpec } from '@/utils/hexEdgeUtils' 
+import { GRID_CONFIG, INNER_EDGE_SPEC } from '@/utils/diceTrackConfig'
 
 extend({ Container, Graphics, Viewport, Text })
 
@@ -300,12 +304,10 @@ const MapViewport = ({
     setHoveredTerritory,
     highlightedTerritory,
   } = useMapInteractionsStore()
-  const { ownershipByTerritory, playerColors } = useSessionStore(
-    useShallow((state) => ({
-      ownershipByTerritory: state.roomView?.territoryOwnership ?? EMPTY_TERRITORY_OWNERSHIP,
-      playerColors: state.roomView?.playerColors ?? EMPTY_PLAYER_COLORS,
-    })),
-  )
+  const { ownershipByTerritory, playerColors } = {
+    ownershipByTerritory: EMPTY_TERRITORY_OWNERSHIP,
+    playerColors: EMPTY_PLAYER_COLORS,
+  }
 
   useEffect(() => {
     if (!map && !loading) {
@@ -465,16 +467,6 @@ const MapViewport = ({
   const overlayOffsetX = useMemo(() => (viewportSize.width - overlaySize) / 2, [overlaySize, viewportSize.width])
   const overlayOffsetY = useMemo(() => (viewportSize.height - overlaySize) / 2, [overlaySize, viewportSize.height])
 
-  const overlayNode = useMemo(() => {
-    if (!overlay) return null
-    return overlay({
-      size: overlaySize,
-      resolution,
-      offsetX: overlayOffsetX,
-      offsetY: overlayOffsetY,
-    })
-  }, [overlay, overlayOffsetX, overlayOffsetY, overlaySize, resolution])
-
   const containerClass = [
     styles.container,
     transparent ? styles.overlay : '',
@@ -483,6 +475,29 @@ const MapViewport = ({
     .filter(Boolean)
     .join(' ')
   // const backgroundColor = background ?? BACKGROUND_COLOR
+
+  const trackGeometry = useMemo(() => {
+    const grid = createHollowGrid()
+    const hexes = Array.from(grid)
+    const [minX, minY, width, height] = computeViewBox(grid)
+      .split(' ')
+      .map((value) => Number.parseFloat(value))
+    const inner = buildInnerPathFromSpec(grid, INNER_EDGE_SPEC, {
+      radius: 3,
+      edgeScaleForLoop: 1,
+    })
+    return {
+      hexes,
+      viewBox: {
+        minX,
+        minY,
+        width,
+        height,
+      },
+      innerLoop: inner.loop,
+    }
+  }, [])
+  const track = trackGeometry
 
   return (
     <div ref={containerRef} className={containerClass}>
@@ -527,7 +542,17 @@ const MapViewport = ({
               />
             </InteractiveViewport>
           </pixiContainer>
-          {overlayNode}
+          {/* {overlayNode} */}
+          <DiceTrackLayer
+            size={overlaySize}
+            resolution={resolution}
+            offsetX={overlayOffsetX}
+            offsetY={overlayOffsetY}
+            track={track}
+            trackSpaces={[]}
+            playerColors={[]}
+            playerOrder={[]}
+          />
         </Application>
       ) : (
         <div className={styles.loading}>Loading map…</div>

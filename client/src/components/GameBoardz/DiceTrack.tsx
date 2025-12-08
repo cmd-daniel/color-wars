@@ -1,20 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Hex } from 'honeycomb-grid'
-import MapViewport from '@components/MapViewport'
-import DiceTrackLayer from '@components/DiceTrackLayer'
+import MapViewport from '@/components/GameBoardz/MapViewport'
+import DiceTrackLayer from '@components/GameBoardz/DiceTrackLayer'
 import styles from './DiceTrack.module.css'
 import { GRID_CONFIG, INNER_EDGE_SPEC } from '@/utils/diceTrackConfig'
 import { createHollowGrid, computeViewBox } from '@/utils/gridUtils'
 import { buildInnerPathFromSpec } from '@/utils/hexEdgeUtils'
-import { useSessionStore } from '@/stores/sessionStore'
-import type { GamePlayer } from '@/stores/sessionStore'
+import { useStore } from '@/stores/sessionStore'
 import type { TrackSpace } from '@/types/game'
 
 const HOP_DURATION = 280
 const STEP_DELAY = 120
 const MIN_TRACK_LENGTH = 1
 const OVERLAY_RESOLUTION_MULTIPLIER = 1.2
-const EMPTY_PLAYERS: GamePlayer[] = []
+//const EMPTY_PLAYERS: GamePlayer[] = []
 const EMPTY_TRACK_SPACES: TrackSpace[] = []
 const EMPTY_PLAYER_COLORS = Object.freeze({}) as Record<string, string>
 const EMPTY_PLAYER_ORDER: string[] = []
@@ -42,7 +41,7 @@ interface PlayerAnimationState {
 const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 
 const DiceTrack = () => {
-  const roomView = useSessionStore((state) => state.roomView)
+  const players = useStore((z) => z.state.game.players)
     const trackGeometry = useMemo(() => {
     const grid = createHollowGrid()
     const hexes = Array.from(grid)
@@ -66,10 +65,10 @@ const DiceTrack = () => {
   }, [])
   const track = trackGeometry
 
-  const trackSpaces = roomView?.trackSpaces ?? EMPTY_TRACK_SPACES
-  const players = roomView?.players ?? EMPTY_PLAYERS
-  const playerColors = roomView?.playerColors ?? EMPTY_PLAYER_COLORS
-  const playerOrder = roomView?.playerOrder ?? EMPTY_PLAYER_ORDER
+  //const trackSpaces = roomView?.trackSpaces ?? EMPTY_TRACK_SPACES
+  // const players = roomView?.players ?? EMPTY_PLAYERS
+  // const playerColors = roomView?.playerColors ?? EMPTY_PLAYER_COLORS
+  // const playerOrder = roomView?.playerOrder ?? EMPTY_PLAYER_ORDER
 
   const tileCenters = useMemo(
     () => track.hexes.map((hex: Hex) => ({ x: hex.x, y: hex.y })),
@@ -80,15 +79,12 @@ const DiceTrack = () => {
   const animationStateRef = useRef<Record<string, PlayerAnimationState>>({})
   const frameRef = useRef<number | null>(null)
   const tileCentersRef = useRef(tileCenters)
-  const trackLengthRef = useRef(trackSpaces.length)
 
   useEffect(() => {
     tileCentersRef.current = tileCenters
   }, [tileCenters])
 
-  useEffect(() => {
-    trackLengthRef.current = trackSpaces.length
-  }, [trackSpaces.length])
+  
 
   const ensureAnimationFrame = useCallback(
     (step: (time: number) => void) => {
@@ -105,10 +101,10 @@ const DiceTrack = () => {
     let hasChanges = false
     const activeIds = new Set<string>()
 
-    players.forEach((player) => {
-      activeIds.add(player.sessionId)
-      if (!state[player.sessionId]) {
-        state[player.sessionId] = {
+    Object.values(players).forEach((player) => {
+      activeIds.add(player.id)
+      if (!state[player.id]) {
+        state[player.id] = {
           currentIndex: player.position,
           queue: [],
           activeStep: null,
@@ -129,10 +125,10 @@ const DiceTrack = () => {
     if (hasChanges) {
       setRenderTokens(() => {
         const next: Record<string, TokenRenderState> = {}
-        players.forEach((player) => {
-          const baseState = state[player.sessionId]
+        Object.values(players).forEach((player) => {
+          const baseState = state[player.id]
           const center = tileCenters[baseState?.currentIndex ?? player.position] ?? tileCenters[player.position] ?? { x: 0, y: 0 }
-          next[player.sessionId] = {
+          next[player.id] = {
             center,
             index: baseState?.currentIndex ?? player.position,
             hopId: baseState?.hopId ?? 0,
@@ -151,7 +147,7 @@ const DiceTrack = () => {
       let shouldContinue = false
 
       const tileCentersLocal = tileCentersRef.current
-      const trackLength = trackLengthRef.current
+      const trackLength = 34
       const hopHeight = GRID_CONFIG.hexDimensions * 0.42
       const defaultPoint = { x: 0, y: 0 }
 
@@ -261,15 +257,15 @@ const DiceTrack = () => {
 
   useEffect(() => {
     const state = animationStateRef.current
-    const trackLength = trackSpaces.length
+    const trackLength = 34
     if (trackLength < MIN_TRACK_LENGTH) {
       return
     }
 
     let hasNewSteps = false
 
-    players.forEach((player) => {
-      const animState = state[player.sessionId]
+    Object.values(players).forEach((player) => {
+      const animState = state[player.id]
       if (!animState) {
         return
       }
@@ -310,7 +306,7 @@ const DiceTrack = () => {
     if (hasNewSteps) {
       ensureAnimationFrame(tick)
     }
-  }, [players, trackSpaces.length, ensureAnimationFrame, tick])
+  }, [players, ensureAnimationFrame, tick])
 
   useEffect(() => {
     const anyActive = Object.values(animationStateRef.current).some(
@@ -322,9 +318,9 @@ const DiceTrack = () => {
   }, [ensureAnimationFrame, tick])
 
   const tokens = useMemo(() => {
-    return players.map((player) => {
-      const token = renderTokens[player.sessionId]
-      const fallbackIndex = animationStateRef.current[player.sessionId]?.currentIndex ?? player.position
+    return Object.values(players).map((player) => {
+      const token = renderTokens[player.id]
+      const fallbackIndex = animationStateRef.current[player.id]?.currentIndex ?? player.position
       const index = token?.index ?? fallbackIndex
       const center = token?.center ?? tileCenters[index] ?? { x: 0, y: 0 }
       const hopId = token?.hopId ?? 0
@@ -355,16 +351,16 @@ const DiceTrack = () => {
         offsetX={offsetX}
         offsetY={offsetY}
         track={track}
-        trackSpaces={trackSpaces}
+        trackSpaces={[]}
         tileCenters={tileCenters}
         tokens={tokens}
-        playerColors={playerColors}
-        playerOrder={playerOrder}
-        players={players}
+        playerColors={[]}
+        playerOrder={[]}
+        players={Object.values(players)}
         tokenRadius={tokenRadius}
       />
     ),
-    [playerColors, playerOrder, players, tileCenters, tokenRadius, tokens, track, trackSpaces],
+    [players, tileCenters, tokenRadius, tokens, track],
   )
 
   return (

@@ -1,4 +1,5 @@
 import type { TerritoryId } from './map'
+import type { Hex } from 'honeycomb-grid'
 
 export type TurnPhase = 'awaiting-roll' | 'awaiting-end-turn'
 
@@ -24,6 +25,7 @@ export interface TrackEventDefinition {
   label: string
   min?: number
   max?: number
+  icon?:string
 }
 
 export interface TrackSpace {
@@ -53,4 +55,15 @@ export interface GameLogEntry {
   type: GameLogEntryType
   message: string
   detail?: string
+}
+
+export interface TrackGeometry {
+  hexes: Hex[]
+  viewBox: {
+    minX: number
+    minY: number
+    width: number
+    height: number
+  }
+  innerLoop: Array<{x: number, y: number}> | null
 }

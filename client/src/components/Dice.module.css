@@ -2,11 +2,12 @@
 .diceWrap {
   transform-style: preserve-3d;
   transform: rotateX(-60deg) rotateY(45deg);
+  padding:16px
 }
 
 /* Dice container */
 .dice {
-  --dice-side: 80px;             /* <— change this to resize the whole dice */
+  --dice-side: 48px;             /* <— change this to resize the whole dice */
   --pip-size: calc(var(--dice-side) * 0.2);
   --pip-offset: calc(var(--dice-side) * 0.2);
   --pip-color: #131210;

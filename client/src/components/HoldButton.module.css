@@ -1,7 +1,7 @@
 
 
 .holdBtn {
-  position: relative;
+  position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -21,6 +21,23 @@
   background-color: var(--color-blue-700);
 }
 
+.holdBtn:active .progressFill {
+  width: 100%;
+  transition: width 1s ease-in;
+}
+
+.holdBtn:active {
+  animation: tiltShake 1s cubic-bezier(0.4, 0, 0.6, 1) forwards, continuousShake 0.1s ease-in-out infinite 1s;
+}
+
+.holdBtn:active .btnText {
+  animation: fadeOut 1s linear forwards;
+}
+
+.holdBtn:active .releaseText {
+  animation: fadeInRelease 1s linear forwards;
+}
+
 .progressFill {
   position: absolute;
   top: 0;
@@ -32,14 +49,6 @@
   transition: width 200ms ease-in-out;
 }
 
-.holdBtn:active .progressFill {
-  width: 100%;
-  transition: width 1s ease-in;
-}
-
-.holdBtn:active {
-  animation: tiltShake 1s cubic-bezier(0.4, 0, 0.6, 1) forwards, continuousShake 0.1s ease-in-out infinite 1s;
-}
 
 .btnText,
 .releaseText {
@@ -56,13 +65,6 @@
   color: #ffffff;
 }
 
-.holdBtn:active .btnText {
-  animation: fadeOut 1s linear forwards;
-}
-
-.holdBtn:active .releaseText {
-  animation: fadeInRelease 1s linear forwards;
-}
 
 @keyframes tiltShake {
   0% {

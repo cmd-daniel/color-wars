@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { useSessionStore } from '@/stores/sessionStore'
+import { useStore } from '@/stores/sessionStore'
 import './RoomLobby.css'
 
 interface RoomLobbyProps {
@@ -25,7 +25,7 @@ const RoomLobby = ({ onLeave }: RoomLobbyProps) => {
     toggleReady,
     sendChat,
     isSpectator,
-  } = useSessionStore()
+  } = useStore()
 
   const [chatDraft, setChatDraft] = useState('')
 

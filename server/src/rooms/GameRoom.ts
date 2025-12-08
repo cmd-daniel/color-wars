@@ -1,278 +1,173 @@
-import { Client, Delayed, Room } from "colyseus";
-import { GameState, PlayerState, RoomVisibility } from "../state/GameState";
-import { RoomManager } from "../matchmaking/RoomManager";
-import { BROADCAST_EVENT, DEFAULT } from "../constants";
-import { logAnalyticsEvent } from "../utils/logger";
-import { GameEngine } from "../game/GameEngine";
+import { Client, Delayed, Room, logger } from 'colyseus';
 
-interface UpdateRoomSettingsPayload {
-  maxPlayers?: number;
-  startingCash?: number;
-  room_visibility?: boolean;
-}
+import { RoomManager } from '../matchmaking/RoomManager';
+import { GameEngine } from '../game/GameEngine';
+import { DEFAULT } from '@color-wars/shared/src/config/room';
+import { validateOrThrow } from '@color-wars/shared/src/validator';
+import { RoomState, PlayerState, DiceState } from '@color-wars/shared/src/types/RoomState';
+import { ClientActionType, ServerActionType, ActionContext, ClientMessages, ServerMessages, PlayerJoinPayload } from '@color-wars/shared/src/protocol';
 
-export class GameRoom extends Room<GameState> {
-  private emptyRoomTimer?: Delayed;
-  private gameEngine!: GameEngine;
 
-  async onCreate() {
-    this.maxClients = DEFAULT.MAX_PLAYERS;
-    this.autoDispose = true;
-    
-    this.state = new GameState(this.roomId);
-    
-    this.gameEngine = new GameEngine(this.state);
-    this.gameEngine.setRoomClock(this.clock);
-    
-    this.registerMessageHandlers();
+export class GameRoom extends Room<RoomState> {
+	private gameEngine!: GameEngine;
+	private pinger: Delayed | null = null;
 
-    RoomManager.registerRoom(this);
-    RoomManager.updateRoomPhase(this);
-  }
+	private onAction<K extends ClientActionType>(action: K, handler: (client:Client, ctx: ActionContext<K>) => void) {
+		this.onMessage(action, (client: Client, payload: ClientMessages[K]) => {
+			try {
+				const playerId = client.sessionId;
+				const ctx = { playerId, ...payload } as ActionContext<K>;
 
-  async onJoin(client: Client, options: { playerName: string }) {
-    // Guard: Check if this sessionId already exists as a player (shouldn't happen in guest mode)
-    if (this.state.players.has(client.sessionId)) return;
+				// Validation Logic
+				const plainState = this.state.toJSON()
+				validateOrThrow(action, plainState, ctx);
 
-    // Set as leader if first player
-    if (this.state.players.size == 0) {
-      this.state.room.leaderId = client.sessionId;
-    }
+				// Execute
+				handler(client, ctx);
+			} catch (err) {
+				console.error(`Error handling action ${action}:`, err);
+			}
+		});
+	}
 
-    // Guest-only mode: Each connection is a new player
-    const player = new PlayerState(client.sessionId, options.playerName);
-    this.state.players.set(client.sessionId, player);
-    
-    // Initialize Player with default values
-    this.gameEngine.handlePlayerJoined(player);
-    
-    await this.updateMetadata();
-  }
+	private dispatch<K extends ServerActionType>(action: K, payload: ServerMessages[K], options?: { client?: Client; except?: Client | Client[] }) {
+		if (options?.client) {
+			options.client.send(action, payload);
+		} else {
+			this.broadcast(action, payload, options);
+		}
+	}
 
-  async onLeave(client: Client) {
-    //this check is very important apparently
-    const player = this.state.players.get(client.sessionId);
-    if (!player) {
-      console.warn(`[GameRoom] onLeave called for unknown sessionId: ${client.sessionId}`)
-      return;
-    }
+	async onCreate() {
+		this.maxClients = DEFAULT.MAX_PLAYERS;
+		this.autoDispose = true;
 
-    this.gameEngine.handlePlayerLeft(client.sessionId);
-    
-    this.state.players.delete(client.sessionId);
-    
-    // Handle leader handoff if leader left
-    if (this.state.room.leaderId === client.sessionId) this.assignNewLeader();
-    
-    await this.updateMetadata();
+		this.state = new RoomState(this.roomId);
+		this.gameEngine = new GameEngine(this.state.game);
+		this.gameEngine.setRoomClock(this.clock);
 
-    if (this.clients.length === 0) this.disconnect();
-  }
-  
-  private assignNewLeader() {
-    // Find the next connected player to be leader
-    const connectedPlayers = Array.from(this.state.players.values()).filter(p => p.connected)
-    
-    if (connectedPlayers.length > 0) this.state.room.leaderId = connectedPlayers[0].id;
-    else this.state.room.leaderId = "";
-  }
+		this.pinger = this.clock.setInterval(() => {
+			const now = Date.now();
+			for (const client of this.clients) {
+				this.dispatch('PING', { serverT1: now }, { client });
+			}
+		}, 2000);
 
-  async onDispose() {
-    RoomManager.unregisterRoom(this);
-  }
+		this.registerMessageHandlers();
+		logger.info('room created');
+		//RoomManager.registerRoom(this);
+		//RoomManager.updateRoomPhase(this);
+	}
 
-  private registerMessageHandlers() {
-    this.onMessage("chat", (client, payload: {message:string}) => {
-      this.handleChat(client, payload);
-    });
-    
-    this.onMessage("setIcon", (client, payload: {icon: string}) => {
-      this.handleSetIcon(client, payload);
-    });
+	async onJoin(client: Client, options: PlayerJoinPayload) {
+		// Guard: Check if this sessionId already exists as a player (shouldn't happen in guest mode)
+		if (this.state.game.players.has(client.sessionId)) return;
 
-    this.onMessage("setColor", (client, payload: {color: string}) => {
-      this.handleSetColor(client, payload);
-    });
-    
-    this.onMessage("updateRoomSettings", (client, payload: UpdateRoomSettingsPayload) => {
-      this.handleUpdateRoomSettings(client, payload);
-    });
-    
-    this.onMessage("kickPlayer", (client, payload: {playerId: string}) => {
-      this.handleKickPlayer(client, payload);
-    });
-    
-    this.onMessage("startGame", (client) => {
-      this.handleStartGame(client);
-    });
-    
-    this.onMessage("rollDice", (client) => {
-      this.gameEngine.handleRoll(client);
-    });
-    
-    this.onMessage("purchaseTerritory", (client, payload: {territoryId: string}) => {
-      const territoryId = typeof payload?.territoryId === "string" ? payload.territoryId : "";
-      const result = this.gameEngine.handlePurchaseTerritory(client, territoryId);
-      client.send("purchaseResult", result);
-    });
-    
-    this.onMessage("endTurn", (client) => {
-      this.gameEngine.handleEndTurn(client);
-    });
-  }
+		// Set as leader if first player
+		if (this.state.game.players.size == 0) {
+			this.state.room.leaderId = client.sessionId;
+		}
 
-  private handleChat(client: Client, payload: {message:string}) {
-    if (!payload || typeof payload.message !== "string") return;
+		// Guest-only mode: Each connection is a new player
+		const player = new PlayerState(client.sessionId, options.playerName);
+		this.state.game.players.set(client.sessionId, player);
 
-    let trimmed = payload.message.trim();
-    if (trimmed.length === 0) return;
+		// Initialize Player with default values
+		this.gameEngine.handlePlayerJoined(player);
 
-    if(trimmed.length > 200){
-      trimmed = trimmed.slice(0, 200) + "… [message truncated]";
-    }
+		logger.info('playerJoined', client.sessionId);
+		// this.state.room.phase = "active";
+		// this.gameEngine.startGame();
 
-    const chatMessage = {
-      senderId:client.sessionId,
-      message: trimmed,
-      timeStamp: Date.now()
-    }
+		await this.updateMetadata();
+	}
 
-    this.broadcast(BROADCAST_EVENT.CHAT, chatMessage);
-  }
+	async onLeave(client: Client<any, any>, consented?: boolean) {
+		this.state.game.players.get(client.sessionId)!.connected = false;
+		try {
+			if (consented) {
+				throw new Error('consented leave');
+			}
 
-  private handleSetIcon(client: Client, payload: {icon : string}) {
-    if (this.state.room.phase !== "lobby") return;
-    
-    const player = this.state.players.get(client.sessionId);
-    if (!player) return;
+			// allow disconnected client to reconnect into this room until 120 seconds
+			await this.allowReconnection(client, 120);
 
-    const icon = typeof payload?.icon === "string" ? payload.icon.trim() : "";
-    if (!icon) return;
+			// client returned! let's re-activate it.
+			this.state.game.players.get(client.sessionId)!.connected = true;
+		} catch (e) {
+			// 120 seconds expired. let's remove the client.
+			const idx = this.state.game.playerOrder.findIndex((p) => p==client.sessionId)
+			this.state.game.playerOrder.splice(idx,1)
+			if(this.state.game.activePlayerId == this.state.game.players.get(client.sessionId)!.id){
+				this.state.game.activePlayerId = this.state.game.playerOrder.at((idx+1)%(this.state.game.playerOrder.length-1))
+			}
+			if(this.state.room.leaderId == this.state.game.players.get(client.sessionId)!.id){
+				this.state.room.leaderId = this.state.game.playerOrder.at((idx+1)%(this.state.game.playerOrder.length-1))
+			}
+			this.state.game.players.delete(client.sessionId);
+			this.state.playersPings.delete(client.sessionId);
+		}
+	}
 
-    // Check if icon is already taken by another player
-    const iconTaken = Array.from(this.state.players.values()).some(
-      p => p.id !== client.sessionId && p.icon === icon
-    );
+	async onDispose() {
+		//RoomManager.unregisterRoom(this);
+		this.pinger?.clear();
+	}
 
-    if (iconTaken) return;
+	private registerMessageHandlers() {
+		this.onAction('ROLL_DICE', () => {
+			logger.info('received roll dice')
+			this.state.game.diceState = new DiceState('ROLLINGTOFACE',[1,2])
+		});
 
-    player.icon = icon;
-  }
+		this.onAction('ACCELERATE_DICE', (client)=>{
+			logger.info('received accel dice')
+			this.state.game.diceState = new DiceState('ACCELERATING',[1,2])
+		})
+		this.onAction('RAGDOLL_DICE', (client)=>{
+			logger.info('received ragdoll dice')
+			this.state.game.diceState = new DiceState('RAGDOLLING',[1,2])
+		})
 
-  private handleSetColor(client: Client, payload: {color:string}) {
-    if (this.state.room.phase !== "lobby") return; // Can only change icon in lobby
+		this.onAction('PONG', (client, { serverT1, clientT2, playerId }) => {
+			const serverT3 = Date.now();
+			const rawRTT = serverT3 - serverT1;
 
-    const player = this.state.players.get(client.sessionId);
-    if (!player) return;
+			this.state.playersPings.set(playerId, rawRTT);
 
-    const color = typeof payload?.color === "string" ? payload.color.trim() : "";
-    if (!color) return;
+			this.dispatch('PING_PONG', { serverT1, clientT2, serverT3 });
+		});
+	}
 
-    const iconTaken = Array.from(this.state.players.values()).some(
-      p => p.id !== client.sessionId && p.color === color
-    );
+	private handleStartGame(client: Client) {
+		// Only leader can start the game
+		if (client.sessionId !== this.state.room.leaderId) return;
 
-    if (iconTaken) return;
+		if (this.state.room.phase !== 'lobby') return;
 
-    player.color = color;
-  }
+		this.state.room.phase = 'active';
 
-  private handleUpdateRoomSettings(client: Client, payload: UpdateRoomSettingsPayload) {
-    // Only leader can update settings
-    if (client.sessionId !== this.state.room.leaderId) return;
+		this.gameEngine.startGame();
+		void this.updateMetadata();
+	}
 
-    if (this.state.room.phase !== "lobby") return;
+	public finishGame(reason: string = 'completed') {
+		if (this.state.room.phase !== 'active') return;
 
-    if (payload.maxPlayers && typeof payload.maxPlayers === "number" && payload.maxPlayers >= 2 && payload.maxPlayers <= 6) {
-      this.state.room.maxPlayers = payload.maxPlayers;
-      this.maxClients = payload.maxPlayers;
-    }
+		this.state.room.phase = 'finished';
+		this.updateMetadata();
+		this.disconnect();
+	}
 
-    if (payload.startingCash && typeof payload.startingCash === "number" && payload.startingCash >= 0) {
-      this.state.room.startingCash = payload.startingCash;
-    }
+	private async updateMetadata() {
+		await this.setMetadata({
+			visibility: this.state.room.visibility,
+			joinCode: this.state.room.joinCode,
+			phase: this.state.room.phase,
+			connectedPlayers: this.state.game.players.size,
+			maxPlayers: this.maxClients,
+		});
 
-    if (payload.room_visibility && typeof payload.room_visibility === "string" && (payload.room_visibility === "private" || payload.room_visibility === "public")) {
-      this.state.room.visibility = payload.room_visibility;
-    }
-  }
-
-  private async handleKickPlayer(client: Client, payload: {playerId: string}) {
-    // Only leader can kick players
-    if (client.sessionId !== this.state.room.leaderId) return
-
-    if (this.state.room.phase !== "lobby") return;
-
-    const targetSessionId = payload?.playerId;
-    if (!targetSessionId || targetSessionId === client.sessionId) return;
-
-    const targetPlayer = this.state.players.get(targetSessionId);
-    if (!targetPlayer) return
-
-    // Find the client and disconnect them
-    const targetClient = this.clients.find(c => c.sessionId === targetSessionId);
-    if (targetClient) targetClient.leave()
-  }
-
-  private handleStartGame(client: Client) {
-    // Only leader can start the game
-    if (client.sessionId !== this.state.room.leaderId) return;
-
-    if (this.state.room.phase !== "lobby") return;
-
-    // Check that all players have selected an icon
-    const playersWithoutIcon = Array.from(this.state.players.values()).filter(p => !p.icon);
-    if (playersWithoutIcon.length > 0) {
-      client.send("startGameError", { error: "All players must select an icon" });
-      return;
-    }
-
-    this.startGame();
-  }
-
-  private startGame() {
-    if (this.state.room.phase === "active") {
-      return;
-    }
-
-    this.state.room.phase = "active";
-    
-    // Give each player the starting cash amount
-    Array.from(this.state.players.values()).forEach(player => {
-      player.money = this.state.room.startingCash;
-    });
-    
-    this.gameEngine.startGame();
-    void this.updateMetadata();
-  }
-
-  public finishGame(reason: string = "completed") {
-    if (this.state.room.phase !== "active") {
-      return;
-    }
-
-    this.state.room.phase = "finished";
-    void this.updateMetadata();
-    logAnalyticsEvent("game_finished", { roomId: this.roomId, reason });
-    this.disconnect();
-  }
-
-  private async updateMetadata() {
-    await this.setMetadata({
-      visibility: this.state.room.visibility,
-      joinCode: this.state.room.joinCode,
-      phase: this.state.room.phase,
-      connectedPlayers: this.state.players.size,
-      maxPlayers: this.maxClients
-    });
-
-    RoomManager.updateRoomPhase(this);
-  }
-
-  private clearEmptyRoomTimeout() {
-    if (this.emptyRoomTimer) {
-      this.emptyRoomTimer.clear();
-      this.emptyRoomTimer = undefined;
-    }
-  }
+		//RoomManager.updateRoomPhase(this);
+	}
 }

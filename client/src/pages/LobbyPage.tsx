@@ -1,21 +1,13 @@
-import { type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useSessionStore } from '@/stores/sessionStore'
-import './LobbyPage.css'
+import { useStore } from '@/stores/sessionStore'
+import { Input, } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
+import { Gamepad2, Zap } from 'lucide-react'
 
 const LobbyPage = () => {
-  const {
-    status,
-    error,
-    playerName,
-    requestedJoinCode,
-    setPlayerName,
-    setRequestedJoinCode,
-    clearError,
-    quickMatch,
-    createPrivateRoom,
-    joinPrivateRoom,
-  } = useSessionStore()
+  const playerName = useStore((z) => z.room.playerName)
+  const setPlayerName = useStore((z) => z.setPlayerName)
+  const quickMatch = useStore((z) => z.quickMatch)
 
   const navigate = useNavigate()
 
@@ -23,110 +15,36 @@ const LobbyPage = () => {
     console.log('[LobbyPage] handleQuickMatch called')
     try {
       const roomId = await quickMatch()
-      console.log('[LobbyPage] quickMatch returned:', roomId)
-      if (roomId) {
-        console.log('[LobbyPage] Navigating to:', `/room/${roomId}`)
-        navigate(`/room/${roomId}`)
-      } else {
-        console.log('[LobbyPage] No roomId returned from quickMatch')
-      }
+      navigate(`/room/${roomId}`)
     } catch (error) {
       console.error('Error in quick match:', error)
     }
   }
 
-  const handleCreatePrivate = async () => {
-    const roomId = await createPrivateRoom()
-    if (roomId) {
-      navigate(`/room/${roomId}`)
-    }
-  }
-
-  const handleJoinPrivate = async (event: FormEvent) => {
-    event.preventDefault()
-    const roomId = await joinPrivateRoom()
-    if (roomId) {
-      navigate(`/room/${roomId}`)
-    }
-  }
-
-  const isMatchmaking = status === 'matchmaking' || status === 'connecting'
-
   return (
-    <div className="lobby-page">
-      <div className="lobby-card">
-        <header className="lobby-card__header">
-          <h1>Color Wars</h1>
-          <p>Multiplayer Territory Conquest</p>
-        </header>
+    <div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-background px-4 font-sans selection:bg-cyan-500/30">
+      
+      {/* <AmbientBackground /> */}
+      <div className="z-10 w-full max-w-md space-y-8 md:space-y-10">
+        
+        {/* Interaction Section */}
+        <div className="space-y-8 relative">
+            <Gamepad2 className="absolute left-3 top-3.5 h-5 w-5 text-zinc-500 group-focus-within:text-cyan-500" />
+            <Input
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              placeholder="Player Name"
+              className="h-12 border-zinc-800 bg-background pl-10 text-lg text-zinc-100 focus-visible:border-cyan-500 focus-visible:ring-0"
+            />
 
-        {error && (
-          <div className="lobby-card__error" role="alert">
-            <p>{error}</p>
-            <button type="button" onClick={clearError}>
-              Dismiss
-            </button>
+            <Button className='w-full h-12' onClick={handleQuickMatch}>
+              PLAY NOW
+              <Zap className="h-4 w-4 fill-black transition-transform group-hover/btn:rotate-12 group-hover/btn:fill-white" />
+            </Button>
           </div>
-        )}
-
-        {isMatchmaking ? (
-          <div className="lobby-card__content">
-            <div className="lobby-loading">
-              <div className="lobby-spinner"></div>
-              <p>Finding a room…</p>
-            </div>
-          </div>
-        ) : (
-          <div className="lobby-card__content">
-            <label className="lobby-field">
-              <span>Display name</span>
-              <input
-                value={playerName}
-                onChange={(event) => setPlayerName(event.target.value)}
-                placeholder="Commander"
-                autoFocus
-              />
-            </label>
-
-            <div className="lobby-actions">
-              <button
-                type="button"
-                onClick={() => void handleQuickMatch()}
-                className="lobby-button lobby-button--primary"
-              >
-                Play Now
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleCreatePrivate()}
-                className="lobby-button lobby-button--secondary"
-              >
-                Create Private Lobby
-              </button>
-            </div>
-
-            <div className="lobby-divider">
-              <span>or</span>
-            </div>
-
-            <form className="lobby-join-form" onSubmit={handleJoinPrivate}>
-              <label className="lobby-field">
-                <span>Join with code</span>
-                <input
-                  value={requestedJoinCode}
-                  placeholder="ABC123"
-                  onChange={(event) => setRequestedJoinCode(event.target.value)}
-                />
-              </label>
-              <button type="submit" className="lobby-button lobby-button--secondary">
-                Join Lobby
-              </button>
-            </form>
-          </div>
-        )}
       </div>
     </div>
-  )
+  );
 }
 
 export default LobbyPage

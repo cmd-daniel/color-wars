@@ -9,7 +9,7 @@ import type { Graphics } from 'pixi.js'
 import type { Point } from '@/utils/geometryUtils'
 import { GRID_CONFIG } from '@/utils/diceTrackConfig'
 import type { TrackEventKind, TrackSpace } from '@/types/game'
-import type { GamePlayer } from '@/stores/sessionStore'
+import type { PlainStateOf, PlayerState } from '@color-wars/shared/src/types/RoomState'
 
 extend({
   Container,
@@ -28,7 +28,7 @@ interface TrackGeometry {
 }
 
 interface TokenRender {
-  player: GamePlayer
+  player: PlainStateOf<PlayerState>
   center: { x: number; y: number }
   index: number
   hopId: number
@@ -42,12 +42,6 @@ interface DiceTrackLayerProps {
   offsetY: number
   track: TrackGeometry
   trackSpaces: TrackSpace[]
-  tileCenters: Array<{ x: number; y: number }>
-  tokens: TokenRender[]
-  playerColors: Record<string, string>
-  playerOrder: string[]
-  players: GamePlayer[]
-  tokenRadius: number
 }
 
 const START_TILE_STYLE = {
@@ -138,12 +132,6 @@ const DiceTrackLayer = memo(
     offsetY,
     track,
     trackSpaces,
-    tileCenters,
-    tokens,
-    playerColors,
-    playerOrder,
-    players,
-    tokenRadius,
   }: DiceTrackLayerProps) => {
     const { app } = useApplication()
 
@@ -152,6 +140,11 @@ const DiceTrackLayer = memo(
       if (!app) return
       ;(globalThis as any).__PIXI_APP__ = app
     }, [app])
+
+    const tileCenters = useMemo(
+      () => track.hexes.map((hex: Hex) => ({ x: hex.x, y: hex.y })),
+      [track.hexes],
+    )
 
     const scaleInfo = useMemo(() => {
       const boxWidth = track.viewBox.width || 1
@@ -182,15 +175,15 @@ const DiceTrackLayer = memo(
       return Math.min(12, scaled)
     }, [resolution, scaleInfo.scale])
 
-    const occupancy = useMemo(() => {
-      const map = new Map<number, string[]>()
-      tokens.forEach(({ player, index }) => {
-        const group = map.get(index) ?? []
-        group.push(player.sessionId)
-        map.set(index, group)
-      })
-      return map
-    }, [tokens])
+    // const occupancy = useMemo(() => {
+    //   const map = new Map<number, string[]>()
+    //   tokens.forEach(({ player, index }) => {
+    //     const group = map.get(index) ?? []
+    //     group.push(player.id)
+    //     map.set(index, group)
+    //   })
+    //   return map
+    // }, [tokens])
 
     const innerLoop = track.innerLoop
     const hasInnerLoop = Array.isArray(innerLoop) && innerLoop.length > 2
@@ -329,9 +322,9 @@ const DiceTrackLayer = memo(
             )
           })}
 
-          {tokens.map(({ player, center, index }) => {
+          {/* {tokens.map(({ player, center, index }) => {
             const crowd = occupancy.get(index) ?? []
-            const crowdIndex = Math.max(0, crowd.indexOf(player.sessionId))
+            const crowdIndex = Math.max(0, crowd.indexOf(player.id))
             const angle = (crowdIndex / Math.max(1, crowd.length)) * Math.PI * 2
             const offsetRadius = tokenRadius * 1.35
             const offset =
@@ -342,19 +335,13 @@ const DiceTrackLayer = memo(
                   }
                 : { x: 0, y: 0 }
 
-            const fillColor = colorToNumber(playerColors[player.sessionId] ?? '#f97316')
-            const orderIndex = playerOrder.indexOf(player.sessionId)
-            const fallbackIndex = players.findIndex((entry) => entry.sessionId === player.sessionId)
-            const numericLabel = (orderIndex >= 0 ? orderIndex : fallbackIndex >= 0 ? fallbackIndex : 0) + 1
-            const label =
-              Number.isFinite(numericLabel) && numericLabel > 0
-                ? numericLabel.toString()
-                : player.sessionId.slice(0, 2).toUpperCase()
+            const fillColor = colorToNumber('#f97316')
+            
 
             return (
               <pixiContainer
-                key={player.sessionId}
-                label={`token-${player.sessionId}`}
+                key={player.id}
+                label={`token-${player.id}`}
                 position={{ x: center.x + offset.x, y: center.y + offset.y }}
                 eventMode="none"
                 sortableChildren
@@ -369,7 +356,7 @@ const DiceTrackLayer = memo(
                   }}
                 />
                 <pixiText
-                  text={label}
+                  text={'lol'}
                   anchor={{ x: 0.5, y: 0.5 }}
                   y={tokenRadius * 0.35}
                   resolution={textResolution}
@@ -382,7 +369,7 @@ const DiceTrackLayer = memo(
                 />
               </pixiContainer>
             )
-          })}
+          })} */}
         </pixiContainer>
       </pixiContainer>
     )
