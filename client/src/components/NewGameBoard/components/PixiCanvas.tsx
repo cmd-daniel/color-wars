@@ -1,6 +1,6 @@
-// src/components/PixiCanvas.tsx
 import { useEffect, useRef } from "react";
-import { PixiEngine } from "../pixi/engine";
+import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
+import { TEST_SMALL_MAP } from "@/maps/test-small-map";
 
 export function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -13,7 +13,9 @@ export function PixiCanvas() {
     const engine = new PixiEngine();
     engineRef.current = engine;
 
-    engine.init(node);
+    engine.init(node).then(() => {
+      engine.loadTestMap(TEST_SMALL_MAP);
+    });
 
     return () => {
       engineRef.current?.destroy();

@@ -24,11 +24,11 @@ const LobbyPage = () => {
 
 	return (
 		<div className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-background px-4 font-sans selection:bg-cyan-500/30">
-			{/* <AmbientBackground /> */}
-			<div className="z-10 w-full max-w-md space-y-8 md:space-y-10">
-				{/* Interaction Section */}
+			
+			{/* <div className="z-10 w-full max-w-md space-y-8 md:space-y-10">
+				
 				<div className="space-y-8 relative">
-					{/* <Gamepad2 className="absolute left-3 top-3.5 h-5 w-5 text-zinc-500 group-focus-within:text-cyan-500" />
+					<Gamepad2 className="absolute left-3 top-3.5 h-5 w-5 text-zinc-500 group-focus-within:text-cyan-500" />
 					<Input
 						value={playerName}
 						onChange={(e) => setPlayerName(e.target.value)}
@@ -39,11 +39,12 @@ const LobbyPage = () => {
 					<Button className="w-full h-12" onClick={handleQuickMatch}>
 						PLAY NOW
 						<Zap className="h-4 w-4 fill-black transition-transform group-hover/btn:rotate-12 group-hover/btn:fill-white" />
-					</Button> */}
-					<div className='w-full h-full '>
-          				<PixiCanvas/>
-					</div>
+					</Button>
+					
 				</div>
+			</div> */}
+			<div className='w-full h-full '>
+          		<PixiCanvas/>
 			</div>
 		</div>
 	);
