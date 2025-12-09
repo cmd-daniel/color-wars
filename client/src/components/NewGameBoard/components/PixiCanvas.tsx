@@ -1,20 +1,23 @@
+// src/components/PixiCanvas.tsx
 import { useEffect, useRef } from "react";
-import { initPixi, destroyPixi } from "@components/NewGameBoard/pixi/engine";
+import { PixiEngine } from "../pixi/engine";
 
 export function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const engineRef = useRef<PixiEngine | null>(null);
 
   useEffect(() => {
     const node = containerRef.current;
-    console.log("🟡 PixiCanvas mounted, node:", node);
-
     if (!node) return;
 
-    initPixi(node);
+    const engine = new PixiEngine();
+    engineRef.current = engine;
+
+    engine.init(node);
 
     return () => {
-      console.log("🔵 PixiCanvas unmounting");
-      destroyPixi();
+      engineRef.current?.destroy();
+      engineRef.current = null;
     };
   }, []);
 
@@ -22,6 +25,7 @@ export function PixiCanvas() {
     <div
       ref={containerRef}
       className="w-full h-full aspect-square"
+      style={{ background: "#000" }}
     />
   );
 }

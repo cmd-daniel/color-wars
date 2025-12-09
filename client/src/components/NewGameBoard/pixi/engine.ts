@@ -1,131 +1,149 @@
-// src/pixi/engine.ts
+// src/pixi/PixiEngine.ts
 import * as PIXI from "pixi.js";
 import { Viewport } from "pixi-viewport";
 
-let app: PIXI.Application | null = null;
-let viewport: Viewport | null = null;
-let worldLayer: PIXI.Container | null = null;
+export class PixiEngine {
+  private app: PIXI.Application | null = null;
+  private viewport: Viewport | null = null;
+  private worldLayer: PIXI.Container | null = null;
 
-let initPromise: Promise<void> | null = null;
-let destroyed = false;
+  private destroyed = false;
+  private initToken = 0;
+  private initPromise: Promise<void> | null = null;
 
-// 🚨 THIS is the crucial fix:
-let initToken = 0; // increments on every init request
+  // --- Public getters (same as before) ---
+  getApp() {
+    return this.app;
+  }
 
-export const getApp = () => app;
-export const getViewport = () => viewport;
-export const getWorldLayer = () => worldLayer;
+  getViewport() {
+    return this.viewport;
+  }
 
-export async function initPixi(root: HTMLDivElement) {
-  const myToken = ++initToken; // each init gets a unique token
+  getWorldLayer() {
+    return this.worldLayer;
+  }
 
-  // Hard DOM cleanup (defensive)
-  root.querySelectorAll("canvas").forEach(c => c.remove());
+  // --- INIT ---
+  async init(root: HTMLDivElement) {
+    const myToken = ++this.initToken;
+    this.destroyed = false;
 
-  destroyed = false;
+    // ✅ HARD DOM CLEANUP (prevents duplicate canvases)
+    root.querySelectorAll("canvas").forEach(c => c.remove());
 
-  initPromise = (async () => {
-    const localApp = new PIXI.Application();
+    this.initPromise = (async () => {
+      const localApp = new PIXI.Application();
 
-    await localApp.init({
-      resizeTo: root,
-      backgroundColor: 0x0,
-      antialias: true,
-      powerPreference: "high-performance",
-    });
+      await localApp.init({
+        resizeTo: root,
+        backgroundColor: 0x0,
+        antialias: true,
+        powerPreference: "high-performance",
+      });
 
-    // ✅ CANCEL STALE ASYNC INITS
-    if (destroyed || myToken !== initToken) {
-      try {
-        localApp.destroy(true);
-      } catch {}
-      return;
+      // ✅ Strict-Mode + async cancellation guard
+      if (this.destroyed || myToken !== this.initToken) {
+        try {
+          localApp.destroy(true);
+        } catch {}
+        return;
+      }
+
+      // ✅ SAFE TO COMMIT INSTANCE STATE
+      this.app = localApp;
+      root.appendChild(this.app.canvas);
+
+      this.viewport = new Viewport({
+        screenWidth: root.clientWidth,
+        screenHeight: root.clientHeight,
+        worldWidth: 5000,
+        worldHeight: 5000,
+        events: this.app.renderer.events,
+      });
+
+      this.viewport.drag().wheel().pinch().decelerate();
+      this.app.stage.addChild(this.viewport);
+
+      this.worldLayer = new PIXI.Container();
+      this.viewport.addChild(this.worldLayer);
+
+      this.addDebugContent(this.worldLayer);
+
+      window.addEventListener("resize", this.handleResize);
+    })();
+
+    return this.initPromise;
+  }
+
+  // --- RESIZE ---
+  private handleResize = () => {
+    if (!this.app || !this.viewport) return;
+
+    const parent = this.app.canvas.parentElement;
+    if (!parent) return;
+
+    const width = parent.clientWidth;
+    const height = parent.clientHeight;
+
+    this.app.renderer.resize(width, height);
+    this.viewport.resize(
+      width,
+      height,
+      this.viewport.worldWidth,
+      this.viewport.worldHeight
+    );
+  };
+
+  // --- DEBUG CONTENT ---
+  private addDebugContent(world: PIXI.Container) {
+    const g = new PIXI.Graphics();
+    g.setStrokeStyle({ width: 1, color: 0x444444, alpha: 1 });
+
+    const step = 100;
+    const size = 2000;
+
+    for (let x = -size; x <= size; x += step) {
+      g.moveTo(x, -size);
+      g.lineTo(x, size);
     }
 
-    // ✅ Now it is GUARANTEED this is the only live instance
-    app = localApp;
-    root.appendChild(app.canvas);
+    for (let y = -size; y <= size; y += step) {
+      g.moveTo(-size, y);
+      g.lineTo(size, y);
+    }
 
-    viewport = new Viewport({
-      screenWidth: root.clientWidth,
-      screenHeight: root.clientHeight,
-      worldWidth: 5000,
-      worldHeight: 5000,
-      events: app.renderer.events,
-    });
+    world.addChild(g);
 
-    viewport.drag().wheel().pinch().decelerate();
-    app.stage.addChild(viewport);
-
-    worldLayer = new PIXI.Container();
-    viewport.addChild(worldLayer);
-
-    addDebugContent(worldLayer);
-
-    window.addEventListener("resize", handleResize);
-  })();
-
-  return initPromise;
-}
-
-function handleResize() {
-  if (!app || !viewport) return;
-
-  const parent = app.canvas.parentElement;
-  if (!parent) return;
-
-  const width = parent.clientWidth;
-  const height = parent.clientHeight;
-
-  app.renderer.resize(width, height);
-  viewport.resize(width, height, viewport.worldWidth, viewport.worldHeight);
-}
-
-function addDebugContent(world: PIXI.Container) {
-  const g = new PIXI.Graphics();
-  g.setStrokeStyle({ width: 1, color: 0x444444, alpha: 1 });
-
-  const step = 100;
-  const size = 2000;
-
-  for (let x = -size; x <= size; x += step) {
-    g.moveTo(x, -size);
-    g.lineTo(x, size);
+    const center = new PIXI.Graphics();
+    center.rect(-50, -50, 100, 100).fill(0x00ff99);
+    world.addChild(center);
   }
 
-  for (let y = -size; y <= size; y += step) {
-    g.moveTo(-size, y);
-    g.lineTo(size, y);
+  // --- DESTROY ---
+  destroy() {
+    this.destroyed = true;
+    this.initToken++; // ✅ invalidates all pending async inits
+
+    if (!this.initPromise) return;
+
+    if (this.app) {
+      try {
+        window.removeEventListener("resize", this.handleResize);
+
+        const canvas = this.app.canvas;
+        this.app.destroy(true);
+
+        // ✅ ALWAYS manually remove canvas
+        if (canvas && canvas.parentElement) {
+          canvas.parentElement.removeChild(canvas);
+        }
+      } catch {}
+    }
+
+    this.app = null;
+    this.viewport = null;
+    this.worldLayer = null;
+    this.initPromise = null;
   }
-
-  world.addChild(g);
-
-  const center = new PIXI.Graphics();
-  center.rect(-50, -50, 100, 100).fill(0x00ff99);
-  world.addChild(center);
-}
-
-export function destroyPixi() {
-  destroyed = true;
-  initToken++; // 🚨 invalidates ALL pending async inits
-
-  if (!initPromise) return;
-
-  if (app) {
-    try {
-      window.removeEventListener("resize", handleResize);
-
-      const canvas = app.canvas;
-      app.destroy(true);
-
-      if (canvas && canvas.parentElement) {
-        canvas.parentElement.removeChild(canvas);
-      }
-    } catch {}
-  }
-
-  app = null;
-  viewport = null;
-  worldLayer = null;
-  initPromise = null;
 }
