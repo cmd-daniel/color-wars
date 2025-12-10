@@ -1,6 +1,12 @@
-// src/pixi/PixiEngine.ts
 import * as PIXI from "pixi.js";
 import { Viewport } from "pixi-viewport";
+import { TerrainMesh } from "./layers/TerrianMesh";
+import type { GameMap } from "@/types/map-types";
+import { hslStringToHex } from "@/utils/color-utils";
+import { InteractionManager } from "./systems/InteractionManager";
+import { OutlineLayer } from "./layers/OutlineLayer";
+import { useGameStore } from "@/stores/mapStateStore"; // For subscription
+
 
 /* ============================
    ======== MAP TYPES =========
@@ -16,7 +22,7 @@ export type AxialHex = {
 export type TestMap = {
   id: string;
   grid: {
-    orientation: "pointy" | "flat"; // currently we implement pointy
+    orientation: "pointy" | "flat";
     hexSize: number;
     origin: { q: number; r: number };
   };
@@ -40,32 +46,34 @@ function colorByState(stateId: string): number {
    ============================ */
 
 export class PixiEngine {
+	private LOD_THRESHOLD = 2
+	private lodMode: "NEAR" | "FAR" = "NEAR"
   private app: PIXI.Application | null = null;
   private viewport: Viewport | null = null;
+  
+  // Layers
   private worldLayer: PIXI.Container | null = null;
+	private mapContent: PIXI.Container | null = null;
+  private terrain: TerrainMesh | null = null;
+	private outlineLayer: OutlineLayer | null = null;
+  private debugLayer: PIXI.Container | null = null; // Separate layer for debug boxes
 
-  private mapLayer: PIXI.Container | null = null;
+  // Assets
   private hexTexture: PIXI.Texture | null = null;
 
+  // Lifecycle
   private destroyed = false;
   private initToken = 0;
   private initPromise: Promise<void> | null = null;
 
-  /* ============================
-     ========= GETTERS ==========
-     ============================ */
+	//
+  private interaction: InteractionManager | null = null;
+  private storeUnsub: (() => void) | null = null;
 
-  getApp() {
-    return this.app;
-  }
-
-  getViewport() {
-    return this.viewport;
-  }
-
-  getMapLayer() {
-    return this.mapLayer;
-  }
+  // Getters
+  getApp() { return this.app; }
+  getViewport() { return this.viewport; }
+	public getTerrain() { return this.terrain; }
 
   /* ============================
      ============ INIT ==========
@@ -75,7 +83,7 @@ export class PixiEngine {
     const myToken = ++this.initToken;
     this.destroyed = false;
 
-    // Defensive DOM cleanup
+    // Cleanup existing canvas
     root.querySelectorAll("canvas").forEach(c => c.remove());
 
     this.initPromise = (async () => {
@@ -83,75 +91,120 @@ export class PixiEngine {
 
       await localApp.init({
         resizeTo: root,
-        backgroundColor: 0xffffff,
+        backgroundColor: 0x0,
         antialias: true,
         powerPreference: "high-performance",
       });
 
-      // Strict-Mode + async cancellation guard
       if (this.destroyed || myToken !== this.initToken) {
-        try {
-          localApp.destroy(true);
-        } catch {}
+        try { localApp.destroy(true); } catch {}
         return;
       }
 
       this.app = localApp;
       root.appendChild(this.app.canvas);
 
+      // --- Viewport Setup ---
       this.viewport = new Viewport({
         screenWidth: root.clientWidth,
         screenHeight: root.clientHeight,
-        worldWidth: 1000,
+        worldWidth: 1000, // Will be resized on map load
         worldHeight: 1000,
         events: this.app.renderer.events,
       });
 
-      this.viewport.drag().wheel().pinch().decelerate();
-			this.viewport.fit(true)
-		// 	this.viewport.clamp({
-		// 		left: true,
-		// 		right: true,
-		// 		top: true,
-		// 		bottom: true,
-		// 		direction: 'all',
-		// 		//underflow: 'center' // If zoomed out (fitted), lock world to center.
-		// });
+      this.viewport
+        .drag()
+        .wheel()
+        .pinch()
+        .decelerate();
+
       this.app.stage.addChild(this.viewport);
 
+      // --- Layer Setup ---
       this.worldLayer = new PIXI.Container();
       this.viewport.addChild(this.worldLayer);
 
-      // ✅ One-time procedural hex texture
-      this.generateHexTexture(40);
+			this.mapContent = new PIXI.Container();
+			this.worldLayer.addChild(this.mapContent)
+			
+
+      this.terrain = new TerrainMesh();
+      this.mapContent.addChild(this.terrain);
+
+			this.outlineLayer = new OutlineLayer();
+			this.mapContent.addChild(this.outlineLayer)
+
+			
+      
+      // this.debugLayer = new PIXI.Container();
+      // this.worldLayer.addChild(this.debugLayer);
+
+      // Generate Assets
+      this.generateHexTexture(50);
+
+			//listen for state changes
+			this.storeUnsub = useGameStore.subscribe((s)=>{
+				if(this.outlineLayer){
+					this.outlineLayer.updateSelection(s.hoveredStateId, s.selectedStateId)
+				}
+			})
 
       window.addEventListener("resize", this.handleResize);
+			this.viewport.on('zoomed', this.handleZoom)
     })();
 
     return this.initPromise;
   }
 
+	/* ============================
+     ========== ZOOM ============
+     ============================ */
+
+	private handleZoom = () =>{
+		if (!this.viewport || !this.terrain || !this.outlineLayer) return;
+
+		const scale = this.viewport.scale.x
+		const newMode = scale < this.LOD_THRESHOLD ? "FAR" : "NEAR";
+
+		if(newMode !== this.lodMode){
+			this.lodMode = newMode
+			this.updateLOD();
+		}
+	}
+
+	private updateLOD(){
+		if (!this.terrain || !this.outlineLayer) return;
+
+		if( this.lodMode === 'FAR'){
+			this.terrain.visible = false;
+			this.outlineLayer.setLODMode('FAR')
+		}else{
+			this.terrain.visible = true;
+			this.outlineLayer.setLODMode('NEAR')
+		}
+	}
+
   /* ============================
      ========= RESIZE ===========
      ============================ */
-
-	private handleResize = () => {
+  
+  private handleResize = () => {
     if (!this.app || !this.viewport) return;
     const parent = this.app.canvas.parentElement;
     if (!parent) return;
 
     this.app.renderer.resize(parent.clientWidth, parent.clientHeight);
-    this.viewport.resize(parent.clientWidth, parent.clientHeight, this.viewport.worldWidth, this.viewport.worldHeight);
-
-    // Fit & Move to POSITIVE center
-    this.viewport.fit();
-    this.viewport.moveCenter(this.viewport.worldWidth / 2, this.viewport.worldHeight / 2);
-
-    const newFittedScale = this.viewport.scale.x;
-    this.viewport.clampZoom({
-      minScale: newFittedScale,
-      maxScale: newFittedScale * 4
-    });
+    
+    // Resize viewport but keep world dimensions intact
+    this.viewport.resize(
+        parent.clientWidth, 
+        parent.clientHeight, 
+        this.viewport.worldWidth, 
+        this.viewport.worldHeight
+    );
+    
+    // Optional: Re-clamp if needed, though usually handled by Viewport logic
   };
 
   /* ============================
@@ -160,191 +213,301 @@ export class PixiEngine {
 
   private generateHexTexture(size: number) {
     if (!this.app) return;
-
+    
     const g = new PIXI.Graphics();
-
+    
+    const points: number[] = [];
     const corners = 6;
-    const angleOffset = -30; // pointy-top
+    const angleOffset = -30; // Pointy top
 
     for (let i = 0; i < corners; i++) {
       const angle = (Math.PI / 180) * (60 * i + angleOffset);
       const x = size * Math.cos(angle);
       const y = size * Math.sin(angle);
-
-      if (i === 0) g.moveTo(x, y);
-      else g.lineTo(x, y);
+      points.push(x, y);
     }
 
-    g.closePath();
-    g.fill({ color: 0xffffff });
-    g.stroke({ width: 1, color: 0x222222, alpha: 0.8 });
+    g.poly(points);
+    g.fill({ color: 0xffffff }); // Fill First
+    g.stroke({ width: 2, color: 0x333333, alignment: 1 }); // Stroke Second (Inner)
 
-    const texture =
-      this.app.renderer.textureGenerator.generateTexture({
-        target: g,
-        resolution: 2,
-        antialias: true,
-      });
+    const texture = this.app.renderer.textureGenerator.generateTexture({
+      target: g,
+      resolution: 5,
+      antialias: false,
+    });
 
     g.destroy(true);
-
-    if (this.hexTexture) {
-      this.hexTexture.destroy(true);
-    }
-
+    if (this.hexTexture) this.hexTexture.destroy(true);
     this.hexTexture = texture;
   }
 
   /* ============================
-     ===== AXIAL → WORLD ========
+     ===== DEBUG DRAWING ========
      ============================ */
 
-  private axialToWorld(q: number, r: number, size: number) {
-    // Pointy-top axial layout
-    const x = size * Math.sqrt(3) * (q + r / 2);
-    const y = size * 1.5 * r;
-    return { x, y };
-  }
-
-  /* ============================
-     ===== MAP LAYER RESET ======
-     ============================ */
-
-  private destroyMapLayer() {
-    if (!this.mapLayer || !this.worldLayer) return;
-
-    this.mapLayer.removeChildren();
-    this.worldLayer.removeChild(this.mapLayer);
-    this.mapLayer.destroy({ children: true });
-    this.mapLayer = null;
-  }
-
-	private drawWorldBounds(w: number, h: number) {
-		if (!this.viewport || !this.worldLayer) return;
-	
-		const g = new PIXI.Graphics();
-	
-        // Draw from 0,0 to w,h (Positive coords)
-		g.rect(0, 0, w, h).stroke({ width: 2, color: 0xff3333, alpha: 0.9 });
-	
-        // Add directly to worldLayer (but NOT inside mapLayer)
-		this.worldLayer.addChild(g);
-	}
-
-	// Draws the actual hex content boundary (Green Box)
-  private drawContentBounds(width: number, height: number) {
-    if (!this.mapLayer) return;
-
+  private drawWorldBounds(w: number, h: number) {
+    if (!this.debugLayer) return;
     const g = new PIXI.Graphics();
-    
-    // Drawn relative to mapLayer, so (0,0) is the center.
-    // We draw from negative half-width to positive half-width.
-    g.rect(-width / 2, -height / 2, width, height)
-     .stroke({ width: 2, color: 0x00ff00, alpha: 0.8 }); // Green color
-
-    this.mapLayer.addChild(g);
+    // Red Box (0,0 to w,h)
+    g.rect(0, 0, w, h).stroke({ width: 4, color: 0xff3333, alpha: 0.5 });
+    this.debugLayer.addChild(g);
   }
-	
+
+  private drawContentBounds(w: number, h: number) {
+    if (!this.debugLayer) return;
+    const g = new PIXI.Graphics();
+    // Green Box (Centered at 0,0 relative to terrain, so -w/2 to w/2)
+    // NOTE: This is drawn relative to the WORLD center now because we pivot the terrain
+    g.rect(-w / 2, -h / 2, w, h).stroke({ width: 4, color: 0x00ff00, alpha: 0.8 });
+    this.terrain?.addChild(g); // Attach to terrain so it moves with it
+  }
 
   /* ============================
      ===== LOAD TEST MAP ========
      ============================ */
 
+  public loadTestMap(map: TestMap) {
+    if (!this.app || !this.viewport || !this.worldLayer || !this.hexTexture || !this.terrain || !this.debugLayer) return;
 
-	public loadTestMap(map: TestMap) {
-    if (!this.app || !this.viewport || !this.worldLayer || !this.hexTexture) return;
-
-    this.destroyMapLayer();
-    this.mapLayer = new PIXI.Container();
-    this.worldLayer.addChild(this.mapLayer);
-
+    // Reset Layers
+    this.debugLayer.removeChildren();
+    
     const { hexSize } = map.grid;
+    const widthPerHex = hexSize * Math.sqrt(3);
+    const heightPerHex = hexSize * 2;
 
-    // --- Calculate Bounds (Same as before) ---
+    // 1. Calculate Content Bounds (Raw Q/R logic)
     let minQ = Infinity, maxQ = -Infinity, minR = Infinity, maxR = -Infinity;
     for (const h of map.hexes) {
       if (h.q < minQ) minQ = h.q; if (h.q > maxQ) maxQ = h.q;
       if (h.r < minR) minR = h.r; if (h.r > maxR) maxR = h.r;
     }
-    const centerQ = (minQ + maxQ) / 2;
-    const centerR = (minR + maxR) / 2;
 
-    const corners = [ { q: minQ, r: minR }, { q: minQ, r: maxR }, { q: maxQ, r: minR }, { q: maxQ, r: maxR } ];
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    // Convert Axial Extents to Local Cartesian Extents
+    // NOTE: This is an approximation of the bounding box.
+    // For precise bounds, we'd check all 6 corners of min/max hexes, 
+    // but calculating centers of min/max Q/R is sufficient for the viewport logic.
     
-    for (const c of corners) {
-      const { x, y } = this.axialToWorld(c.q - centerQ, c.r - centerR, hexSize);
-      if (x < minX) minX = x; if (x > maxX) maxX = x;
-      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    const minX = widthPerHex * (minQ + minR / 2);
+    const maxX = widthPerHex * (maxQ + maxR / 2);
+    const minY = heightPerHex * 1.5 * (minR / 2); // vertical spacing is 3/4 height * r
+    const maxY = heightPerHex * 1.5 * (maxR / 2);
+    
+    // More precise vertical calc: y = size * 3/2 * r
+    const realMinY = hexSize * 1.5 * minR;
+    const realMaxY = hexSize * 1.5 * maxR;
+
+    const contentWidth = Math.abs(maxX - minX) + widthPerHex * 2; // Add some margin for hex width
+    const contentHeight = Math.abs(realMaxY - realMinY) + heightPerHex * 2;
+
+    const mapCenterX = (minX + maxX) / 2;
+    const mapCenterY = (realMinY + realMaxY) / 2;
+
+    // 2. Calculate World Size (Red Box)
+    const aestheticPadding = 200;
+    const totalWidth = Math.max(this.viewport.screenWidth, contentWidth + aestheticPadding * 2);
+    const totalHeight = Math.max(this.viewport.screenHeight, contentHeight + aestheticPadding * 2);
+
+    // 3. Initialize Terrain Mesh
+    this.terrain.init(map.hexes, hexSize, this.hexTexture);
+    
+    // 4. Colorize
+    for (const cell of map.hexes) {
+      this.terrain.setHexColor(cell.q, cell.r, colorByState(cell.stateId));
     }
 
-    // --- Dimensions Calculation ---
-    
-    const geometricMargin = hexSize * 2; 
-    const aestheticPadding = 100; // The extra space around the edges
+    // 5. Position Terrain in Center of World
+    // We pivot the terrain so its internal center aligns with the world center
+    this.terrain.pivot.set(mapCenterX, mapCenterY);
+    this.terrain.position.set(totalWidth / 2, totalHeight / 2);
 
-    // 1. Content Size (The Green Box)
-    const contentWidth = Math.abs(maxX - minX) + geometricMargin;
-    const contentHeight = Math.abs(maxY - minY) + geometricMargin;
+    // 6. Draw Bounds
+    this.drawWorldBounds(totalWidth, totalHeight); // Red
+    this.drawContentBounds(contentWidth, contentHeight); // Green
 
-    // 2. World Size (The Red Box / Viewport limits)
-    const totalWidth = Math.max(4 * hexSize, contentWidth + (aestheticPadding * 2));
-    const totalHeight = Math.max(4 * hexSize, contentHeight + (aestheticPadding * 2));
-
-    // Center map layer
-    this.mapLayer.position.set(totalWidth / 2, totalHeight / 2);
-    
-    // ✅ NEW: Draw the content bounds (Green)
-    this.drawContentBounds(contentWidth, contentHeight);
-
+    // 7. Update Viewport
     const parent = this.app.canvas.parentElement;
     if (parent) {
+      // Update world size
       this.viewport.resize(parent.clientWidth, parent.clientHeight, totalWidth, totalHeight);
-      
-      // Draw World Bounds (Red)
-      this.drawWorldBounds(totalWidth, totalHeight);
 
+      // Hard clamp to the Red Box
       this.viewport.clamp({
-        left: 0, top: 0, right: totalWidth, bottom: totalHeight,
-        direction: 'all', underflow: 'center'
+        left: 0,
+        top: 0,
+        right: totalWidth,
+        bottom: totalHeight,
+        direction: "all",
+        underflow: "center",
       });
 
       // --- ZOOM LOGIC ---
-
-      // 1. Calculate the "Perfect Fit"
-      this.viewport.fit(true);
+      // 1. Fit to see everything
+      this.viewport.fit(true, totalWidth, totalHeight);
       
-      // 2. Capture that scale
       const fittedScale = this.viewport.scale.x;
-			
-      // 3. Set Limits (User can zoom out to the fit, but no further)
-      this.viewport.clampZoom({
-				minScale: fittedScale,
-        maxScale: fittedScale * 4
-      });
-			
-      // ✅ NEW: Apply "Slight Zoom In"
-      // This sets the initial view to be 20% closer than the "perfect fit".
-      // The user can scroll out to see the edges, but starts focused.
-      const initialZoom = fittedScale * 2; 
-      
-      // Ensure we don't exceed max scale if map is tiny
-      const safeZoom = Math.min(initialZoom, fittedScale * 4); 
-      
-      this.viewport.setZoom(safeZoom);
-			this.viewport.moveCenter(totalWidth / 2, totalHeight / 2);
-    }
 
-    // Render Hexes (Unchanged)
-    for (const cell of map.hexes) {
-      const { x, y } = this.axialToWorld(cell.q - centerQ, cell.r - centerR, hexSize);
-      const sprite = new PIXI.Sprite(this.hexTexture);
-      sprite.anchor.set(0.5);
-      sprite.position.set(x, y);
-      sprite.tint = colorByState(cell.stateId);
-      this.mapLayer.addChild(sprite);
+      // 2. Set Zoom Constraints
+      this.viewport.clampZoom({
+        minScale: fittedScale * 0.8, // Allow zooming out slightly past the fit
+        maxScale: fittedScale * 6,   // Allow deep zoom
+      });
+
+      // 3. Initial Zoom "Ease-In"
+      // Zoom in slightly so the user feels "in" the world, not looking at a small map
+      const initialZoom = fittedScale * 1.2; 
+      const safeZoom = Math.min(initialZoom, fittedScale * 4);
+
+      this.viewport.setZoom(safeZoom);
+      this.viewport.moveCenter(totalWidth / 2, totalHeight / 2);
     }
   }
+
+	public loadMap(map: GameMap) {
+    if (!this.app || !this.viewport || !this.worldLayer || !this.hexTexture || !this.terrain || !this.mapContent) return;
+
+    // 1. Pre-calculate Colors
+    // Create a lookup: StateID -> HexColorNumber
+    const colorMap = new Map<string, number>();
+    
+    map.states.forEach(state => {
+      colorMap.set(state.id, hslStringToHex(state.displayColor));
+    });
+
+    // 2. Setup Dimensions
+    const { hexSize } = map.grid;
+    const widthPerHex = hexSize * Math.sqrt(3);
+    const heightPerHex = hexSize * 2;
+
+
+		
+
+		// setup interaction
+		if(!this.interaction){
+			this.interaction = new InteractionManager(this)
+		}
+		this.interaction.initMap(map.hexes, hexSize)
+
+    // Calculate Bounds from Q/R
+    // We can use the bounds in JSON or recalc them. Recalc is safer.
+    let minQ = Infinity, maxQ = -Infinity, minR = Infinity, maxR = -Infinity;
+    for (const h of map.hexes) {
+      if (h.q < minQ) minQ = h.q;
+      if (h.q > maxQ) maxQ = h.q;
+      if (h.r < minR) minR = h.r;
+      if (h.r > maxR) maxR = h.r;
+    }
+
+    const minX = widthPerHex * (minQ + minR / 2);
+    const maxX = widthPerHex * (maxQ + maxR / 2);
+    // Rough estimation for pointy top vertical
+    const minY = hexSize * 1.5 * minR; 
+    const maxY = hexSize * 1.5 * maxR;
+
+    const contentWidth = Math.abs(maxX - minX) + widthPerHex * 2;
+    const contentHeight = Math.abs(maxY - minY) + heightPerHex * 2;
+    
+    // Center point logic
+    const mapCenterX = (minX + maxX) / 2;
+    const mapCenterY = (minY + maxY) / 2;
+
+		
+    // 3. Initialize Mesh
+    // We map the incoming generic "MapHex" to the shape TerrainMesh expects
+    this.terrain.init(map.hexes, hexSize, this.hexTexture);
+
+		// build outlines for territories
+		this.outlineLayer?.build(map)
+
+    // 4. Colorize Mesh
+    for (const hex of map.hexes) {
+      if (!hex.stateId) {
+        // Handle "Water" or "Void" - e.g., dark blue or transparent
+        this.terrain.setHexColor(hex.q, hex.r, 0x1a1a2e); 
+        continue;
+      }
+
+      const color = colorMap.get(hex.stateId);
+      if (color !== undefined) {
+        this.terrain.setHexColor(hex.q, hex.r, color);
+      } else {
+        // Fallback for unknown state
+        this.terrain.setHexColor(hex.q, hex.r, 0xFF00FF); 
+      }
+    }
+
+    // 5. Update Viewport / Camera
+    const aestheticPadding = 500;
+    const totalWidth = Math.max(this.viewport.screenWidth, contentWidth + aestheticPadding);
+    const totalHeight = Math.max(this.viewport.screenHeight, contentHeight + aestheticPadding);
+
+    // Pivot terrain to center
+    // this.terrain.pivot.set(mapCenterX, mapCenterY);
+    // this.terrain.position.set(totalWidth / 2, totalHeight / 2);
+
+		// ✅ 4. Apply Pivot/Position to the SHARED Parent Container
+		// Instead of moving just the terrain, we move the whole content holder.
+		this.mapContent.pivot.set(mapCenterX, mapCenterY);
+		this.mapContent.position.set(totalWidth / 2, totalHeight / 2);
+
+    const parent = this.app.canvas.parentElement;
+    if (parent) {
+        this.viewport.resize(parent.clientWidth, parent.clientHeight, totalWidth, totalHeight);
+        
+        // Update Viewport Bounds
+        this.viewport.clamp({
+            left: 0, top: 0, right: totalWidth, bottom: totalHeight,
+            // direction: "all", 
+						underflow: "center",
+        });
+
+        this.viewport.fit(true, totalWidth, totalHeight);
+        const fittedScale = this.viewport.scale.x;
+        
+        this.viewport.clampZoom({
+            minScale: fittedScale * 2, 
+            maxScale: fittedScale * 1000
+        });
+
+        // Start with a nice view
+        this.viewport.setZoom(fittedScale * 2); 
+        this.viewport.moveCenter(totalWidth / 2, totalHeight / 2);
+
+				setTimeout(() => {
+					this.handleZoom();
+				}, 100);
+    }
+  }
+		/* ==========================
+     ======= Math Helpers =======
+     ============================ */
+		 public worldToAxial(x: number, y: number, hexSize: number) {
+			const sqrt3 = Math.sqrt(3);
+			const q = ((sqrt3 / 3) * x - (1 / 3) * y) / hexSize;
+			const r = ((2 / 3) * y) / hexSize;
+			return this.axialRound(q, r);
+		}
+	
+		private axialRound(q: number, r: number) {
+			let rq = Math.round(q);
+			let rr = Math.round(r);
+			const s = -q - r;
+			let rs = Math.round(s);
+	
+			const qDiff = Math.abs(rq - q);
+			const rDiff = Math.abs(rr - r);
+			const sDiff = Math.abs(rs - s);
+	
+			if (qDiff > rDiff && qDiff > sDiff) {
+					rq = -rr - rs;
+			} else if (rDiff > sDiff) {
+					rr = -rq - rs;
+			}
+			return { q: rq, r: rr };
+		}
+		 
+
 
   /* ============================
      ========= DESTROY ==========
@@ -353,28 +516,18 @@ export class PixiEngine {
   destroy() {
     this.destroyed = true;
     this.initToken++;
+    
+    window.removeEventListener("resize", this.handleResize);
 
-    if (!this.initPromise) return;
-
-    if (this.app) {
-      try {
-        window.removeEventListener("resize", this.handleResize);
-
-        const canvas = this.app.canvas;
-        this.app.destroy(true);
-        canvas?.parentElement?.removeChild(canvas);
-      } catch {}
-    }
-
-    if (this.hexTexture) {
-      this.hexTexture.destroy(true);
-      this.hexTexture = null;
-    }
-
+		this.app?.destroy(true);
+		this.storeUnsub?.()
+		this.interaction?.destroy()
+		this.viewport?.off("zoomed", this.handleZoom);
+    
     this.app = null;
     this.viewport = null;
-    this.mapLayer = null;
     this.worldLayer = null;
-    this.initPromise = null;
+    this.terrain = null;
+    this.debugLayer = null;
   }
 }
