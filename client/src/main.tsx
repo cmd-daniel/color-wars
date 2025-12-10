@@ -6,10 +6,10 @@ import App from './App.tsx'
 import Toaster from '@components/Toast/toaster.tsx'
 
 createRoot(document.getElementById('root')!).render(
-
-  // <App />
   <React.StrictMode>
-    <App />
-    <Toaster/>
+    <>
+      <App />
+      <Toaster/>
+    </>
   </React.StrictMode>
 )

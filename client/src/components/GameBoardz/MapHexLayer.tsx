@@ -187,6 +187,7 @@ const MapHexLayer = ({
     )
   }, [hexSize, positionedHexes, showHexFill, visibleBounds])
 
+  console.log(visibleHexes)
   return (
     <pixiContainer>
       {showHexFill &&

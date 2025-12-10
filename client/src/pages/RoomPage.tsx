@@ -80,7 +80,7 @@ const RoomPage = () => {
 		<div className="w-full flex flex-col items-center justify-center">
 			{/* {spectatorBanner} */}
 			<div className='max-w-[420px] w-full'>
-				<DiceTrack/>
+				{/* <DiceTrack/> */}
 			</div>
 			<GameStatus />
 

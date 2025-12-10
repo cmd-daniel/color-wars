@@ -13,7 +13,6 @@ import { Viewport } from 'pixi-viewport'
 import { useShallow } from 'zustand/shallow'
 import { useMapStore } from '@/stores/mapStore'
 import { useMapInteractionsStore } from '@/stores/mapInteractionsStore'
-import { useStore } from '@/stores/sessionStore'
 import MapHexLayer from './MapHexLayer'
 import { computeTerritoryRenderInfo, mapTerritoryRenderInfo } from '@/utils/territoryGeometry'
 import type { TerritoryId } from '@/types/map'
@@ -21,7 +20,7 @@ import styles from './PixiViewport.module.css'
 import DiceTrackLayer from './DiceTrackLayer'
 import { computeViewBox, createHollowGrid} from '@/utils/gridUtils'
 import { buildInnerPathFromSpec } from '@/utils/hexEdgeUtils' 
-import { GRID_CONFIG, INNER_EDGE_SPEC } from '@/utils/diceTrackConfig'
+import { INNER_EDGE_SPEC } from '@/utils/diceTrackConfig'
 
 extend({ Container, Graphics, Viewport, Text })
 
@@ -252,33 +251,24 @@ const InteractiveViewport = ({
   )
 }
 
-interface MapViewportOverlayProps {
-  size: number
-  resolution: number
-  offsetX: number
-  offsetY: number
-}
+
 
 interface MapViewportProps {
   className?: string
-  background?: number
   transparent?: boolean
   initialZoomFactor?: number
   fitPadding?: number
   resolutionMultiplier?: number
   maxResolution?: number
-  overlay?: (props: MapViewportOverlayProps) => ReactNode
 }
 
 const MapViewport = ({
   className,
-  // background,
   transparent = false,
   initialZoomFactor = 1,
   fitPadding = 0,
-  resolutionMultiplier = 1,
+  resolutionMultiplier = 1.2,
   maxResolution = 6,
-  overlay,
 }: MapViewportProps) => {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const [viewportSize, setViewportSize] = useState({ width: 800, height: 600 })
@@ -315,10 +305,6 @@ const MapViewport = ({
     }
   }, [loadMap, map, loading])
 
-  const handleWheel = useCallback((event: WheelEvent) => {
-    event.preventDefault()
-  }, [])
-
   const handleBoundsChange = useCallback(
     (bounds: ViewportBounds) => {
       if (!map) return
@@ -347,15 +333,6 @@ const MapViewport = ({
   const handleScaleChange = useCallback((scale: number) => {
     viewportEvents?.emitScale(scale)
   }, [viewportEvents])
-
-  useEffect(() => {
-    const mapContainer = containerRef.current
-    if (!mapContainer) return
-    mapContainer.addEventListener('wheel', handleWheel, { passive: false })
-    return () => {
-      mapContainer.removeEventListener('wheel', handleWheel)
-    }
-  }, [handleWheel])
 
   useEffect(() => {
     const updateResolution = () => {
@@ -542,8 +519,7 @@ const MapViewport = ({
               />
             </InteractiveViewport>
           </pixiContainer>
-          {/* {overlayNode} */}
-          <DiceTrackLayer
+          {/* <DiceTrackLayer
             size={overlaySize}
             resolution={resolution}
             offsetX={overlayOffsetX}
@@ -552,7 +528,7 @@ const MapViewport = ({
             trackSpaces={[]}
             playerColors={[]}
             playerOrder={[]}
-          />
+          /> */}
         </Application>
       ) : (
         <div className={styles.loading}>Loading map…</div>

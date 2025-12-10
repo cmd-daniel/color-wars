@@ -55,7 +55,7 @@ export function PixiCanvas() {
       )}
       <div
         ref={containerRef}
-        className="w-full h-full aspect-square bg-gray-900"
+        className="w-full h-full aspect-square bg-[#111111]"
       />
     </div>
   );

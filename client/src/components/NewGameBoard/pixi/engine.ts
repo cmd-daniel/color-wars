@@ -5,6 +5,7 @@ import type { GameMap } from "@/types/map-types";
 import { hslStringToHex } from "@/utils/color-utils";
 import { InteractionManager } from "./systems/InteractionManager";
 import { OutlineLayer } from "./layers/OutlineLayer";
+import { DiceTrackLayer } from "./layers/DiceTrackLayer";
 import { useGameStore } from "@/stores/mapStateStore"; // For subscription
 
 
@@ -57,7 +58,8 @@ export class PixiEngine {
   private terrain: TerrainMesh | null = null;
 	private outlineLayer: OutlineLayer | null = null;
   private debugLayer: PIXI.Container | null = null; // Separate layer for debug boxes
-
+	private diceTrack: DiceTrackLayer | null = null;
+	private uiLayer: PIXI.Container | null = null;
   // Assets
   private hexTexture: PIXI.Texture | null = null;
 
@@ -135,6 +137,15 @@ export class PixiEngine {
 			this.outlineLayer = new OutlineLayer();
 			this.mapContent.addChild(this.outlineLayer)
 
+			this.uiLayer = new PIXI.Container();
+			this.app.stage.addChild(this.uiLayer)
+
+			this.diceTrack = new DiceTrackLayer();
+			this.uiLayer.addChild(this.diceTrack);
+			this.diceTrack.init(this.app)
+
+
+
 			
       
       // this.debugLayer = new PIXI.Container();
@@ -152,6 +163,8 @@ export class PixiEngine {
 
       window.addEventListener("resize", this.handleResize);
 			this.viewport.on('zoomed', this.handleZoom)
+
+      this.handleResize()
     })();
 
     return this.initPromise;
@@ -194,15 +207,19 @@ export class PixiEngine {
     const parent = this.app.canvas.parentElement;
     if (!parent) return;
 
-    this.app.renderer.resize(parent.clientWidth, parent.clientHeight);
+		const w = parent.clientWidth
+		const h = parent.clientHeight
+    this.app.renderer.resize(w, h);
     
     // Resize viewport but keep world dimensions intact
     this.viewport.resize(
-        parent.clientWidth, 
-        parent.clientHeight, 
+        w, 
+        h, 
         this.viewport.worldWidth, 
         this.viewport.worldHeight
     );
+		
+		this.diceTrack?.resize(w, h)
     
     // Optional: Re-clamp if needed, though usually handled by Viewport logic
   };
@@ -350,7 +367,7 @@ export class PixiEngine {
 
       // 2. Set Zoom Constraints
       this.viewport.clampZoom({
-        minScale: fittedScale * 0.8, // Allow zooming out slightly past the fit
+        minScale: fittedScale * 0.5, // Allow zooming out slightly past the fit
         maxScale: fittedScale * 6,   // Allow deep zoom
       });
 
@@ -466,7 +483,7 @@ export class PixiEngine {
         const fittedScale = this.viewport.scale.x;
         
         this.viewport.clampZoom({
-            minScale: fittedScale * 2, 
+            minScale: fittedScale * 1.5, 
             maxScale: fittedScale * 1000
         });
 
