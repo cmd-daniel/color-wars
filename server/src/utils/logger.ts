@@ -14,9 +14,9 @@ export const logger = winston.createLogger({
   defaultMeta: { service: "color-wars-server" },
   transports: [
     new winston.transports.Console({
-      format: combine(colorize(), timestamp(), consoleFormat)
-    })
-  ]
+      format: combine(colorize(), timestamp(), consoleFormat),
+    }),
+  ],
 });
 
 export type AnalyticsEvent =

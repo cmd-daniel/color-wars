@@ -22,18 +22,16 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
 
     /* Shadcn */
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@components/*": [
-        "./src/components/*"
-      ]
+      "@/*": ["./src/*"],
+      "@components/*": ["./src/components/*"]
     },
     "types": ["vite/client", "@pixi/react"]
   },
-  "include": ["src"]
+  "include": ["src", "../shared/src/types/registry.ts"]
 }

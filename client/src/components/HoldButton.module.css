@@ -1,5 +1,3 @@
-
-
 .holdBtn {
   position: absolute;
   display: flex;
@@ -11,9 +9,9 @@
   cursor: pointer;
   overflow: hidden;
   transition: box-shadow 0.2s ease;
-  user-select: none;     /* Standard */
+  user-select: none; /* Standard */
   -webkit-user-select: none; /* Safari */
-  -ms-user-select: none;     /* Old Edge/IE */
+  -ms-user-select: none; /* Old Edge/IE */
   -webkit-touch-callout: none; /* Disable touch callout */
 }
 
@@ -27,7 +25,9 @@
 }
 
 .holdBtn:active {
-  animation: tiltShake 1s cubic-bezier(0.4, 0, 0.6, 1) forwards, continuousShake 0.1s ease-in-out infinite 1s;
+  animation:
+    tiltShake 1s cubic-bezier(0.4, 0, 0.6, 1) forwards,
+    continuousShake 0.1s ease-in-out infinite 1s;
 }
 
 .holdBtn:active .btnText {
@@ -49,7 +49,6 @@
   transition: width 200ms ease-in-out;
 }
 
-
 .btnText,
 .releaseText {
   position: relative;
@@ -64,7 +63,6 @@
   opacity: 0;
   color: #ffffff;
 }
-
 
 @keyframes tiltShake {
   0% {

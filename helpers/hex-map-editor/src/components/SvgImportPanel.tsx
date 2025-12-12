@@ -1,34 +1,34 @@
-import { useState, type ChangeEvent } from 'react'
-import { useMapEditorStore } from '../state/useMapEditorStore'
+import { useState, type ChangeEvent } from "react";
+import { useMapEditorStore } from "../state/useMapEditorStore";
 
 const SvgImportPanel = () => {
-  const svgDocument = useMapEditorStore((state) => state.svgDocument)
-  const loadSvgDocument = useMapEditorStore((state) => state.loadSvgDocument)
-  const clearSvgDocument = useMapEditorStore((state) => state.clearSvgDocument)
-  const generateHexesFromSvg = useMapEditorStore((state) => state.generateHexesFromSvg)
+  const svgDocument = useMapEditorStore((state) => state.svgDocument);
+  const loadSvgDocument = useMapEditorStore((state) => state.loadSvgDocument);
+  const clearSvgDocument = useMapEditorStore((state) => state.clearSvgDocument);
+  const generateHexesFromSvg = useMapEditorStore((state) => state.generateHexesFromSvg);
 
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const [file] = event.target.files ?? []
+    const [file] = event.target.files ?? [];
     if (!file) {
-      return
+      return;
     }
 
     try {
-      const text = await file.text()
-      loadSvgDocument(text)
-      setError(null)
+      const text = await file.text();
+      loadSvgDocument(text);
+      setError(null);
     } catch (err) {
-      console.error('Failed to parse SVG', err)
-      setError('Failed to parse SVG file. Please ensure it contains valid <path> geometry.')
+      console.error("Failed to parse SVG", err);
+      setError("Failed to parse SVG file. Please ensure it contains valid <path> geometry.");
     }
-  }
+  };
 
   const handleReset = () => {
-    clearSvgDocument()
-    setError(null)
-  }
+    clearSvgDocument();
+    setError(null);
+  };
 
   return (
     <section className="panel panel--import">
@@ -52,8 +52,8 @@ const SvgImportPanel = () => {
             <div>
               <dt>ViewBox</dt>
               <dd>
-                {svgDocument.viewBox.x},{svgDocument.viewBox.y} →
-                {svgDocument.viewBox.width}×{svgDocument.viewBox.height}
+                {svgDocument.viewBox.x},{svgDocument.viewBox.y} →{svgDocument.viewBox.width}×
+                {svgDocument.viewBox.height}
               </dd>
             </div>
             <div>
@@ -65,7 +65,8 @@ const SvgImportPanel = () => {
             Populate hexes
           </button>
           <p className="panel__helper">
-            Adjust grid size and offsets before sampling so the hex lattice aligns with your artwork.
+            Adjust grid size and offsets before sampling so the hex lattice aligns with your
+            artwork.
           </p>
         </div>
       ) : (
@@ -78,7 +79,7 @@ const SvgImportPanel = () => {
       )}
       {error && <p className="panel__error">{error}</p>}
     </section>
-  )
-}
+  );
+};
 
-export default SvgImportPanel
+export default SvgImportPanel;

@@ -22100,7 +22100,7 @@
       "stateId": "ingj"
     }
   ],
-  "states": [
+  "territories": [
     {
       "id": "inla",
       "name": "INLA",
@@ -23521,9 +23521,7 @@
       "id": "indl",
       "name": "INDL",
       "displayColor": "hsl(63 65% 55%)",
-      "hexIds": [
-        "-6,-24"
-      ]
+      "hexIds": ["-6,-24"]
     },
     {
       "id": "insk",
@@ -25312,9 +25310,7 @@
       "id": "indh",
       "name": "INDH",
       "displayColor": "hsl(16 65% 55%)",
-      "hexIds": [
-        "-36,10"
-      ]
+      "hexIds": ["-36,10"]
     },
     {
       "id": "intg",
@@ -25814,12 +25810,7 @@
       "id": "inga",
       "name": "INGA",
       "displayColor": "hsl(110 65% 55%)",
-      "hexIds": [
-        "-41,28",
-        "-42,28",
-        "-42,29",
-        "-42,30"
-      ]
+      "hexIds": ["-41,28", "-42,28", "-42,29", "-42,30"]
     },
     {
       "id": "intn",
@@ -25997,203 +25988,42 @@
       "id": "inpy",
       "name": "INPY",
       "displayColor": "hsl(48 65% 55%)",
-      "hexIds": [
-        "-32,45"
-      ]
+      "hexIds": ["-32,45"]
     }
   ],
   "adjacencies": {
-    "inla": [
-      "inhp",
-      "injk"
-    ],
-    "injk": [
-      "inhp",
-      "inla",
-      "inpb"
-    ],
-    "inhp": [
-      "inhr",
-      "injk",
-      "inla",
-      "inpb",
-      "inup",
-      "inut"
-    ],
-    "inpb": [
-      "inhp",
-      "inhr",
-      "injk",
-      "inrj"
-    ],
-    "inut": [
-      "inhp",
-      "inup"
-    ],
-    "inhr": [
-      "indl",
-      "inhp",
-      "inpb",
-      "inrj",
-      "inup"
-    ],
-    "inup": [
-      "inbr",
-      "inct",
-      "indl",
-      "inhp",
-      "inhr",
-      "injh",
-      "inmp",
-      "inrj",
-      "inut"
-    ],
-    "inrj": [
-      "ingj",
-      "inhr",
-      "inmp",
-      "inpb",
-      "inup"
-    ],
-    "inar": [
-      "inas",
-      "innl"
-    ],
-    "indl": [
-      "inhr",
-      "inup"
-    ],
-    "inas": [
-      "inar",
-      "inml",
-      "inmn",
-      "inmz",
-      "innl",
-      "intr",
-      "inwb"
-    ],
-    "insk": [
-      "inwb"
-    ],
-    "inbr": [
-      "injh",
-      "inup",
-      "inwb"
-    ],
-    "inwb": [
-      "inas",
-      "inbr",
-      "injh",
-      "inor",
-      "insk"
-    ],
-    "inmp": [
-      "inct",
-      "ingj",
-      "inmh",
-      "inrj",
-      "inup"
-    ],
-    "innl": [
-      "inar",
-      "inas",
-      "inmn"
-    ],
-    "inml": [
-      "inas"
-    ],
-    "inmn": [
-      "inas",
-      "inmz",
-      "innl"
-    ],
-    "injh": [
-      "inbr",
-      "inct",
-      "inor",
-      "inup",
-      "inwb"
-    ],
-    "ingj": [
-      "indh",
-      "inmh",
-      "inmp",
-      "inrj"
-    ],
-    "inmz": [
-      "inas",
-      "inmn",
-      "intr"
-    ],
-    "inct": [
-      "injh",
-      "inmh",
-      "inmp",
-      "inor",
-      "intg",
-      "inup"
-    ],
-    "intr": [
-      "inas",
-      "inmz"
-    ],
-    "inor": [
-      "inap",
-      "inct",
-      "injh",
-      "intg",
-      "inwb"
-    ],
-    "inmh": [
-      "inct",
-      "indh",
-      "inga",
-      "ingj",
-      "inka",
-      "inmp",
-      "intg"
-    ],
-    "indh": [
-      "ingj",
-      "inmh"
-    ],
-    "intg": [
-      "inap",
-      "inct",
-      "inka",
-      "inmh",
-      "inor"
-    ],
-    "inap": [
-      "inka",
-      "inor",
-      "intg",
-      "intn"
-    ],
-    "inka": [
-      "inap",
-      "inga",
-      "inkl",
-      "inmh",
-      "intg",
-      "intn"
-    ],
-    "inga": [
-      "inka",
-      "inmh"
-    ],
-    "intn": [
-      "inap",
-      "inka",
-      "inkl",
-      "inpy"
-    ],
-    "inkl": [
-      "inka",
-      "intn"
-    ],
-    "inpy": [
-      "intn"
-    ]
+    "inla": ["inhp", "injk"],
+    "injk": ["inhp", "inla", "inpb"],
+    "inhp": ["inhr", "injk", "inla", "inpb", "inup", "inut"],
+    "inpb": ["inhp", "inhr", "injk", "inrj"],
+    "inut": ["inhp", "inup"],
+    "inhr": ["indl", "inhp", "inpb", "inrj", "inup"],
+    "inup": ["inbr", "inct", "indl", "inhp", "inhr", "injh", "inmp", "inrj", "inut"],
+    "inrj": ["ingj", "inhr", "inmp", "inpb", "inup"],
+    "inar": ["inas", "innl"],
+    "indl": ["inhr", "inup"],
+    "inas": ["inar", "inml", "inmn", "inmz", "innl", "intr", "inwb"],
+    "insk": ["inwb"],
+    "inbr": ["injh", "inup", "inwb"],
+    "inwb": ["inas", "inbr", "injh", "inor", "insk"],
+    "inmp": ["inct", "ingj", "inmh", "inrj", "inup"],
+    "innl": ["inar", "inas", "inmn"],
+    "inml": ["inas"],
+    "inmn": ["inas", "inmz", "innl"],
+    "injh": ["inbr", "inct", "inor", "inup", "inwb"],
+    "ingj": ["indh", "inmh", "inmp", "inrj"],
+    "inmz": ["inas", "inmn", "intr"],
+    "inct": ["injh", "inmh", "inmp", "inor", "intg", "inup"],
+    "intr": ["inas", "inmz"],
+    "inor": ["inap", "inct", "injh", "intg", "inwb"],
+    "inmh": ["inct", "indh", "inga", "ingj", "inka", "inmp", "intg"],
+    "indh": ["ingj", "inmh"],
+    "intg": ["inap", "inct", "inka", "inmh", "inor"],
+    "inap": ["inka", "inor", "intg", "intn"],
+    "inka": ["inap", "inga", "inkl", "inmh", "intg", "intn"],
+    "inga": ["inka", "inmh"],
+    "intn": ["inap", "inka", "inkl", "inpy"],
+    "inkl": ["inka", "intn"],
+    "inpy": ["intn"]
   }
 }

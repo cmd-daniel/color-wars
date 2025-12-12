@@ -13,7 +13,7 @@ class SoundManager {
   }
 
   destroy() {
-    this.unsubs.forEach(fn => fn());
+    this.unsubs.forEach((fn) => fn());
     this.unsubs = [];
   }
 }

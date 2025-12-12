@@ -11,6 +11,5 @@ export const timeSyncStore = create<TimeSyncState>((set) => ({
 }));
 
 export function getSyncedNow() {
-    return Date.now() + timeSyncStore.getState().serverTimeOffset;
-  }
-  
+  return Date.now() + timeSyncStore.getState().serverTimeOffset;
+}

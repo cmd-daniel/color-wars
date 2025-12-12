@@ -27,9 +27,9 @@ export const useGameStore = create<MapState>((set) => ({
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch map");
       const data: GameMap = await response.json();
-      
+
       // Basic validation could go here
-      if (!data.hexes || !data.states) throw new Error("Invalid map format");
+      if (!data.hexes || !data.territories) throw new Error("Invalid map format");
 
       set({ currentMap: data, isLoading: false });
     } catch (err) {

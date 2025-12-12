@@ -1,7 +1,12 @@
 // src/lib/rotationCalculator.ts
 // DiceRotationCalculator: computes target orientations & random quaternions
 
-import { Quaternion, Vector3, swingTwistDecomposition, getRotationBetweenVectors } from "./diceMath";
+import {
+  Quaternion,
+  Vector3,
+  swingTwistDecomposition,
+  getRotationBetweenVectors,
+} from "./diceMath";
 import { FACE_NORMALS } from "./diceConfig";
 
 export class DiceRotationCalculator {
@@ -31,7 +36,7 @@ export class DiceRotationCalculator {
       Math.sqrt(1 - u1) * Math.sin(2 * Math.PI * u2),
       Math.sqrt(1 - u1) * Math.cos(2 * Math.PI * u2),
       Math.sqrt(u1) * Math.sin(2 * Math.PI * u3),
-      Math.sqrt(u1) * Math.cos(2 * Math.PI * u3)
+      Math.sqrt(u1) * Math.cos(2 * Math.PI * u3),
     );
   }
 }

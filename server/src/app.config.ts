@@ -47,15 +47,11 @@ const registerClientBuild = (app: express.Express) => {
 
 export default config({
   initializeGameServer: (gameServer) => {
-    gameServer.simulateLatency(300)
-    gameServer
-      .define(DEFAULT_ROOM_TYPE, GameRoom)
-      .enableRealtimeListing()
-      .sortBy({clients:-1})
+    gameServer.simulateLatency(300);
+    gameServer.define(DEFAULT_ROOM_TYPE, GameRoom).enableRealtimeListing().sortBy({ clients: -1 });
   },
 
   initializeExpress: (app) => {
-
     app.use(express.json());
 
     app.use("/matchmaking", createMatchmakingRouter());
@@ -73,5 +69,5 @@ export default config({
 
   beforeListen: () => {
     logger.info("color-wars server listening", { port: env.port });
-  }
+  },
 });

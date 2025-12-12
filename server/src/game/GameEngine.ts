@@ -1,7 +1,7 @@
 import { readFileSync } from "fs";
 import path from "path";
 import { GameState, PlayerState } from "@color-wars/shared/src/types/RoomState";
-import { PLAYER } from '@color-wars/shared/src/config/game'
+import { PLAYER } from "@color-wars/shared/src/config/game";
 import { env } from "../config/env";
 
 type MapTerritory = {
@@ -19,9 +19,10 @@ type MapDefinition = {
 const loadDefaultMapDefinition = (): MapDefinition | null => {
   try {
     const customPath = env.mapDefinitionPath;
-    const filePath = customPath ?? path.resolve(__dirname,"../../../client/public/sample-subcontinent.json");
+    const filePath =
+      customPath ?? path.resolve(__dirname, "../../../client/public/sample-subcontinent.json");
     const raw = readFileSync(filePath, "utf8");
-    const parsed = JSON.parse(raw) as MapDefinition
+    const parsed = JSON.parse(raw) as MapDefinition;
     return parsed;
   } catch (error) {
     return null;
@@ -38,9 +39,7 @@ export class GameEngine {
     this.mapDefinition = loadDefaultMapDefinition();
   }
 
-  setRoomClock(clock: {
-    setTimeout: (callback: () => void, delay: number) => any;
-  }) {
+  setRoomClock(clock: { setTimeout: (callback: () => void, delay: number) => any }) {
     this.roomClock = clock;
   }
 
@@ -69,14 +68,12 @@ export class GameEngine {
     }
   }
 
-
   startGame() {
     this.state.turnPhase = "awaiting-roll";
     //this.state.lastRoll.clear();
   }
 
   handleRoll() {
-
     const die1 = Math.floor(Math.random() * 6) + 1;
     const die2 = Math.floor(Math.random() * 6) + 1;
     const roll = die1 + die2;

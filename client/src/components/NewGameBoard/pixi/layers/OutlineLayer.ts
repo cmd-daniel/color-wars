@@ -5,10 +5,10 @@ import { hslStringToHex } from "@/utils/color-utils";
 export class OutlineLayer extends PIXI.Container {
   private bordersContainer: PIXI.Container;
   private fillsContainer: PIXI.Container;
-  
+
   // Storage for lookups
-  private stateGraphics: Map<string, { border: PIXI.Graphics, fill: PIXI.Graphics }> = new Map();
-  
+  private stateGraphics: Map<string, { border: PIXI.Graphics; fill: PIXI.Graphics }> = new Map();
+
   // Interaction State
   private activeHoverId: string | null = null;
   private activeSelectId: string | null = null;
@@ -18,7 +18,7 @@ export class OutlineLayer extends PIXI.Container {
     // Order matters: Fills at bottom, Borders on top
     this.fillsContainer = new PIXI.Container();
     this.bordersContainer = new PIXI.Container();
-    
+
     this.addChild(this.fillsContainer);
     this.addChild(this.bordersContainer);
   }
@@ -46,16 +46,19 @@ export class OutlineLayer extends PIXI.Container {
 
     // 3. Color Lookup
     const colorMap = new Map<string, number>();
-    map.states.forEach(s => colorMap.set(s.id, hslStringToHex(s.displayColor)));
+    map.territories.forEach((s) => colorMap.set(s.id, hslStringToHex(s.displayColor)));
 
     // 4. Geometry Pre-calculation
     const width = hexSize * Math.sqrt(3);
-    const height = hexSize * 2;
-    
+
     // Neighbor offsets (odd-r/pointy)
     const neighbors = [
-      { q: 1, r: 0 }, { q: 0, r: 1 }, { q: -1, r: 1 }, 
-      { q: -1, r: 0 }, { q: 0, r: -1 }, { q: 1, r: -1 }
+      { q: 1, r: 0 },
+      { q: 0, r: 1 },
+      { q: -1, r: 1 },
+      { q: -1, r: 0 },
+      { q: 0, r: -1 },
+      { q: 1, r: -1 },
     ];
 
     // Corner offsets
@@ -79,8 +82,8 @@ export class OutlineLayer extends PIXI.Container {
 
         // 1. Draw Fill (Simply draw a hex polygon for every cell)
         // We draw it slightly overlapping to prevent hairline cracks
-        gFill.poly(corners.map(c => ({ x: cx + c.x, y: cy + c.y })));
-        
+        gFill.poly(corners.map((c) => ({ x: cx + c.x, y: cy + c.y })));
+
         // 2. Draw Borders (Only on edges)
         neighbors.forEach((offset, i) => {
           const nKey = `${h.q + offset.q},${h.r + offset.r}`;
@@ -96,30 +99,30 @@ export class OutlineLayer extends PIXI.Container {
       });
 
       // Finalize Styles
-      
+
       // Fill Style: Solid color, no stroke
-      gFill.fill({ color: stateColor, alpha: 1.0 }); 
-      
+      gFill.fill({ color: stateColor, alpha: 1.0 });
+
       // Border Style: Thick White
-      gBorder.stroke({ width: 3, color: 0xffffff, alpha: 1, join: 'round', cap: 'round' });
+      gBorder.stroke({ width: 3, color: 0xffffff, alpha: 1, join: "round", cap: "round" });
 
       // Store references
       this.stateGraphics.set(stateId, { border: gBorder, fill: gFill });
-      
+
       this.fillsContainer.addChild(gFill);
       this.bordersContainer.addChild(gBorder);
     });
-    
+
     // Initial State:
     // Fills hidden (assuming we start zoomed in)
     // Borders hidden (until selected)
     this.fillsContainer.visible = false;
-    
-    // Actually, borders should probably be visible? 
-    // Or do you only want borders on hover? 
+
+    // Actually, borders should probably be visible?
+    // Or do you only want borders on hover?
     // Based on prompt: "outline on hover and select". So hide borders by default.
-    this.bordersContainer.visible = true; 
-    this.bordersContainer.children.forEach(c => c.visible = false);
+    this.bordersContainer.visible = true;
+    this.bordersContainer.children.forEach((c) => (c.visible = false));
   }
 
   /**
@@ -129,7 +132,7 @@ export class OutlineLayer extends PIXI.Container {
    */
   public setLODMode(mode: "NEAR" | "FAR") {
     // If FAR, we show the solid fills (Political Map Mode)
-    this.fillsContainer.visible = (mode === "FAR");
+    this.fillsContainer.visible = mode === "FAR";
   }
 
   public updateSelection(hoverId: string | null, selectId: string | null) {
@@ -148,12 +151,12 @@ export class OutlineLayer extends PIXI.Container {
   private toggleBorder(stateId: string, isVisible: boolean, tint: number = 0xffffff) {
     const obj = this.stateGraphics.get(stateId);
     if (!obj) return;
-    
+
     obj.border.visible = isVisible;
     if (isVisible) {
       obj.border.tint = tint;
       // Bring to top within its container
-      this.bordersContainer.addChild(obj.border); 
+      this.bordersContainer.addChild(obj.border);
     }
   }
 }

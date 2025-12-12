@@ -1,8 +1,5 @@
 const isLocalhost = (h: string) =>
-  h === "localhost" ||
-  h === "127.0.0.1" ||
-  h === "::1" ||
-  h.startsWith("127.");
+  h === "localhost" || h === "127.0.0.1" || h === "::1" || h.startsWith("127.");
 
 const httpEndpoint = (() => {
   if (import.meta.env.DEV) {
@@ -19,6 +16,6 @@ const httpEndpoint = (() => {
 })();
 
 const wsEndpoint = httpEndpoint.replace(/^http/, "ws");
-console.log(wsEndpoint)
-console.log(import.meta.env.VITE_SERVER_URL)
+console.log(wsEndpoint);
+console.log(import.meta.env.VITE_SERVER_URL);
 export { httpEndpoint, wsEndpoint };

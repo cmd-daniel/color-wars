@@ -1,5 +1,6 @@
 import { PixiEngine } from "../engine";
 import { useGameStore } from "@/stores/mapStateStore";
+import type { MapHex } from "@/types/map-types";
 import { FederatedPointerEvent } from "pixi.js";
 
 export class InteractionManager {
@@ -10,23 +11,27 @@ export class InteractionManager {
 
   constructor(engine: PixiEngine) {
     this.engine = engine;
-    
+
     const viewport = engine.getViewport();
     if (viewport) {
       // Use 'pointermove' on the viewport
       viewport.on("pointermove", this.onPointerMove);
       viewport.on("pointertap", this.onPointerTap);
-      
+
       // Prevent click triggers while panning
-      viewport.on("drag-start", () => { this.isDragging = true; });
-      viewport.on("drag-end", () => { setTimeout(() => this.isDragging = false, 50); });
+      viewport.on("drag-start", () => {
+        this.isDragging = true;
+      });
+      viewport.on("drag-end", () => {
+        setTimeout(() => (this.isDragging = false), 50);
+      });
     }
   }
 
-  public initMap(hexes: any[], size: number) {
+  public initMap(hexes: MapHex[], size: number) {
     this.hexSize = size;
     this.hexLookup.clear();
-    hexes.forEach(h => {
+    hexes.forEach((h) => {
       if (h.stateId) this.hexLookup.set(`${h.q},${h.r}`, h.stateId);
     });
   }
@@ -35,16 +40,16 @@ export class InteractionManager {
     if (this.isDragging) return;
 
     // 1. Get world position from Interaction Event
-    // Note: Pixi events have global (screen) coords. 
+    // Note: Pixi events have global (screen) coords.
     // We convert screen -> world using the Terrain container to account for pivot/scale.
     const terrain = this.engine.getTerrain();
     if (!terrain) return;
 
     const localPoint = terrain.toLocal(e.global);
-    
+
     // 2. Convert to Axial
     const hex = this.engine.worldToAxial(localPoint.x, localPoint.y, this.hexSize);
-    
+
     // 3. Lookup State
     const stateId = this.hexLookup.get(`${hex.q},${hex.r}`) || null;
 

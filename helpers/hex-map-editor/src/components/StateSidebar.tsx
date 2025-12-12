@@ -1,87 +1,87 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react'
-import { nanoid } from 'nanoid'
-import { useMapEditorStore } from '../state/useMapEditorStore'
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { nanoid } from "nanoid";
+import { useMapEditorStore } from "../state/useMapEditorStore";
 
-const DEFAULT_COLORS = ['#f39c12', '#3498db', '#1abc9c', '#9b59b6', '#e74c3c', '#2ecc71']
+const DEFAULT_COLORS = ["#f39c12", "#3498db", "#1abc9c", "#9b59b6", "#e74c3c", "#2ecc71"];
 
 const StateSidebar = () => {
-  const map = useMapEditorStore((state) => state.map)
-  const selectedStateId = useMapEditorStore((state) => state.selectedStateId)
-  const setSelectedState = useMapEditorStore((state) => state.setSelectedState)
-  const upsertState = useMapEditorStore((state) => state.upsertState)
-  const removeState = useMapEditorStore((state) => state.removeState)
-  const interactionMode = useMapEditorStore((state) => state.interactionMode)
+  const map = useMapEditorStore((state) => state.map);
+  const selectedStateId = useMapEditorStore((state) => state.selectedStateId);
+  const setSelectedState = useMapEditorStore((state) => state.setSelectedState);
+  const upsertState = useMapEditorStore((state) => state.upsertState);
+  const removeState = useMapEditorStore((state) => state.removeState);
+  const interactionMode = useMapEditorStore((state) => state.interactionMode);
 
-  const [draftName, setDraftName] = useState('')
-  const [draftColorIndex, setDraftColorIndex] = useState(0)
+  const [draftName, setDraftName] = useState("");
+  const [draftColorIndex, setDraftColorIndex] = useState(0);
   const selectedTerritory = useMemo(
     () => map.states.find((state) => state.id === selectedStateId) ?? null,
     [map.states, selectedStateId],
-  )
-  const [renameValue, setRenameValue] = useState('')
+  );
+  const [renameValue, setRenameValue] = useState("");
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (interactionMode === 'view') {
-      return
+    event.preventDefault();
+    if (interactionMode === "view") {
+      return;
     }
     if (!draftName.trim()) {
-      return
+      return;
     }
 
-    const nextId = draftName.toLowerCase().replace(/[^a-z0-9]+/g, '-') || nanoid(6)
+    const nextId = draftName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || nanoid(6);
 
     upsertState({
       id: nextId,
       name: draftName.trim(),
       displayColor: DEFAULT_COLORS[draftColorIndex % DEFAULT_COLORS.length],
       hexIds: [],
-    })
+    });
 
-    setSelectedState(nextId)
-    setDraftName('')
-    setDraftColorIndex((current) => (current + 1) % DEFAULT_COLORS.length)
-  }
+    setSelectedState(nextId);
+    setDraftName("");
+    setDraftColorIndex((current) => (current + 1) % DEFAULT_COLORS.length);
+  };
 
   useEffect(() => {
-    setRenameValue(selectedTerritory?.name ?? '')
-  }, [selectedTerritory?.id, selectedTerritory?.name])
+    setRenameValue(selectedTerritory?.name ?? "");
+  }, [selectedTerritory?.id, selectedTerritory?.name]);
 
   const handleRenameSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+    event.preventDefault();
     if (!selectedTerritory) {
-      return
+      return;
     }
-    if (interactionMode === 'view') {
-      return
+    if (interactionMode === "view") {
+      return;
     }
-    const trimmed = renameValue.trim()
+    const trimmed = renameValue.trim();
     if (!trimmed || trimmed === selectedTerritory.name) {
-      return
+      return;
     }
     upsertState({
       ...selectedTerritory,
       name: trimmed,
-    })
-  }
+    });
+  };
 
   const handleRenameBlur = () => {
     if (!selectedTerritory) {
-      return
+      return;
     }
-    if (interactionMode === 'view') {
-      return
+    if (interactionMode === "view") {
+      return;
     }
-    const trimmed = renameValue.trim()
+    const trimmed = renameValue.trim();
     if (!trimmed || trimmed === selectedTerritory.name) {
-      setRenameValue(selectedTerritory.name)
-      return
+      setRenameValue(selectedTerritory.name);
+      return;
     }
     upsertState({
       ...selectedTerritory,
       name: trimmed,
-    })
-  }
+    });
+  };
 
   return (
     <aside className="state-sidebar">
@@ -92,15 +92,21 @@ const StateSidebar = () => {
 
       <ul className="state-sidebar__list">
         {map.states.map((state) => {
-          const isActive = state.id === selectedStateId
+          const isActive = state.id === selectedStateId;
           return (
-            <li key={state.id} className={isActive ? 'state-item state-item--active' : 'state-item'}>
+            <li
+              key={state.id}
+              className={isActive ? "state-item state-item--active" : "state-item"}
+            >
               <button
                 type="button"
                 className="state-item__select"
                 onClick={() => setSelectedState(isActive ? null : state.id)}
               >
-                <span className="state-item__swatch" style={{ backgroundColor: state.displayColor }} />
+                <span
+                  className="state-item__swatch"
+                  style={{ backgroundColor: state.displayColor }}
+                />
                 <div className="state-item__meta">
                   <strong>{state.name}</strong>
                   <span>{state.hexIds.length} hexes</span>
@@ -110,13 +116,13 @@ const StateSidebar = () => {
                 type="button"
                 className="state-item__remove"
                 onClick={() => removeState(state.id)}
-                disabled={interactionMode === 'view'}
+                disabled={interactionMode === "view"}
                 aria-label={`Remove ${state.name}`}
               >
                 ✕
               </button>
             </li>
-          )
+          );
         })}
       </ul>
 
@@ -128,9 +134,9 @@ const StateSidebar = () => {
           value={draftName}
           onChange={(event) => setDraftName(event.target.value)}
           placeholder="Enter territory name"
-          disabled={interactionMode === 'view'}
+          disabled={interactionMode === "view"}
         />
-        <button type="submit" className="state-sidebar__add" disabled={interactionMode === 'view'}>
+        <button type="submit" className="state-sidebar__add" disabled={interactionMode === "view"}>
           Add territory
         </button>
       </form>
@@ -145,9 +151,13 @@ const StateSidebar = () => {
             onChange={(event) => setRenameValue(event.target.value)}
             onBlur={handleRenameBlur}
             placeholder="Territory name"
-            disabled={interactionMode === 'view'}
+            disabled={interactionMode === "view"}
           />
-          <button type="submit" className="state-sidebar__add" disabled={interactionMode === 'view'}>
+          <button
+            type="submit"
+            className="state-sidebar__add"
+            disabled={interactionMode === "view"}
+          >
             Save name
           </button>
         </form>
@@ -158,8 +168,8 @@ const StateSidebar = () => {
           {map.adjacencies[selectedTerritory.id]?.length ? (
             <ul className="adjacency-list">
               {map.adjacencies[selectedTerritory.id]?.map((neighbourId) => {
-                const neighbour = map.states.find((state) => state.id === neighbourId)
-                const name = neighbour?.name ?? neighbourId
+                const neighbour = map.states.find((state) => state.id === neighbourId);
+                const name = neighbour?.name ?? neighbourId;
                 return (
                   <li key={neighbourId}>
                     <button
@@ -170,7 +180,7 @@ const StateSidebar = () => {
                       {name}
                     </button>
                   </li>
-                )
+                );
               })}
             </ul>
           ) : (
@@ -179,7 +189,7 @@ const StateSidebar = () => {
         </section>
       )}
     </aside>
-  )
-}
+  );
+};
 
-export default StateSidebar
+export default StateSidebar;

@@ -1,9 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import { Quaternion, Vector3 } from '@/lib/diceMath';
-import { DiceRotationCalculator } from '../lib/rotationCalculator';
-import { getRandomVertexAxis } from '@/lib/diceMath';
-import { useStore } from '@/stores/sessionStore';
-export type DiceMode = 'idle' | 'accelerate' | 'ragdoll' | 'auto-spin' | 'spin-to-target' | 'ragdoll';
+import { useRef, useState } from "react";
+import { Quaternion, Vector3 } from "@/lib/diceMath";
+import { DiceRotationCalculator } from "../lib/rotationCalculator";
+import { getRandomVertexAxis } from "@/lib/diceMath";
+export type DiceMode =
+  | "idle"
+  | "accelerate"
+  | "ragdoll"
+  | "auto-spin"
+  | "spin-to-target"
+  | "ragdoll";
 
 const VELOCITY_CUTOFF_THRESHOLD = 0.0003;
 const MAX_SPEED = 0.0435;
@@ -13,230 +18,237 @@ const ANIMATION_SPEED = 200;
 const DECELERATION_RATE = 0.002;
 
 export const useDicePhysics = () => {
-	const [quat, setQuat] = useState(new Quaternion());
-	const [rolledNumber, setRolledNumber] = useState<number | null>(null);
+  const [quat, setQuat] = useState(new Quaternion());
+  const [rolledNumber] = useState<number | null>(null);
 
-	const calculatorRef = useRef(new DiceRotationCalculator());
-	const animationRef = useRef<number | null>(null);
-	
-	// INTERNAL STATE MACHINE
-	const rollIdRef = useRef('');
-	const isApiPending = useRef(false);
-	
-	const stateRef = useRef<{
-		mode: DiceMode;
-		targetFace: number | null;
-	}>({
-		mode: 'idle',
-		targetFace: null,
-	});
+  const calculatorRef = useRef(new DiceRotationCalculator());
+  const animationRef = useRef<number | null>(null);
 
-	// ---------------------------------------------------
-	// HIGH-LEVEL MODE SETTER (APP CONTROLS DICE)
-	// ---------------------------------------------------
-	const setMode = (mode: DiceMode, payload?: any) => {
-		stateRef.current.mode = mode;
+  // INTERNAL STATE MACHINE
+  const rollIdRef = useRef("");
+  const isApiPending = useRef(false);
 
-		if (mode === 'auto-spin') {
-			isApiPending.current = true;
-			return;
-		} else if (mode === 'spin-to-target') {
-			stateRef.current.targetFace = payload.face;
-			isApiPending.current = false;
-			return;
-		} else if (mode === 'ragdoll') {
-			isApiPending.current = false;
-			return;
-		}
-	};
+  const stateRef = useRef<{
+    mode: DiceMode;
+    targetFace: number | null;
+  }>({
+    mode: "idle",
+    targetFace: null,
+  });
 
-	// ---------------------------------------------------
-	// START LOOP (App provides rollId)
-	// ---------------------------------------------------
+  // ---------------------------------------------------
+  // HIGH-LEVEL MODE SETTER (APP CONTROLS DICE)
+  // ---------------------------------------------------
+  const setMode = (mode: DiceMode, payload?: { face: number }) => {
+    stateRef.current.mode = mode;
 
-	const startPhysicsLoop = (rollId: string) => {
-		rollIdRef.current = rollId;
+    if (mode === "auto-spin") {
+      isApiPending.current = true;
+      return;
+    } else if (mode === "spin-to-target") {
+      stateRef.current.targetFace = payload!.face;
+      isApiPending.current = false;
+      return;
+    } else if (mode === "ragdoll") {
+      isApiPending.current = false;
+      return;
+    }
+  };
 
-		if (animationRef.current) cancelAnimationFrame(animationRef.current);
+  // ---------------------------------------------------
+  // START LOOP (App provides rollId)
+  // ---------------------------------------------------
 
-		//const rotationAxis = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
-		const rotationAxis = getRandomVertexAxis();
+  const startPhysicsLoop = (rollId: string) => {
+    rollIdRef.current = rollId;
 
-		let SPEED = 0;
-		let last = Date.now();
-		let shouldContinue = true;
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
 
-		// LOCAL SOURCE OF TRUTH (NOT REACT)
-		let currentQuat = quat.clone();
+    //const rotationAxis = new Vector3(Math.random() - 0.5, Math.random() - 0.5, Math.random() - 0.5).normalize();
+    const rotationAxis = getRandomVertexAxis();
 
-		const loop = () => {
-			if (rollIdRef.current !== rollId) return;
-			if (!shouldContinue) return;
+    let SPEED = 0;
+    let last = Date.now();
+    let shouldContinue = true;
 
-			const now = Date.now();
-			const dt = now - last;
-			last = now;
+    // LOCAL SOURCE OF TRUTH (NOT REACT)
+    let currentQuat = quat.clone();
 
-			const mode = stateRef.current.mode;
+    const loop = () => {
+      if (rollIdRef.current !== rollId) return;
+      if (!shouldContinue) return;
 
-			// ACCELERATE
-			if (mode === 'accelerate') {
-				SPEED = Math.min(SPEED + ACCELERATION * dt, MAX_SPEED);
-			}
+      const now = Date.now();
+      const dt = now - last;
+      last = now;
 
-			// NATURAL DECEL
-			else if (mode === 'ragdoll') {
-				const friction = SPEED * DECELERATION_RATE;
-				SPEED = Math.max(SPEED - friction * dt, 0);
+      const mode = stateRef.current.mode;
 
-				if (SPEED < VELOCITY_CUTOFF_THRESHOLD) {
-					animationRef.current = null;
-					return;
-				}
-			}
+      // ACCELERATE
+      if (mode === "accelerate") {
+        SPEED = Math.min(SPEED + ACCELERATION * dt, MAX_SPEED);
+      }
 
-			// FORCE MAX SPEED
-			else if (mode === 'auto-spin') {
-				SPEED = MAX_SPEED;
-			}
+      // NATURAL DECEL
+      else if (mode === "ragdoll") {
+        const friction = SPEED * DECELERATION_RATE;
+        SPEED = Math.max(SPEED - friction * dt, 0);
 
-			// HANDOFF TO STEERING
-			else if (mode === 'spin-to-target') {
-				const face = stateRef.current.targetFace!;
-				shouldContinue = false;
-				animationRef.current = null;
+        if (SPEED < VELOCITY_CUTOFF_THRESHOLD) {
+          animationRef.current = null;
+          return;
+        }
+      }
 
-				startSteering(face, SPEED, rotationAxis, currentQuat);
-				return;
-			}
+      // FORCE MAX SPEED
+      else if (mode === "auto-spin") {
+        SPEED = MAX_SPEED;
+      }
 
-			// INTEGRATE SPIN
-			const angle = SPEED * dt;
-			const inc = new Quaternion().setFromAxisAngle(rotationAxis, angle);
-			currentQuat = inc.multiply(currentQuat);
+      // HANDOFF TO STEERING
+      else if (mode === "spin-to-target") {
+        const face = stateRef.current.targetFace!;
+        shouldContinue = false;
+        animationRef.current = null;
 
-			setQuat(currentQuat.clone());
-			animationRef.current = requestAnimationFrame(loop);
-		};
+        startSteering(face, SPEED, rotationAxis, currentQuat);
+        return;
+      }
 
-		loop();
-	};
+      // INTEGRATE SPIN
+      const angle = SPEED * dt;
+      const inc = new Quaternion().setFromAxisAngle(rotationAxis, angle);
+      currentQuat = inc.multiply(currentQuat);
 
-	const startSteering = (targetFace: number, initialSpeed: number, vertexAxis: Vector3, _startQuat: Quaternion) => {
-		console.log('targetFace', targetFace);
+      setQuat(currentQuat.clone());
+      animationRef.current = requestAnimationFrame(loop);
+    };
 
-		const axis = vertexAxis.normalize();
-		let omega = initialSpeed;
+    loop();
+  };
 
-		const targetQuat = calculatorRef.current.calculateRotationToFace(_startQuat, targetFace).normalize();
+  const startSteering = (
+    targetFace: number,
+    initialSpeed: number,
+    vertexAxis: Vector3,
+    _startQuat: Quaternion,
+  ) => {
+    console.log("targetFace", targetFace);
 
-		// --------------------------------------------------
-		// 1. Exact analytic solution (FPS independent)
-		// --------------------------------------------------
-		const k = DECELERATION_RATE;
-		const w0 = initialSpeed;
-		const wCut = VELOCITY_CUTOFF_THRESHOLD;
+    const axis = vertexAxis.normalize();
+    let omega = initialSpeed;
 
-		let tStop = 0;
-		let thetaExact = 0;
+    const targetQuat = calculatorRef.current
+      .calculateRotationToFace(_startQuat, targetFace)
+      .normalize();
 
-		if (w0 > wCut) {
-			tStop = Math.log(w0 / wCut) / k;
-			thetaExact = (w0 / k) * (1 - Math.exp(-k * tStop));
-		}
+    // --------------------------------------------------
+    // 1. Exact analytic solution (FPS independent)
+    // --------------------------------------------------
+    const k = DECELERATION_RATE;
+    const w0 = initialSpeed;
+    const wCut = VELOCITY_CUTOFF_THRESHOLD;
 
-		// --------------------------------------------------
-		// 2. Correct starting pose (no bias, exact)
-		//    Q_start = R(-θ_exact) · Q_target
-		// --------------------------------------------------
-		const reverseRot = new Quaternion().setFromAxisAngle(axis, -thetaExact);
+    let tStop = 0;
+    let thetaExact = 0;
 
-		let currentQuat = reverseRot.multiply(targetQuat).normalize();
+    if (w0 > wCut) {
+      tStop = Math.log(w0 / wCut) / k;
+      thetaExact = (w0 / k) * (1 - Math.exp(-k * tStop));
+    }
 
-		setQuat(currentQuat.clone());
+    // --------------------------------------------------
+    // 2. Correct starting pose (no bias, exact)
+    //    Q_start = R(-θ_exact) · Q_target
+    // --------------------------------------------------
+    const reverseRot = new Quaternion().setFromAxisAngle(axis, -thetaExact);
 
-		// --------------------------------------------------
-		// 3. Normal forward ragdoll (unchanged runtime)
-		// --------------------------------------------------
-		let lastTime = Date.now();
+    let currentQuat = reverseRot.multiply(targetQuat).normalize();
 
-		const inc = new Quaternion();
-		const negK = -k;
+    setQuat(currentQuat.clone());
 
-		const step = () => {
-			const now = Date.now();
-			const dt = now - lastTime;
-			lastTime = now;
+    // --------------------------------------------------
+    // 3. Normal forward ragdoll (unchanged runtime)
+    // --------------------------------------------------
+    let lastTime = Date.now();
 
-			const omegaPrev = omega;
+    const inc = new Quaternion();
+    const negK = -k;
 
-			// ✅ exact exponential decay (FPS independent)
-			omega *= Math.exp(negK * dt);
+    const step = () => {
+      const now = Date.now();
+      const dt = now - lastTime;
+      lastTime = now;
 
-			// ✅ exact integrated angle for this frame
-			const stepAngle = (omegaPrev / k) * (1 - Math.exp(negK * dt));
+      const omegaPrev = omega;
 
-			inc.setFromAxisAngle(axis, stepAngle);
+      // ✅ exact exponential decay (FPS independent)
+      omega *= Math.exp(negK * dt);
 
-			currentQuat = inc.multiply(currentQuat).normalize();
-			setQuat(currentQuat.clone());
+      // ✅ exact integrated angle for this frame
+      const stepAngle = (omegaPrev / k) * (1 - Math.exp(negK * dt));
 
-			if (omega < wCut) {
-				setQuat(targetQuat.clone());
-				animationRef.current = null;
-				return;
-			}
+      inc.setFromAxisAngle(axis, stepAngle);
 
-			animationRef.current = requestAnimationFrame(step);
-		};
-		step();
-	};
+      currentQuat = inc.multiply(currentQuat).normalize();
+      setQuat(currentQuat.clone());
 
-	// CONTROL PANEL COMMANDS
-	const rotateToFace = (face: number) => {
-		const start = quat.clone();
-		const end = calculatorRef.current.calculateRotationToFace(start, face);
-		const startTime = Date.now();
+      if (omega < wCut) {
+        setQuat(targetQuat.clone());
+        animationRef.current = null;
+        return;
+      }
 
-		const duration = ANIMATION_SPEED;
+      animationRef.current = requestAnimationFrame(step);
+    };
+    step();
+  };
 
-		const animLoop = () => {
-			const t = Math.min((Date.now() - startTime) / duration, 1);
-			const q = start.clone().slerp(end, t);
-			setQuat(q);
+  // CONTROL PANEL COMMANDS
+  const rotateToFace = (face: number) => {
+    const start = quat.clone();
+    const end = calculatorRef.current.calculateRotationToFace(start, face);
+    const startTime = Date.now();
 
-			if (t < 1) animationRef.current = requestAnimationFrame(animLoop);
-		};
+    const duration = ANIMATION_SPEED;
 
-		animLoop();
-	};
+    const animLoop = () => {
+      const t = Math.min((Date.now() - startTime) / duration, 1);
+      const q = start.clone().slerp(end, t);
+      setQuat(q);
 
-	const randomRotate = () => {
-		const start = quat.clone();
-		const end = calculatorRef.current.generateRandomQuaternion();
-		const startTime = Date.now();
-		const duration = ANIMATION_SPEED * 1.5;
+      if (t < 1) animationRef.current = requestAnimationFrame(animLoop);
+    };
 
-		const animLoop = () => {
-			const t = Math.min((Date.now() - startTime) / duration, 1);
-			const q = start.clone().slerp(end, t);
-			setQuat(q);
+    animLoop();
+  };
 
-			if (t < 1) animationRef.current = requestAnimationFrame(animLoop);
-		};
+  const randomRotate = () => {
+    const start = quat.clone();
+    const end = calculatorRef.current.generateRandomQuaternion();
+    const startTime = Date.now();
+    const duration = ANIMATION_SPEED * 1.5;
 
-		animLoop();
-	};
+    const animLoop = () => {
+      const t = Math.min((Date.now() - startTime) / duration, 1);
+      const q = start.clone().slerp(end, t);
+      setQuat(q);
 
-	return {
-		quat,
-		rolledNumber,
-		startPhysicsLoop,
-		setMode,
+      if (t < 1) animationRef.current = requestAnimationFrame(animLoop);
+    };
 
-		rotateToFace,
-		randomRotate,
+    animLoop();
+  };
 
-		isApiPending,
-	};
+  return {
+    quat,
+    rolledNumber,
+    startPhysicsLoop,
+    setMode,
+
+    rotateToFace,
+    randomRotate,
+
+    isApiPending,
+  };
 };

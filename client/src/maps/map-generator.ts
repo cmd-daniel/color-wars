@@ -2,14 +2,18 @@ import type { TestMap, AxialHex } from "@/components/NewGameBoard/pixi/engine";
 
 // Directions for moving neighbor-to-neighbor in a hex grid
 const HEX_DIRECTIONS = [
-  { q: +1, r: 0 }, { q: +1, r: -1 }, { q: 0, r: -1 }, 
-  { q: -1, r: 0 }, { q: -1, r: +1 }, { q: 0, r: +1 }
+  { q: +1, r: 0 },
+  { q: +1, r: -1 },
+  { q: 0, r: -1 },
+  { q: -1, r: 0 },
+  { q: -1, r: +1 },
+  { q: 0, r: +1 },
 ];
 
 export function generateProceduralMap(hexCount: number, hexSize: number = 20): TestMap {
   const hexes: AxialHex[] = [];
   const territoryIds = ["A", "B", "C", "D", "E", "F", "G", "H"];
-  
+
   // 1. Add Center Hex
   hexes.push({ q: 0, r: 0, s: 0, stateId: resolveState(0, 0, territoryIds) });
 
@@ -19,7 +23,7 @@ export function generateProceduralMap(hexCount: number, hexSize: number = 20): T
   while (hexes.length < hexCount) {
     // Start at: q = -radius, r = radius (Bottom Leftish in pointy top)
     // Actually, let's start at direction 4 multiplied by radius
-    let q = -radius; 
+    let q = -radius;
     let r = radius; // direction 4 is (-1, 1)
 
     // Walk around the 6 sides of the ring
@@ -33,12 +37,12 @@ export function generateProceduralMap(hexCount: number, hexSize: number = 20): T
         // Move to neighbor
         q += dir.q;
         r += dir.r;
-        
+
         hexes.push({
-          q, 
-          r, 
+          q,
+          r,
           s: -q - r,
-          stateId: resolveState(q, r, territoryIds)
+          stateId: resolveState(q, r, territoryIds),
         });
       }
     }
@@ -63,15 +67,15 @@ export function generateProceduralMap(hexCount: number, hexSize: number = 20): T
 function resolveState(q: number, r: number, ids: string[]): string {
   // Scale down coords to make "features" larger
   // Lower scale = Larger territories
-  const scale = 0.15; 
-  
+  const scale = 0.15;
+
   // Create a pseudo-random value between -1 and 1
-  const noise = Math.sin(q * scale) + Math.cos(r * scale * 0.8) + Math.sin((q+r)*scale*0.5);
-  
+  const noise = Math.sin(q * scale) + Math.cos(r * scale * 0.8) + Math.sin((q + r) * scale * 0.5);
+
   // Normalize roughly to 0..1
   // noise range is roughly -3 to +3, so add 3 divide by 6
   const normalized = (noise + 3) / 6;
-  
+
   // Pick an ID
   const index = Math.floor(normalized * ids.length);
   return ids[Math.max(0, Math.min(ids.length - 1, index))];

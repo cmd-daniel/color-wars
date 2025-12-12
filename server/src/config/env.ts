@@ -38,7 +38,7 @@ export const env = {
   port: parsePort(process.env.PORT),
   logLevel: process.env.LOG_LEVEL ?? "info",
   mapDefinitionPath: resolveOptionalPath(process.env.MAP_DEFINITION_PATH),
-  clientBuildPath: resolveClientBuildPath(process.env.CLIENT_BUILD_PATH)
+  clientBuildPath: resolveClientBuildPath(process.env.CLIENT_BUILD_PATH),
 };
 
 export type Env = typeof env;

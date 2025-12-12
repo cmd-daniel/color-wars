@@ -1,273 +1,367 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Axial Hex Blob Growth</title>
-<style>
-body { margin:0; display:flex; flex-direction:column; align-items:center; background:#111; color:#ddd; font-family:sans-serif; gap:10px; padding:10px;}
-canvas { border:2px solid #444; background:#222; cursor:crosshair; }
-.controls { display:flex; gap:10px; flex-wrap: wrap; align-items:center; }
-input[type="range"], input[type="number"] { width:120px; }
-button { padding:6px 12px; border-radius:4px; border:none; background:#444; color:#eee; cursor:pointer; }
-button.primary { background:#2ea85a; }
-</style>
-</head>
-<body>
-
-<input type="file" id="svgFile" accept=".svg">
-<div class="controls">
-<label>Hex Size: <input type="number" id="cellSize" value="1" min="1"></label>
-<label>Speed: <input type="range" id="speedSlider" min="1" max="500" value="50"></label>
-<label>Wall Width: <input type="range" id="wallWidthSlider" min="1" max="5" value="1"></label>
-<button id="startBtn" class="primary">Start</button>
-<button id="resetBtn">Reset</button>
-</div>
-<canvas id="canvas" width="800" height="600"></canvas>
-
-<script>
-const canvas = document.getElementById('canvas');
-
-canvas.width = window.innerWidth-100;
-canvas.height = window.innerHeight-100;
-
-window.addEventListener('resize', () => {
-  canvas.width = window.innerWidth-100;
-  canvas.height = window.innerHeight-100;
-  drawTransformed(); // Redraw to fit new size
-});
-const ctx = canvas.getContext('2d');
-
-const cellSizeInput = document.getElementById('cellSize');
-const speedSlider = document.getElementById('speedSlider');
-const wallWidthSlider = document.getElementById('wallWidthSlider');
-const startBtn = document.getElementById('startBtn');
-const resetBtn = document.getElementById('resetBtn');
-const svgFileInput = document.getElementById('svgFile');
-
-let cellSize = parseInt(cellSizeInput.value);
-let mask = {};    // key="q,r" => false if wall
-let visited = {}; // key="q,r" => color
-let hexByColor = {};
-let queue = [];
-let running = false;
-let animationId = null;
-let drawingWall = false;
-let colorIndex = 0;
-const colors = ['#2ea85a','#e63946'];
-
-// Zoom & pan
-let scale = 1;
-let offsetX = 0;
-let offsetY = 0;
-let isPanning = false;
-let startPan = {x:0, y:0};
-
-// Helpers
-function cellKey(q,r){ return `${q},${r}`; }
-
-function hexToPixel(q,r,size){
-  const x = size * Math.sqrt(3) * (q + r/2);
-  const y = size * 3/2 * r;
-  return {x,y};
-}
-
-function pixelToHex(x,y,size){
-  const r = Math.round(y/(size*3/2));
-  const q = Math.round(x/(size*Math.sqrt(3)) - r/2);
-  return {q,r};
-}
-
-function drawHex(ctx,q,r,size,color){
-  const {x,y} = hexToPixel(q,r,size);
-  ctx.beginPath();
-  for(let i=0;i<6;i++){
-    const angle = Math.PI/180 * (60*i - 30); // pointy-topped
-    const px = x + size*Math.cos(angle);
-    const py = y + size*Math.sin(angle);
-    if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py);
-  }
-  ctx.closePath();
-  ctx.fillStyle=color;
-  ctx.fill();
-}
-
-// 6 axial neighbors
-const directions = [
-  [+1, 0], [+1, -1], [0, -1],
-  [-1, 0], [-1, +1], [0, +1]
-];
-function getNeighbors(q,r){ return directions.map(([dq,dr]) => [q+dq, r+dr]); }
-
-function visitHex(q,r,color){
-  const key = cellKey(q,r);
-  visited[key] = color;
-  if(!hexByColor[color]) hexByColor[color] = new Set();
-  hexByColor[color].add(key);
-}
-
-// ✅ FIXED drawTransformed
-function drawTransformed(){
-  ctx.setTransform(1,0,0,1,0,0);  // reset transform
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-
-  ctx.setTransform(scale,0,0,scale,offsetX,offsetY);
-
-  const margin = 0;
-  const pixelTL = {x:-offsetX/scale, y:-offsetY/scale};
-  const pixelBR = {x:(canvas.width-offsetX)/scale, y:(canvas.height-offsetY)/scale};
-
-  const hexW = Math.sqrt(3) * cellSize;
-  const hexH = 1.5 * cellSize;
-
-  const minR = Math.floor(pixelTL.y / hexH) - margin;
-  const maxR = Math.ceil(pixelBR.y / hexH) + 20;
-  const minQ = Math.floor(pixelTL.x / hexW) - (2000);
-  const maxQ = Math.ceil(pixelBR.x / hexW) + 20;
-
-  for(let r = minR; r <= maxR; r++){
-    for(let q = minQ; q <= maxQ; q++){
-      const key = cellKey(q,r);
-      const {x,y} = hexToPixel(q,r,cellSize);
-
-      if(x + cellSize < pixelTL.x || x - cellSize > pixelBR.x) continue;
-      if(y + cellSize < pixelTL.y || y - cellSize > pixelBR.y) continue;
-
-      if(mask[key] === false) drawHex(ctx,q,r,cellSize,'#555');
-      if(visited[key]) drawHex(ctx,q,r,cellSize,visited[key]);
-    }
-  }
-}
-
-// Draw walls
-function drawWallsFromPoint(q,r){
-  const wallWidth = parseInt(wallWidthSlider.value);
-  for(let dr=0; dr<wallWidth; dr++){
-    for(let dq=0; dq<wallWidth; dq++){
-      const nq=q+dq, nr=r+dr;
-      mask[cellKey(nq,nr)] = false;
-    }
-  }
-}
-
-// BFS step
-function stepOnce(){
-  const perFrame = parseInt(speedSlider.value);
-  let popped = 0;
-  while(popped<perFrame && queue.length>0){
-    const {q,r,color} = queue.shift();
-    const key = cellKey(q,r);
-    if(mask[key]===false || visited[key]) continue;
-    visitHex(q,r,color);
-
-    getNeighbors(q,r).forEach(([nq,nr])=>{
-      const nKey = cellKey(nq,nr);
-      if(mask[nKey]===false || visited[nKey]) return;
-      if(Math.random()<0.6) queue.push({q:nq,r:nr,color});
-      else setTimeout(()=>{
-        if(mask[nKey]!==false && !visited[nKey]) queue.push({q:nq,r:nr,color});
-      }, Math.random()*200);
-    });
-    popped++;
-  }
-  drawTransformed();
-}
-
-// Animation loop
-function loop(){ if(running) stepOnce(); animationId=requestAnimationFrame(loop); }
-
-// Controls
-startBtn.addEventListener('click',()=>{
-  if(queue.length===0){ alert("Add at least one seed (right-click) before starting!"); return; }
-  running=!running;
-  startBtn.textContent = running ? 'Pause' : 'Start';
-  if(!animationId) loop();
-});
-
-resetBtn.addEventListener('click',()=>{
-  running=false; startBtn.textContent='Start';
-  if(animationId){ cancelAnimationFrame(animationId); animationId=null; }
-  queue=[]; visited={}; hexByColor={}; mask={}; colorIndex=0;
-  drawTransformed();
-});
-
-cellSizeInput.addEventListener('change',()=>{
-  cellSize=parseInt(cellSizeInput.value);
-  drawTransformed();
-});
-
-// Mouse events
-canvas.addEventListener('mousedown', e=>{
-  const {q,r} = pixelToHex((e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale,cellSize);
-  if(e.button===0){ drawingWall=true; mask[cellKey(q,r)]=false; drawTransformed(); }
-  if(e.button===2){
-    if(!visited[cellKey(q,r)] && mask[cellKey(q,r)]!==false){
-      const color = colors[colorIndex]; colorIndex=(colorIndex+1)%colors.length;
-      queue.push({q,r,color});
-      drawTransformed();
-    }
-  }
-  if(e.button===1){ isPanning=true; startPan={x:e.clientX-offsetX, y:e.clientY-offsetY}; }
-});
-
-canvas.addEventListener('mousemove', e=>{
-  const {q,r} = pixelToHex((e.offsetX-offsetX)/scale,(e.offsetY-offsetY)/scale,cellSize);
-  if(drawingWall && e.buttons===1){ mask[cellKey(q,r)]=false; drawTransformed(); }
-  if(isPanning){ offsetX=e.clientX-startPan.x; offsetY=e.clientY-startPan.y; drawTransformed(); }
-});
-canvas.addEventListener('mouseup', ()=>{ drawingWall=false; isPanning=false; });
-canvas.addEventListener('mouseleave', ()=>{ drawingWall=false; isPanning=false; });
-canvas.addEventListener('contextmenu', e=>e.preventDefault());
-
-// Zoom
-canvas.addEventListener('wheel', e=>{
-  if(!e.ctrlKey) return;
-  e.preventDefault();
-  const zoomFactor=1.05;
-  const mouseX=e.offsetX;
-  const mouseY=e.offsetY;
-  const wx=(mouseX-offsetX)/scale;
-  const wy=(mouseY-offsetY)/scale;
-  scale=e.deltaY<0 ? scale*zoomFactor : scale/zoomFactor;
-  offsetX = mouseX - wx*scale;
-  offsetY = mouseY - wy*scale;
-  drawTransformed();
-},{passive:false});
-
-// Load SVG walls
-svgFileInput.addEventListener('change', e=>{
-  const file = e.target.files[0]; if(!file) return;
-  const reader = new FileReader();
-  reader.onload = evt => {
-    const svgText = evt.target.result;
-    const parser = new DOMParser();
-    const svgDoc = parser.parseFromString(svgText,"image/svg+xml");
-    const paths = svgDoc.querySelectorAll('path');
-    const svgEl = svgDoc.querySelector('svg');
-    let vb=[0,0,canvas.width,canvas.height];
-    const viewBox = svgEl.getAttribute('viewBox');
-    if(viewBox) vb = viewBox.split(' ').map(Number);
-    const [minX,minY] = vb;
-
-    paths.forEach(pathEl=>{
-      const tempPath=document.createElementNS("http://www.w3.org/2000/svg","path");
-      tempPath.setAttribute("d", pathEl.getAttribute('d'));
-      const pathLength = tempPath.getTotalLength();
-      const step = Math.max(1, cellSize / 2);
-      for(let i=0;i<=pathLength;i+=step){ 
-        const pt = tempPath.getPointAtLength(i);
-        const px = pt.x - minX;
-        const py = pt.y - minY;
-        const {q,r} = pixelToHex(px,py,cellSize);
-        drawWallsFromPoint(q,r);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Axial Hex Blob Growth</title>
+    <style>
+      body {
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #111;
+        color: #ddd;
+        font-family: sans-serif;
+        gap: 10px;
+        padding: 10px;
       }
-    });
-    drawTransformed();
-  };
-  reader.readAsText(file);
-});
+      canvas {
+        border: 2px solid #444;
+        background: #222;
+        cursor: crosshair;
+      }
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      input[type="range"],
+      input[type="number"] {
+        width: 120px;
+      }
+      button {
+        padding: 6px 12px;
+        border-radius: 4px;
+        border: none;
+        background: #444;
+        color: #eee;
+        cursor: pointer;
+      }
+      button.primary {
+        background: #2ea85a;
+      }
+    </style>
+  </head>
+  <body>
+    <input type="file" id="svgFile" accept=".svg" />
+    <div class="controls">
+      <label>Hex Size: <input type="number" id="cellSize" value="1" min="1" /></label>
+      <label>Speed: <input type="range" id="speedSlider" min="1" max="500" value="50" /></label>
+      <label
+        >Wall Width: <input type="range" id="wallWidthSlider" min="1" max="5" value="1"
+      /></label>
+      <button id="startBtn" class="primary">Start</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
 
-drawTransformed(); // initial render
-</script>
-</body>
+    <script>
+      const canvas = document.getElementById("canvas");
+
+      canvas.width = window.innerWidth - 100;
+      canvas.height = window.innerHeight - 100;
+
+      window.addEventListener("resize", () => {
+        canvas.width = window.innerWidth - 100;
+        canvas.height = window.innerHeight - 100;
+        drawTransformed(); // Redraw to fit new size
+      });
+      const ctx = canvas.getContext("2d");
+
+      const cellSizeInput = document.getElementById("cellSize");
+      const speedSlider = document.getElementById("speedSlider");
+      const wallWidthSlider = document.getElementById("wallWidthSlider");
+      const startBtn = document.getElementById("startBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const svgFileInput = document.getElementById("svgFile");
+
+      let cellSize = parseInt(cellSizeInput.value);
+      let mask = {}; // key="q,r" => false if wall
+      let visited = {}; // key="q,r" => color
+      let hexByColor = {};
+      let queue = [];
+      let running = false;
+      let animationId = null;
+      let drawingWall = false;
+      let colorIndex = 0;
+      const colors = ["#2ea85a", "#e63946"];
+
+      // Zoom & pan
+      let scale = 1;
+      let offsetX = 0;
+      let offsetY = 0;
+      let isPanning = false;
+      let startPan = { x: 0, y: 0 };
+
+      // Helpers
+      function cellKey(q, r) {
+        return `${q},${r}`;
+      }
+
+      function hexToPixel(q, r, size) {
+        const x = size * Math.sqrt(3) * (q + r / 2);
+        const y = ((size * 3) / 2) * r;
+        return { x, y };
+      }
+
+      function pixelToHex(x, y, size) {
+        const r = Math.round(y / ((size * 3) / 2));
+        const q = Math.round(x / (size * Math.sqrt(3)) - r / 2);
+        return { q, r };
+      }
+
+      function drawHex(ctx, q, r, size, color) {
+        const { x, y } = hexToPixel(q, r, size);
+        ctx.beginPath();
+        for (let i = 0; i < 6; i++) {
+          const angle = (Math.PI / 180) * (60 * i - 30); // pointy-topped
+          const px = x + size * Math.cos(angle);
+          const py = y + size * Math.sin(angle);
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      // 6 axial neighbors
+      const directions = [
+        [+1, 0],
+        [+1, -1],
+        [0, -1],
+        [-1, 0],
+        [-1, +1],
+        [0, +1],
+      ];
+      function getNeighbors(q, r) {
+        return directions.map(([dq, dr]) => [q + dq, r + dr]);
+      }
+
+      function visitHex(q, r, color) {
+        const key = cellKey(q, r);
+        visited[key] = color;
+        if (!hexByColor[color]) hexByColor[color] = new Set();
+        hexByColor[color].add(key);
+      }
+
+      // ✅ FIXED drawTransformed
+      function drawTransformed() {
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // reset transform
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
+
+        const margin = 0;
+        const pixelTL = { x: -offsetX / scale, y: -offsetY / scale };
+        const pixelBR = {
+          x: (canvas.width - offsetX) / scale,
+          y: (canvas.height - offsetY) / scale,
+        };
+
+        const hexW = Math.sqrt(3) * cellSize;
+        const hexH = 1.5 * cellSize;
+
+        const minR = Math.floor(pixelTL.y / hexH) - margin;
+        const maxR = Math.ceil(pixelBR.y / hexH) + 20;
+        const minQ = Math.floor(pixelTL.x / hexW) - 2000;
+        const maxQ = Math.ceil(pixelBR.x / hexW) + 20;
+
+        for (let r = minR; r <= maxR; r++) {
+          for (let q = minQ; q <= maxQ; q++) {
+            const key = cellKey(q, r);
+            const { x, y } = hexToPixel(q, r, cellSize);
+
+            if (x + cellSize < pixelTL.x || x - cellSize > pixelBR.x) continue;
+            if (y + cellSize < pixelTL.y || y - cellSize > pixelBR.y) continue;
+
+            if (mask[key] === false) drawHex(ctx, q, r, cellSize, "#555");
+            if (visited[key]) drawHex(ctx, q, r, cellSize, visited[key]);
+          }
+        }
+      }
+
+      // Draw walls
+      function drawWallsFromPoint(q, r) {
+        const wallWidth = parseInt(wallWidthSlider.value);
+        for (let dr = 0; dr < wallWidth; dr++) {
+          for (let dq = 0; dq < wallWidth; dq++) {
+            const nq = q + dq,
+              nr = r + dr;
+            mask[cellKey(nq, nr)] = false;
+          }
+        }
+      }
+
+      // BFS step
+      function stepOnce() {
+        const perFrame = parseInt(speedSlider.value);
+        let popped = 0;
+        while (popped < perFrame && queue.length > 0) {
+          const { q, r, color } = queue.shift();
+          const key = cellKey(q, r);
+          if (mask[key] === false || visited[key]) continue;
+          visitHex(q, r, color);
+
+          getNeighbors(q, r).forEach(([nq, nr]) => {
+            const nKey = cellKey(nq, nr);
+            if (mask[nKey] === false || visited[nKey]) return;
+            if (Math.random() < 0.6) queue.push({ q: nq, r: nr, color });
+            else
+              setTimeout(() => {
+                if (mask[nKey] !== false && !visited[nKey]) queue.push({ q: nq, r: nr, color });
+              }, Math.random() * 200);
+          });
+          popped++;
+        }
+        drawTransformed();
+      }
+
+      // Animation loop
+      function loop() {
+        if (running) stepOnce();
+        animationId = requestAnimationFrame(loop);
+      }
+
+      // Controls
+      startBtn.addEventListener("click", () => {
+        if (queue.length === 0) {
+          alert("Add at least one seed (right-click) before starting!");
+          return;
+        }
+        running = !running;
+        startBtn.textContent = running ? "Pause" : "Start";
+        if (!animationId) loop();
+      });
+
+      resetBtn.addEventListener("click", () => {
+        running = false;
+        startBtn.textContent = "Start";
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        queue = [];
+        visited = {};
+        hexByColor = {};
+        mask = {};
+        colorIndex = 0;
+        drawTransformed();
+      });
+
+      cellSizeInput.addEventListener("change", () => {
+        cellSize = parseInt(cellSizeInput.value);
+        drawTransformed();
+      });
+
+      // Mouse events
+      canvas.addEventListener("mousedown", (e) => {
+        const { q, r } = pixelToHex(
+          (e.offsetX - offsetX) / scale,
+          (e.offsetY - offsetY) / scale,
+          cellSize,
+        );
+        if (e.button === 0) {
+          drawingWall = true;
+          mask[cellKey(q, r)] = false;
+          drawTransformed();
+        }
+        if (e.button === 2) {
+          if (!visited[cellKey(q, r)] && mask[cellKey(q, r)] !== false) {
+            const color = colors[colorIndex];
+            colorIndex = (colorIndex + 1) % colors.length;
+            queue.push({ q, r, color });
+            drawTransformed();
+          }
+        }
+        if (e.button === 1) {
+          isPanning = true;
+          startPan = { x: e.clientX - offsetX, y: e.clientY - offsetY };
+        }
+      });
+
+      canvas.addEventListener("mousemove", (e) => {
+        const { q, r } = pixelToHex(
+          (e.offsetX - offsetX) / scale,
+          (e.offsetY - offsetY) / scale,
+          cellSize,
+        );
+        if (drawingWall && e.buttons === 1) {
+          mask[cellKey(q, r)] = false;
+          drawTransformed();
+        }
+        if (isPanning) {
+          offsetX = e.clientX - startPan.x;
+          offsetY = e.clientY - startPan.y;
+          drawTransformed();
+        }
+      });
+      canvas.addEventListener("mouseup", () => {
+        drawingWall = false;
+        isPanning = false;
+      });
+      canvas.addEventListener("mouseleave", () => {
+        drawingWall = false;
+        isPanning = false;
+      });
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+      // Zoom
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          if (!e.ctrlKey) return;
+          e.preventDefault();
+          const zoomFactor = 1.05;
+          const mouseX = e.offsetX;
+          const mouseY = e.offsetY;
+          const wx = (mouseX - offsetX) / scale;
+          const wy = (mouseY - offsetY) / scale;
+          scale = e.deltaY < 0 ? scale * zoomFactor : scale / zoomFactor;
+          offsetX = mouseX - wx * scale;
+          offsetY = mouseY - wy * scale;
+          drawTransformed();
+        },
+        { passive: false },
+      );
+
+      // Load SVG walls
+      svgFileInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const svgText = evt.target.result;
+          const parser = new DOMParser();
+          const svgDoc = parser.parseFromString(svgText, "image/svg+xml");
+          const paths = svgDoc.querySelectorAll("path");
+          const svgEl = svgDoc.querySelector("svg");
+          let vb = [0, 0, canvas.width, canvas.height];
+          const viewBox = svgEl.getAttribute("viewBox");
+          if (viewBox) vb = viewBox.split(" ").map(Number);
+          const [minX, minY] = vb;
+
+          paths.forEach((pathEl) => {
+            const tempPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            tempPath.setAttribute("d", pathEl.getAttribute("d"));
+            const pathLength = tempPath.getTotalLength();
+            const step = Math.max(1, cellSize / 2);
+            for (let i = 0; i <= pathLength; i += step) {
+              const pt = tempPath.getPointAtLength(i);
+              const px = pt.x - minX;
+              const py = pt.y - minY;
+              const { q, r } = pixelToHex(px, py, cellSize);
+              drawWallsFromPoint(q, r);
+            }
+          });
+          drawTransformed();
+        };
+        reader.readAsText(file);
+      });
+
+      drawTransformed(); // initial render
+    </script>
+  </body>
 </html>

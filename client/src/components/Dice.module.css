@@ -2,12 +2,12 @@
 .diceWrap {
   transform-style: preserve-3d;
   transform: rotateX(-60deg) rotateY(45deg);
-  padding:16px
+  padding: 16px;
 }
 
 /* Dice container */
 .dice {
-  --dice-side: 48px;             /* <— change this to resize the whole dice */
+  --dice-side: 48px; /* <— change this to resize the whole dice */
   --pip-size: calc(var(--dice-side) * 0.2);
   --pip-offset: calc(var(--dice-side) * 0.2);
   --pip-color: #131210;
@@ -23,8 +23,8 @@
 .diceFace {
   box-sizing: border-box;
   position: absolute;
-  width: calc(var(--dice-side) );
-  height: calc(var(--dice-side) );
+  width: calc(var(--dice-side));
+  height: calc(var(--dice-side));
   background-color: var(--face-color);
   border: calc(var(--dice-side) * 0.01) solid #000;
   border-radius: calc(var(--dice-side) * 0.2);
@@ -52,9 +52,7 @@
   border-radius: 50%;
   top: 50%;
   left: 50%;
-  transform: translateZ(2px)
-             translate(-50%, -50%);
-  
+  transform: translateZ(2px) translate(-50%, -50%);
 }
 
 /* ----------------------------------
@@ -126,7 +124,6 @@
     calc(-1 * var(--pip-offset)) calc(-1.2 * var(--pip-offset)) var(--pip-color),
     calc(-1 * var(--pip-offset)) 0 var(--pip-color),
     calc(-1 * var(--pip-offset)) calc(1.2 * var(--pip-offset)) var(--pip-color),
-
     var(--pip-offset) calc(-1.2 * var(--pip-offset)) var(--pip-color),
     var(--pip-offset) 0 var(--pip-color),
     var(--pip-offset) calc(1.2 * var(--pip-offset)) var(--pip-color);
@@ -135,5 +132,5 @@
 .face2::after,
 .face4::after,
 .face6::after {
-  background-color: transparent;   /* or background-color */
+  background-color: transparent; /* or background-color */
 }

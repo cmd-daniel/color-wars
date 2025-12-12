@@ -1,6 +1,6 @@
 {
-    "watch": ["src", "../shared/src"],
-    "ext": "ts,json",
-    "ignore": ["src/**/*.spec.ts"],
-    "exec": "NODE_ENV=development ts-node src/index.ts"
-  }
+  "watch": ["src", "../shared/src"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.spec.ts"],
+  "exec": "NODE_ENV=development ts-node src/index.ts"
+}

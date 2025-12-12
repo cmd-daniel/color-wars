@@ -6,19 +6,24 @@ class ToastManager {
 
   init() {
     this.unsubs.push(
-      GameEventBus.on("UPDATE_NETWORK_STATE", ({state}) => {
-        switch(state){
-            case 'connected': toast.success(state,{toasterId:'center'}); break
-            case 'connecting' :
-            case 'reconnecting': toast.info(state); break
-            default: toast(state)
+      GameEventBus.on("UPDATE_NETWORK_STATE", ({ state }) => {
+        switch (state) {
+          case "connected":
+            toast.success(state, { toasterId: "center" });
+            break;
+          case "connecting":
+          case "reconnecting":
+            toast.info(state);
+            break;
+          default:
+            toast(state);
         }
       }),
     );
   }
 
   destroy() {
-    this.unsubs.forEach(fn => fn());
+    this.unsubs.forEach((fn) => fn());
     this.unsubs = [];
   }
 }

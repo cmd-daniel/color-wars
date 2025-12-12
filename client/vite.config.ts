@@ -1,22 +1,22 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from "path"
-import tailwindcss from "@tailwindcss/vite"
-import babel from 'vite-plugin-babel'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import tailwindcss from "@tailwindcss/vite";
+import babel from "vite-plugin-babel";
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     babel({
-      babelConfig:{
+      babelConfig: {
         plugins: [
-          'babel-plugin-react-compiler',
-          ['@babel/plugin-proposal-decorators',{"version": "2023-11"}]
-        ]
-      }
-    }), 
-    tailwindcss()
+          "babel-plugin-react-compiler",
+          ["@babel/plugin-proposal-decorators", { version: "2023-11" }],
+        ],
+      },
+    }),
+    tailwindcss(),
   ],
   resolve: {
     alias: {
@@ -24,5 +24,5 @@ export default defineConfig({
       "@components": path.resolve(__dirname, "./src/components"),
     },
   },
-  server: { host: true, strictPort:true }
-})
+  server: { host: true, strictPort: true },
+});

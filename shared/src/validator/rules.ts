@@ -1,23 +1,29 @@
-import type { PlainStateOf, RoomState } from '../types/RoomState';
+import type { PlainStateOf, RoomState } from "../types/RoomState";
 
 // 1. Define the Shapes (The requirements)
 // Every action context in your app seems to have a playerId
-interface WithPlayer { playerId: string }
-interface WithPrice extends WithPlayer { price: number }
-interface WithMessage { message: string }
+interface WithPlayer {
+  playerId: string;
+}
+interface WithPrice extends WithPlayer {
+  price: number;
+}
+interface WithMessage {
+  message: string;
+}
 
 // 2. The Rules
 // notice we don't reference specific Actions here, just data shapes.
 
 export const requirePlayerExists = (s: PlainStateOf<RoomState>, c: WithPlayer) => {
   if (!s.game.players || !s.game.players[c.playerId]) {
-    throw new Error('Player does not exist');
+    throw new Error("Player does not exist");
   }
 };
 
 export const requirePlayersTurn = (s: PlainStateOf<RoomState>, c: WithPlayer) => {
   if (s.game.activePlayerId !== c.playerId) {
-    throw new Error('Not your turn');
+    throw new Error("Not your turn");
   }
 };
 

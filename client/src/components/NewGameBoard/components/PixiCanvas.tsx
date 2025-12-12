@@ -1,14 +1,19 @@
 import { useEffect, useRef } from "react";
 import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
+import { Sprite } from "pixi.js";
 import { useGameStore } from "@/stores/mapStateStore";
 
+import { pixiTargetLocator } from "@/animation/target-locator";
+import { HexHop } from "@/actions/actions";
+import { network } from "@/lib/managers/network";
+
 // Example URL - in a real app this might come from props or a route param
-const MAP_URL = "/sample-subcontinent.json"; 
+const MAP_URL = "/sample-subcontinent.json";
 
 export function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const engineRef = useRef<PixiEngine | null>(null);
-  
+
   // Zustand Hooks
   const { currentMap, fetchMap, isLoading } = useGameStore();
 
@@ -29,6 +34,7 @@ export function PixiCanvas() {
     });
 
     return () => {
+      console.log("Pixi Engine Destroyed");
       engine.destroy();
       engineRef.current = null;
     };
@@ -42,21 +48,39 @@ export function PixiCanvas() {
   // 3. React to Map Changes -> Update Engine
   useEffect(() => {
     if (currentMap && engineRef.current) {
-        engineRef.current.loadMap(currentMap);
+      engineRef.current.loadMap(currentMap);
     }
   }, [currentMap]);
 
+  function testAnimation() {
+    // 1. Find the target (The Hex at 0,0 on the dice track)
+    const targetSprite = pixiTargetLocator.get<Sprite>("unit-1");
+    if (targetSprite) {
+      network.actionQueue.enqueue(new HexHop({ targetId: "", q: 1, r: 3 }));
+    } else {
+      console.error("Sprite not found in registry");
+    }
+  }
+
+  const addPlayer = () => {
+    const tile = pixiTargetLocator.get<Sprite>("track-tile-0-0");
+    engineRef.current?.getTokenLayer()?.addToken(`unit-1`, 0xff00aa, tile!.x, tile!.y);
+  };
+
   return (
-    <div className="relative w-full h-full">
+    <div className="relative h-full w-full">
       {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white z-10">
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 text-white">
           Loading Map...
         </div>
       )}
-      <div
-        ref={containerRef}
-        className="w-full h-full aspect-square bg-[#111111]"
-      />
+      <button className="h-8 w-fit rounded-md bg-amber-50 px-2 text-black" onClick={testAnimation}>
+        test animation
+      </button>
+      <button className="h-8 w-fit rounded-md bg-amber-50 px-2 text-black" onClick={addPlayer}>
+        add player
+      </button>
+      <div ref={containerRef} className="aspect-square h-full w-full bg-[#111111]" />
     </div>
   );
 }

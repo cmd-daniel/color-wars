@@ -11,14 +11,18 @@ export function createMatchmakingRouter() {
       const reservation = await RoomManager.quickMatch({ playerName }, preferences ?? undefined);
       res.json(formatReservationResponse(reservation));
     } catch (error) {
-        res.status(500).json({ error: "Unable to find a room" });
+      res.status(500).json({ error: "Unable to find a room" });
     }
   });
 
   router.post("/private", async (req, res) => {
     try {
       const { playerName, maxPlayers, minPlayers } = req.body ?? {};
-      const { joinCode, reservation } = await RoomManager.createPrivateRoom({ playerName, maxPlayers, minPlayers });
+      const { joinCode, reservation } = await RoomManager.createPrivateRoom({
+        playerName,
+        maxPlayers,
+        minPlayers,
+      });
       res.json({ joinCode, reservation: formatReservationResponse(reservation) });
     } catch (error) {
       logger.error("private_room_create_failed", { message: (error as Error).message });
@@ -76,7 +80,10 @@ export function createMatchmakingRouter() {
         res.json({ isSpectator: true, roomId });
       } else {
         if (result.reservation) {
-          res.json({ isSpectator: false, reservation: formatReservationResponse(result.reservation) });
+          res.json({
+            isSpectator: false,
+            reservation: formatReservationResponse(result.reservation),
+          });
         } else {
           res.status(500).json({ error: "Reservation not found" });
         }
@@ -100,7 +107,9 @@ export function createMatchmakingRouter() {
   return router;
 }
 
-function formatReservationResponse(reservation: Awaited<ReturnType<typeof RoomManager.quickMatch>>) {
+function formatReservationResponse(
+  reservation: Awaited<ReturnType<typeof RoomManager.quickMatch>>,
+) {
   return {
     sessionId: reservation.sessionId,
     reservationId: (reservation as any).reservationId,
@@ -117,7 +126,7 @@ function formatReservationResponse(reservation: Awaited<ReturnType<typeof RoomMa
       private: reservation.room.private,
       publicAddress: reservation.room.publicAddress,
       unlisted: reservation.room.unlisted,
-      metadata: reservation.room.metadata
-    }
+      metadata: reservation.room.metadata,
+    },
   };
 }
