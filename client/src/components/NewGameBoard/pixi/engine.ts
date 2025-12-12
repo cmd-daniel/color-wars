@@ -131,6 +131,7 @@ export class PixiEngine {
         worldWidth: 1000, // Will be resized on map load
         worldHeight: 1000,
         events: this.app.renderer.events,
+        passiveWheel:false
       });
 
       this.viewport.drag().wheel().pinch().decelerate();
@@ -159,9 +160,6 @@ export class PixiEngine {
 
       this.tokenLayer = new TokenLayer();
       this.diceTrack.getTrackLayer().addChild(this.tokenLayer);
-
-      // this.debugLayer = new PIXI.Container();
-      // this.worldLayer.addChild(this.debugLayer);
 
       // Generate Assets
       this.generateHexTexture(50);
@@ -225,7 +223,6 @@ export class PixiEngine {
 
     // Resize viewport but keep world dimensions intact
     this.viewport.resize(w, h, this.viewport.worldWidth, this.viewport.worldHeight);
-
     this.diceTrack?.resize(w, h);
 
     // Optional: Re-clamp if needed, though usually handled by Viewport logic
@@ -480,9 +477,9 @@ export class PixiEngine {
     }
 
     // 5. Update Viewport / Camera
-    const aestheticPadding = 500;
+    const aestheticPadding = 800;
     const totalWidth = Math.max(this.viewport.screenWidth, contentWidth + aestheticPadding);
-    const totalHeight = Math.max(this.viewport.screenHeight, contentHeight + aestheticPadding);
+    const totalHeight = Math.max(this.viewport.screenHeight, contentHeight + aestheticPadding + 400);
 
     // Pivot terrain to center
     // this.terrain.pivot.set(mapCenterX, mapCenterY);
@@ -511,13 +508,19 @@ export class PixiEngine {
       const fittedScale = this.viewport.scale.x;
 
       this.viewport.clampZoom({
-        minScale: fittedScale * 1.5,
+        minScale: fittedScale * 1.3,
         maxScale: fittedScale * 1000,
       });
 
       // Start with a nice view
-      this.viewport.setZoom(fittedScale * 2);
+      // this.viewport.setZoom(fittedScale * 1.3);
       this.viewport.moveCenter(totalWidth / 2, totalHeight / 2);
+      this.viewport.zoomPercent(0.125,true)
+      this.viewport.snap(200,260,{
+        topLeft:true,
+        removeOnInterrupt:true,
+        removeOnComplete:true
+      })
 
       setTimeout(() => {
         this.handleZoom();

@@ -37,5 +37,5 @@
     },
     "types": ["vite/client", "@pixi/react"]
   },
-  "include": ["src", "../shared/src/types/registry.ts"]
+  "include": ["src"]
 }

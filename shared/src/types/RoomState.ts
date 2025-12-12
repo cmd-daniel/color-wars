@@ -1,5 +1,4 @@
 import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
-import { ActionData, ActionRegistry, ActionType } from "./registry";
 
 export type RoomPhase = "lobby" | "active" | "finished";
 export type TurnPhase = "awaiting-roll" | "awaiting-end-turn";
