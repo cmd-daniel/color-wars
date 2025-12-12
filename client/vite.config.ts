@@ -22,6 +22,9 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
       "@components": path.resolve(__dirname, "./src/components"),
+      "@animation": path.resolve(__dirname, "./src/animation"),
+      "@actions": path.resolve(__dirname, "./src/actions"),
+      "@gsap": path.resolve(__dirname, "./src/lib/gsap.ts"),
     },
   },
   server: { host: true, strictPort: true },

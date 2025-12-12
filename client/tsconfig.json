@@ -1,10 +1,14 @@
 {
   "files": [],
-  "references": [{ "path": "./tsconfig.node.json" }],
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.app.json" }],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "@components/*": ["./src/components/*"],
+      "@lib/*": ["./src/lib/*"],
+      "@animation/*": ["./src/animation/*"],
+      "@actions/*": ["./src/actions/*"],
+      "@gsap": ["./src/lib/gsap.ts"],
       "@/*": ["./src/*"]
     }
   }

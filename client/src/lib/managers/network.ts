@@ -219,7 +219,7 @@ class Network {
         this.playActionInstantly(action);
 
         continue;
-      }
+      } else if (mode == 'fast') this.setSpeed(2)
 
       // Create action executor
       const parsed = this.parseServerAction(action.type, action.payload);

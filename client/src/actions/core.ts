@@ -1,4 +1,4 @@
-import type { ActionHandle } from "@/animation/driver/AnimationHandle";
+import type { ActionHandle } from "@animation/driver/AnimationHandle";
 
 export interface IExecutable {
   execute(): ActionHandle;

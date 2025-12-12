@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react";
 import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
 import { Sprite } from "pixi.js";
 import { useGameStore } from "@/stores/mapStateStore";
-
 import { pixiTargetLocator } from "@/animation/target-locator";
 import { HexHop } from "@/actions/actions";
 import { network } from "@/lib/managers/network";
+import { GameEventBus } from "@/lib/managers/GameEventBus";
 
 // Example URL - in a real app this might come from props or a route param
 const MAP_URL = "/sample-subcontinent.json";
@@ -55,8 +55,11 @@ export function PixiCanvas() {
   function testAnimation() {
     // 1. Find the target (The Hex at 0,0 on the dice track)
     const targetSprite = pixiTargetLocator.get<Sprite>("unit-1");
+    GameEventBus.emit("UPDATE_ANIMATION_SPEED", {
+      speedMultiplier: 2,
+    });
     if (targetSprite) {
-      network.actionQueue.enqueue(new HexHop({ targetId: "", q: 1, r: 3 }));
+      network.actionQueue.enqueue(new HexHop({ fromTile:1, toTile: 17 }));
     } else {
       console.error("Sprite not found in registry");
     }
@@ -64,7 +67,7 @@ export function PixiCanvas() {
 
   const addPlayer = () => {
     const tile = pixiTargetLocator.get<Sprite>("track-tile-0-0");
-    engineRef.current?.getTokenLayer()?.addToken(`unit-1`, 0xff00aa, tile!.x, tile!.y);
+    engineRef.current?.getTokenLayer()?.addToken(`unit-1`, 0x4450d4, tile!.x, tile!.y);
   };
 
   return (

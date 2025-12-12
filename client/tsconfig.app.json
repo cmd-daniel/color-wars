@@ -29,7 +29,11 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@components/*": ["./src/components/*"]
+      "@components/*": ["./src/components/*"],
+      "@animation/*": ["./src/animation/*"],
+      "@actions/*": ["./src/actions/*"],
+      "@store/*": ["./src/store/*"],
+      "@gsap": ["./src/lib/gsap.ts"],
     },
     "types": ["vite/client", "@pixi/react"]
   },
