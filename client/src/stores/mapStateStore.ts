@@ -1,42 +1,83 @@
 import { create } from "zustand";
-import type { GameMap } from "@/types/map-types";
+import type { GameMap, Territory } from "@/types/map-types";
+import { subscribeWithSelector } from "zustand/middleware";
 
 interface MapState {
   currentMap: GameMap | null;
   isLoading: boolean;
   error: string | null;
-  hoveredStateId: string | null;
-  selectedStateId: string | null;
+  hoveredTerritoryId: string | null;
+  selectedTerritoryId: string | null;
+  colorMap: Map<string, string>;
 
   // Actions
   fetchMap: (url: string) => Promise<void>;
-  setHoveredState: (id: string | null) => void;
-  setSelectedState: (id: string | null) => void;
+  setHoveredTerritory: (id: string | null) => void;
+  setSelectedTerritory: (id: string | null) => void;
+  setTerritoryColor: (id: string, color: string) => void;
 }
 
-export const useGameStore = create<MapState>((set) => ({
-  currentMap: null,
-  isLoading: false,
-  error: null,
-  hoveredStateId: null,
-  selectedStateId: null,
+import { devtools, combine } from "zustand/middleware";
+import { immer } from "zustand/middleware/immer";
 
-  fetchMap: async (url: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch map");
-      const data: GameMap = await response.json();
+export const useMapStore = create<MapState>()(
+  subscribeWithSelector(
+    devtools(
+      immer(
+        combine(
+          {
+            currentMap: null as GameMap | null,
+            isLoading: false,
+            error: null as string | null,
+            hoveredTerritoryId: null as string | null,
+            selectedTerritoryId: null as string | null,
+            colorMap: new Map<string,string>(),
+          },
+          (set, get) => ({
+            fetchMap: async (url: string) => {
+              set((state) => {
+                state.isLoading = true;
+                state.error = null;
+              });
+              try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("Failed to fetch map");
+                const data: GameMap = await response.json();
 
-      // Basic validation could go here
-      if (!data.hexes || !data.territories) throw new Error("Invalid map format");
+                // Basic validation could go here
+                if (!data.hexes || !data.territories) throw new Error("Invalid map format");
 
-      set({ currentMap: data, isLoading: false });
-    } catch (err) {
-      console.error(err);
-      set({ error: (err as Error).message, isLoading: false });
-    }
-  },
-  setHoveredState: (id) => set({ hoveredStateId: id }),
-  setSelectedState: (id) => set({ selectedStateId: id }),
-}));
+                set((state) => {
+                  state.currentMap = data;
+                  state.isLoading = false;
+                });
+              } catch (err) {
+                console.error(err);
+                set((state) => {
+                  state.error = (err as Error).message;
+                  state.isLoading = false;
+                });
+              }
+            },
+            setHoveredTerritory: (id: string | null) => {
+              set((state) => {
+                state.hoveredTerritoryId = id;
+              });
+            },
+            setSelectedTerritory: (id: string | null) => {
+              set((state) => {
+                state.selectedTerritoryId = id;
+              });
+            },
+            setTerritoryColor: (territoryID: string, color: string) => {
+              set((s) => {
+                s.colorMap.set(territoryID, color)
+              });
+            },
+          }),
+        ),
+      ),
+      { name: "mapStateStore" },
+    ),
+  )
+);

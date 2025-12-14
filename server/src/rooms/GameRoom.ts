@@ -95,36 +95,53 @@ export class GameRoom extends Room<RoomState> {
     await this.updateMetadata();
   }
 
-  async onLeave(client: Client<any, any>, consented?: boolean) {
-    this.state.game.players.get(client.sessionId)!.connected = false;
+  async onLeave(client: Client, consented?: boolean) {
+    const { game, room } = this.state;
+    const { players, playerOrder } = game;
+  
+    const player = players.get(client.sessionId);
+    if (!player) return;
+  
+    player.connected = false;
+  
+    const playerId = player.id;
+    const isLeader = room.leaderId === playerId;
+    const isActive = game.activePlayerId === playerId;
+  
+    const removePlayer = (idx: number) => {
+      playerOrder.splice(idx, 1);
+  
+      const next =
+        playerOrder.length > 0
+          ? playerOrder[idx % playerOrder.length]
+          : "null";
+  
+      if (isActive) game.activePlayerId = next;
+      if (isLeader) room.leaderId = next;
+  
+      players.delete(client.sessionId);
+      this.state.playersPings.delete(client.sessionId);
+    };
+  
+    const idx = playerOrder.indexOf(client.sessionId);
+  
     try {
       if (consented) {
-        throw new Error("consented leave");
+        if (idx !== -1) removePlayer(idx);
+        return;
       }
-
-      // allow disconnected client to reconnect into this room until 120 seconds
+  
+      // allow reconnect
       await this.allowReconnection(client, 120);
-
-      // client returned! let's re-activate it.
-      this.state.game.players.get(client.sessionId)!.connected = true;
-    } catch (e) {
-      // 120 seconds expired. let's remove the client.
-      const idx = this.state.game.playerOrder.findIndex((p) => p == client.sessionId);
-      this.state.game.playerOrder.splice(idx, 1);
-      if (this.state.game.activePlayerId == this.state.game.players.get(client.sessionId)!.id) {
-        this.state.game.activePlayerId = this.state.game.playerOrder.at(
-          (idx + 1) % (this.state.game.playerOrder.length - 1),
-        );
-      }
-      if (this.state.room.leaderId == this.state.game.players.get(client.sessionId)!.id) {
-        this.state.room.leaderId = this.state.game.playerOrder.at(
-          (idx + 1) % (this.state.game.playerOrder.length - 1),
-        );
-      }
-      this.state.game.players.delete(client.sessionId);
-      this.state.playersPings.delete(client.sessionId);
+  
+      // client returned
+      player.connected = true;
+    } catch {
+      // reconnection window expired
+      if (idx !== -1) removePlayer(idx);
     }
   }
+  
 
   async onDispose() {
     //RoomManager.unregisterRoom(this);

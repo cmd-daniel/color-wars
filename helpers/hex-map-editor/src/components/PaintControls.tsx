@@ -13,7 +13,7 @@ const PaintControls = () => {
   const selectedStateId = useMapEditorStore((state) => state.selectedStateId);
   const interactionMode = useMapEditorStore((state) => state.interactionMode);
   const setInteractionMode = useMapEditorStore((state) => state.setInteractionMode);
-  const territories = useMapEditorStore((state) => state.map.states);
+  const territories = useMapEditorStore((state) => state.map.territories);
 
   const selectedTerritoryName = selectedStateId
     ? (territories.find((territory) => territory.id === selectedStateId)?.name ?? selectedStateId)

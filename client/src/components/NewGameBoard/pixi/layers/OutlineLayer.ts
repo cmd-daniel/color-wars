@@ -1,6 +1,7 @@
 import * as PIXI from "pixi.js";
-import type { GameMap, MapHex } from "@/types/map-types";
+import type { GameMap, Hex } from "@/types/map-types";
 import { hslStringToHex } from "@/utils/color-utils";
+import { BACKGROUND_COLOR, SECONDARY_COLOR } from "../engine";
 
 export class OutlineLayer extends PIXI.Container {
   private bordersContainer: PIXI.Container;
@@ -33,20 +34,18 @@ export class OutlineLayer extends PIXI.Container {
 
     // 1. Map Hex -> State
     map.hexes.forEach((h) => {
-      if (h.stateId) hexMap.set(`${h.q},${h.r}`, h.stateId);
+      if (h.territoryID) hexMap.set(`${h.q},${h.r}`, h.territoryID);
     });
 
     // 2. Group Hexes by State
-    const states = new Map<string, MapHex[]>();
-    map.hexes.forEach((h) => {
-      if (!h.stateId) return;
-      if (!states.has(h.stateId)) states.set(h.stateId, []);
-      states.get(h.stateId)!.push(h);
+    const territories = new Map<string, Hex[]>();
+    map.territories.forEach((t) => {
+      territories.set(t.id, t.hexes);
     });
 
     // 3. Color Lookup
-    const colorMap = new Map<string, number>();
-    map.territories.forEach((s) => colorMap.set(s.id, hslStringToHex(s.displayColor)));
+    // const colorMap = new Map<string, number>();
+    // map.territories.forEach((s) => colorMap.set(s.id, hslStringToHex(s.displayColor)));
 
     // 4. Geometry Pre-calculation
     const width = hexSize * Math.sqrt(3);
@@ -68,8 +67,8 @@ export class OutlineLayer extends PIXI.Container {
       corners.push({ x: hexSize * Math.cos(angle), y: hexSize * Math.sin(angle) });
     }
 
-    states.forEach((hexList, stateId) => {
-      const stateColor = colorMap.get(stateId) || 0x999999;
+    territories.forEach((hexList, territoryID) => {
+      const defaultTerritoryColor = SECONDARY_COLOR;
 
       // --- A. Create Outline Graphics ---
       const gBorder = new PIXI.Graphics();
@@ -89,7 +88,7 @@ export class OutlineLayer extends PIXI.Container {
           const nKey = `${h.q + offset.q},${h.r + offset.r}`;
           const nState = hexMap.get(nKey);
 
-          if (nState !== stateId) {
+          if (nState !== territoryID) {
             const c1 = corners[i];
             const c2 = corners[(i + 1) % 6];
             gBorder.moveTo(cx + c1.x, cy + c1.y);
@@ -101,13 +100,13 @@ export class OutlineLayer extends PIXI.Container {
       // Finalize Styles
 
       // Fill Style: Solid color, no stroke
-      gFill.fill({ color: stateColor, alpha: 1.0 });
-
+      gFill.fill({ color: defaultTerritoryColor, alpha: 1.0 });
+      
       // Border Style: Thick White
-      gBorder.stroke({ width: 3, color: 0xffffff, alpha: 1, join: "round", cap: "round" });
-
+      gBorder.stroke({ width: 2, color: 0xffffff, alpha: 1, join: "round", cap: "round" });
+      gBorder.tint=BACKGROUND_COLOR
       // Store references
-      this.stateGraphics.set(stateId, { border: gBorder, fill: gFill });
+      this.stateGraphics.set(territoryID, { border: gBorder, fill: gFill });
 
       this.fillsContainer.addChild(gFill);
       this.bordersContainer.addChild(gBorder);
@@ -116,13 +115,13 @@ export class OutlineLayer extends PIXI.Container {
     // Initial State:
     // Fills hidden (assuming we start zoomed in)
     // Borders hidden (until selected)
-    this.fillsContainer.visible = false;
+    this.fillsContainer.visible = true;
 
     // Actually, borders should probably be visible?
     // Or do you only want borders on hover?
     // Based on prompt: "outline on hover and select". So hide borders by default.
     this.bordersContainer.visible = true;
-    this.bordersContainer.children.forEach((c) => (c.visible = false));
+    this.bordersContainer.children.forEach((c) => (c.visible = true));
   }
 
   /**
@@ -141,22 +140,31 @@ export class OutlineLayer extends PIXI.Container {
     if (this.activeSelectId) this.toggleBorder(this.activeSelectId, false);
 
     // Set new
-    if (hoverId) this.toggleBorder(hoverId, true, 0xaaaaaa); // Greyish hover
-    if (selectId) this.toggleBorder(selectId, true, 0xffd700); // Gold select
+    if (hoverId) this.toggleBorder(hoverId, true, 0xffd700); // Greyish hover
+    if (selectId) this.toggleBorder(selectId, true, 0xffffff); // Gold select
 
     this.activeHoverId = hoverId;
     this.activeSelectId = selectId;
   }
 
-  private toggleBorder(stateId: string, isVisible: boolean, tint: number = 0xffffff) {
-    const obj = this.stateGraphics.get(stateId);
+  private toggleBorder(territoryID: string, isVisible: boolean, tint: number = BACKGROUND_COLOR) {
+    const obj = this.stateGraphics.get(territoryID);
     if (!obj) return;
 
-    obj.border.visible = isVisible;
+    //obj.border.visible = isVisible;
     if (isVisible) {
       obj.border.tint = tint;
       // Bring to top within its container
       this.bordersContainer.addChild(obj.border);
+    }else {
+      obj.border.tint = tint;
     }
+  }
+
+  setTerritoryColor(territoryID: string, color:string){
+    const obj = this.stateGraphics.get(territoryID)
+    if(!obj) return;
+
+    obj.fill.fill({color, alpha:1})
   }
 }

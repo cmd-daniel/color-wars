@@ -87,7 +87,10 @@ export const HoldButton2 = ({ onHoldStart, onHoldEnd, onHoldCancel }: HoldButton
   return (
     <div
       {...listeners}
-      className={`group bg-secondary/10 pointer-events-auto absolute inset-0 z-50 flex items-center justify-center backdrop-blur-[0] transition-all duration-100 active:bg-transparent active:backdrop-blur-[0]`}
-    ></div>
+      className={`pointer-events-auto z-50 grow flex items-center justify-center transition-all rounded-md self-stretch  duration-100`}>
+      <div className="w-full h-full flex justify-center pt-2 select-none border-dashed border rounded-md border-black border-2">
+        hold to rotate dice
+      </div>
+    </div>
   );
 };

@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type {
   MapConfig,
-  StateId,
-  StateRegion,
+  TerritoryId,
+  Territory,
   HexCell,
   HexGridConfig,
   HexBounds,
@@ -18,16 +18,16 @@ import { pixelToAxial } from "../utils/hexGeometry";
 
 interface EditorState {
   map: MapConfig;
-  selectedStateId: StateId | null;
+  selectedStateId: TerritoryId | null;
   svgDocument: ParsedSvgDocument | null;
   gridOverlay: GridOverlayConfig;
   paintMode: "brush" | "erase" | "flood" | "delete-hex";
   interactionMode: "view" | "edit";
   validationIssues: ValidationIssue[];
-  setSelectedState: (stateId: StateId | null) => void;
-  upsertState: (state: StateRegion) => void;
-  removeState: (stateId: StateId) => void;
-  assignHexToState: (hexKey: string, stateId: StateId | null) => void;
+  setSelectedState: (stateId: TerritoryId | null) => void;
+  upsertState: (state: Territory) => void;
+  removeState: (stateId: TerritoryId) => void;
+  assignHexToState: (hexKey: string, stateId: TerritoryId | null) => void;
   setGridConfig: (grid: HexGridConfig) => void;
   importMap: (config: MapConfig) => void;
   loadSvgDocument: (svgText: string) => void;
@@ -91,12 +91,12 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
   setSelectedState: (stateId) => set({ selectedStateId: stateId }),
   upsertState: (state) =>
     set((current) => {
-      const index = current.map.states.findIndex((entry) => entry.id === state.id);
-      const nextStates = [...current.map.states];
+      const index = current.map.territories.findIndex((entry) => entry.id === state.id);
+      const nextTerritories = [...current.map.territories];
       if (index >= 0) {
-        nextStates[index] = state;
+        nextTerritories[index] = state;
       } else {
-        nextStates.push(state);
+        nextTerritories.push(state);
       }
 
       const nextAdjacency = { ...current.map.adjacencies };
@@ -106,19 +106,19 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
 
       const next = computeMapState({
         ...current.map,
-        states: nextStates,
+        territories: nextTerritories,
       });
       return next;
     }),
   removeState: (stateId) =>
     set((current) => {
-      const nextStates = current.map.states.filter((entry) => entry.id !== stateId);
+      const nextTerritories = current.map.territories.filter((entry) => entry.id !== stateId);
       const nextHexes = current.map.hexes.map((hex) =>
         hex.stateId === stateId ? { ...hex, stateId: null } : hex,
       );
       const next = computeMapState({
         ...current.map,
-        states: nextStates,
+        territories: nextTerritories,
         hexes: nextHexes,
       });
       return {
@@ -135,24 +135,24 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
         return { ...hex, stateId };
       });
 
-      const nextStates = current.map.states.map((state) => {
-        const filteredHexes = state.hexIds.filter((id) => id !== hexKey);
+      const nextTerritories = current.map.territories.map((state) => {
+        const filteredHexes = state.hexes.filter((id) => id !== hexKey);
         if (state.id === stateId) {
           return {
             ...state,
-            hexIds: [...filteredHexes, hexKey].sort(),
+            hexes: [...filteredHexes, hexKey].sort(),
           };
         }
         return {
           ...state,
-          hexIds: filteredHexes,
+          hexes: filteredHexes,
         };
       });
 
       const next = computeMapState({
         ...current.map,
         hexes: nextHexes,
-        states: nextStates,
+        territories: nextTerritories,
       });
       return next;
     }),
@@ -218,8 +218,8 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
       "[SVG→Hex] Generated",
       nextMap.hexes.length,
       "hexes across",
-      nextMap.states.length,
-      "states",
+      nextMap.territories.length,
+      "territories",
     );
     set({
       ...computeMapState(nextMap),
@@ -345,32 +345,32 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
     const nextHexes = [...current.map.hexes, newHex];
     const bounds = recalcBounds(nextHexes);
 
-    let nextStates = current.map.states;
+    let nextTerritories = current.map.territories;
 
     if (stateId) {
-      const stateIndex = nextStates.findIndex((state) => state.id === stateId);
+      const stateIndex = nextTerritories.findIndex((state) => state.id === stateId);
       const hexId = `${q},${r}`;
       if (stateIndex >= 0) {
-        const state = nextStates[stateIndex];
-        const updated = new Set(state.hexIds);
+        const state = nextTerritories[stateIndex];
+        const updated = new Set(state.hexes);
         updated.add(hexId);
-        nextStates = nextStates.map((entry, index) =>
+        nextTerritories = nextTerritories.map((entry, index) =>
           index === stateIndex
             ? {
                 ...entry,
-                hexIds: Array.from(updated.values()).sort(),
+                hexes: Array.from(updated.values()).sort(),
               }
             : entry,
         );
       } else {
         const fallbackColor = "#60a5fa";
-        nextStates = [
-          ...nextStates,
+        nextTerritories = [
+          ...nextTerritories,
           {
             id: stateId,
             name: stateId,
             displayColor: fallbackColor,
-            hexIds: [hexId],
+            hexes: [hexId],
           },
         ];
       }
@@ -380,7 +380,7 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
       ...computeMapState({
         ...current.map,
         hexes: nextHexes,
-        states: nextStates,
+        territories: nextTerritories,
         grid: {
           ...current.map.grid,
           bounds,
@@ -398,15 +398,15 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
     }
 
     const remainingHexes = current.map.hexes.filter((hex) => keyForHex(hex) !== hexKey);
-    const nextStates = current.map.states
+    const nextTerritories = current.map.territories
       .map((state) => {
-        const filtered = state.hexIds.filter((id) => id !== hexKey);
+        const filtered = state.hexes.filter((id) => id !== hexKey);
         return {
           ...state,
-          hexIds: filtered,
+          hexes: filtered,
         };
       })
-      .filter((state) => state.hexIds.length > 0 || state.id !== target.stateId);
+      .filter((state) => state.hexes.length > 0 || state.id !== target.stateId);
 
     const bounds = recalcBounds(remainingHexes);
 
@@ -414,7 +414,7 @@ export const useMapEditorStore = create<EditorState>((set, get) => ({
       ...computeMapState({
         ...current.map,
         hexes: remainingHexes,
-        states: nextStates,
+        territories: nextTerritories,
         grid: {
           ...current.map.grid,
           bounds,

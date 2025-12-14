@@ -1,4 +1,4 @@
-import type { HexBounds, HexCell, MapConfig, StateRegion, AxialCoord } from "../schema/mapConfig";
+import type { HexBounds, HexCell, MapConfig, Territory, AxialCoord } from "../schema/mapConfig";
 import type { ParsedSvgDocument, SvgPathDefinition } from "./svgParsing";
 import { axialToPixel, pixelToAxial } from "./hexGeometry";
 import { withRecomputedAdjacency } from "./adjacency";
@@ -12,7 +12,7 @@ export interface GridOverlayConfig {
 
 interface RasterisedResult {
   hexes: HexCell[];
-  states: StateRegion[];
+  territories: Territory[];
   bounds: HexBounds;
   origin: AxialCoord;
 }
@@ -83,7 +83,7 @@ const interpolateHexes = (svg: ParsedSvgDocument, overlay: GridOverlayConfig): R
   if (!pathEntries.length) {
     return {
       hexes: [],
-      states: [],
+      territories: [],
       bounds: { minQ: 0, maxQ: 0, minR: 0, maxR: 0 },
       origin: { q: 0, r: 0 },
     };
@@ -199,13 +199,13 @@ const interpolateHexes = (svg: ParsedSvgDocument, overlay: GridOverlayConfig): R
     }
   }
 
-  const states: StateRegion[] = Array.from(stateHexLookup.entries()).map(([stateId, hexIdSet]) => {
+  const territories: Territory[] = Array.from(stateHexLookup.entries()).map(([stateId, hexIdSet]) => {
     const metadata = stateMeta.get(stateId);
     return {
       id: stateId,
       name: metadata?.name ?? stateId,
       displayColor: metadata?.displayColor ?? "#ffffff",
-      hexIds: Array.from(hexIdSet.values()).sort(),
+      hexes: Array.from(hexIdSet.values()).sort(),
     };
   });
 
@@ -231,7 +231,7 @@ const interpolateHexes = (svg: ParsedSvgDocument, overlay: GridOverlayConfig): R
 
   return {
     hexes,
-    states,
+    territories,
     bounds,
     origin: { q: bounds.minQ, r: bounds.minR },
   };
@@ -254,6 +254,6 @@ export const rasteriseSvgToMap = (
       origin: result.origin,
     },
     hexes: result.hexes,
-    states: result.states,
+    territories: result.territories,
   });
 };

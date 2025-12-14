@@ -54,6 +54,33 @@ const App = () => {
     }
   };
 
+  const convertForExport = (map: MapConfig) => {
+    const _map: any = map;
+    const newT = map.territories.map((t) => ({
+      ...t,
+      hexes: t.hexes.map((h) => {
+        if (!h) return;
+        try {
+          const [q, r] = h
+            .split(",")
+            .map((s) => s.trim())
+            .map(Number);
+          return {
+            q,r,
+            s:-q-r,
+            stateId: t.id
+          };
+        } catch (err) {
+          console.log(err);
+          console.log(h);
+        }
+      }),
+    }));
+
+    _map.territories = newT;
+    return _map;
+  };
+
   const handleExport = () => {
     const blocking = validationIssues.filter((issue) => issue.level === "error");
     if (blocking.length > 0) {
@@ -64,7 +91,8 @@ const App = () => {
         return;
       }
     }
-    const payload = JSON.stringify(map, null, 2);
+    const _map = convertForExport(map);
+    const payload = JSON.stringify(_map, null, 2);
     const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");

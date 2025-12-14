@@ -15,8 +15,8 @@ const StateSidebar = () => {
   const [draftName, setDraftName] = useState("");
   const [draftColorIndex, setDraftColorIndex] = useState(0);
   const selectedTerritory = useMemo(
-    () => map.states.find((state) => state.id === selectedStateId) ?? null,
-    [map.states, selectedStateId],
+    () => map.territories.find((t) => t.id === selectedStateId) ?? null,
+    [map.territories, selectedStateId],
   );
   const [renameValue, setRenameValue] = useState("");
 
@@ -35,7 +35,7 @@ const StateSidebar = () => {
       id: nextId,
       name: draftName.trim(),
       displayColor: DEFAULT_COLORS[draftColorIndex % DEFAULT_COLORS.length],
-      hexIds: [],
+      hexes: [],
     });
 
     setSelectedState(nextId);
@@ -87,37 +87,37 @@ const StateSidebar = () => {
     <aside className="state-sidebar">
       <header className="state-sidebar__header">
         <h2>Territories</h2>
-        <span className="state-sidebar__count">{map.states.length}</span>
+        <span className="state-sidebar__count">{map.territories.length}</span>
       </header>
 
       <ul className="state-sidebar__list">
-        {map.states.map((state) => {
-          const isActive = state.id === selectedStateId;
+        {map.territories.map((territory) => {
+          const isActive = territory.id === selectedStateId;
           return (
             <li
-              key={state.id}
+              key={territory.id}
               className={isActive ? "state-item state-item--active" : "state-item"}
             >
               <button
                 type="button"
                 className="state-item__select"
-                onClick={() => setSelectedState(isActive ? null : state.id)}
+                onClick={() => setSelectedState(isActive ? null : territory.id)}
               >
                 <span
                   className="state-item__swatch"
-                  style={{ backgroundColor: state.displayColor }}
+                  style={{ backgroundColor: territory.displayColor }}
                 />
                 <div className="state-item__meta">
-                  <strong>{state.name}</strong>
-                  <span>{state.hexIds.length} hexes</span>
+                  <strong>{territory.name}</strong>
+                  <span>{territory.hexes.length} hexes</span>
                 </div>
               </button>
               <button
                 type="button"
                 className="state-item__remove"
-                onClick={() => removeState(state.id)}
+                onClick={() => removeState(territory.id)}
                 disabled={interactionMode === "view"}
-                aria-label={`Remove ${state.name}`}
+                aria-label={`Remove ${territory.name}`}
               >
                 ✕
               </button>
@@ -168,7 +168,7 @@ const StateSidebar = () => {
           {map.adjacencies[selectedTerritory.id]?.length ? (
             <ul className="adjacency-list">
               {map.adjacencies[selectedTerritory.id]?.map((neighbourId) => {
-                const neighbour = map.states.find((state) => state.id === neighbourId);
+                const neighbour = map.territories.find((t) => t.id === neighbourId);
                 const name = neighbour?.name ?? neighbourId;
                 return (
                   <li key={neighbourId}>

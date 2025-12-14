@@ -20,15 +20,7 @@ const TurnControls = () => {
   const [a, b] = useStore((z) => z.state.game.diceState.rollTo);
 
   useEffect(() => {
-    if (diceMode == "ACCELERATING") {
-      diceA.setMode("accelerate");
-      diceB.setMode("accelerate");
-      diceA.startPhysicsLoop(nanoid());
-      diceB.startPhysicsLoop(nanoid());
-    } else if (diceMode == "RAGDOLLING") {
-      diceA.setMode("ragdoll");
-      diceB.setMode("ragdoll");
-    } else if (diceMode == "ROLLINGTOFACE") {
+    if (diceMode == "ROLLINGTOFACE") {
       diceA.setMode("spin-to-target", { face: a });
       diceB.setMode("spin-to-target", { face: b });
     }
@@ -37,19 +29,28 @@ const TurnControls = () => {
   const holdStart = () => {
     console.log("holding");
     holdStartRef.current = performance.now();
+    diceA.setMode("accelerate");
+    diceB.setMode("accelerate");
+    diceA.startPhysicsLoop(nanoid());
+    diceB.startPhysicsLoop(nanoid());
     sendDiceMode("acc");
   };
   const holdEnd = () => {
     if (holdStartRef.current == null) return;
     const elapsed = performance.now() - holdStartRef.current!;
     holdStartRef.current = null;
-    if (elapsed < 1000) sendDiceMode("rag");
-    else sendDiceMode("roll");
+    if (elapsed < 1000) {
+      diceA.setMode("ragdoll");
+      diceB.setMode("ragdoll");
+      sendDiceMode("rag");
+    }else {
+      sendDiceMode("roll");
+    }
   };
 
   return (
-    <section className="relative flex flex-col">
-      <div className="flex">
+    <section className="relative flex justify-between w-full h-full items-center">
+      <div className="flex grow-2 justify-center">
         <Dice quaternion={diceA.quat} />
         <Dice quaternion={diceB.quat} />
       </div>

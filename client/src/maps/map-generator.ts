@@ -1,4 +1,4 @@
-import type { TestMap, AxialHex } from "@/components/NewGameBoard/pixi/engine";
+import type { Hex } from "@/types/map-types";
 
 // Directions for moving neighbor-to-neighbor in a hex grid
 const HEX_DIRECTIONS = [
@@ -10,12 +10,12 @@ const HEX_DIRECTIONS = [
   { q: 0, r: +1 },
 ];
 
-export function generateProceduralMap(hexCount: number, hexSize: number = 20): TestMap {
-  const hexes: AxialHex[] = [];
+export function generateProceduralMap(hexCount: number, hexSize: number = 20) {
+  const hexes: Hex[] = [];
   const territoryIds = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
   // 1. Add Center Hex
-  hexes.push({ q: 0, r: 0, s: 0, stateId: resolveState(0, 0, territoryIds) });
+  hexes.push({ q: 0, r: 0, s: 0, territoryID: resolveState(0, 0, territoryIds) });
 
   // 2. Spiral Outwards until we hit the count
   // Based on Red Blob Games: https://www.redblobgames.com/grids/hexagons/#rings
@@ -42,7 +42,7 @@ export function generateProceduralMap(hexCount: number, hexSize: number = 20): T
           q,
           r,
           s: -q - r,
-          stateId: resolveState(q, r, territoryIds),
+          territoryID: resolveState(q, r, territoryIds),
         });
       }
     }
@@ -57,6 +57,7 @@ export function generateProceduralMap(hexCount: number, hexSize: number = 20): T
       origin: { q: 0, r: 0 },
     },
     hexes,
+    
   };
 }
 

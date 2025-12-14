@@ -2,49 +2,25 @@ import * as PIXI from "pixi.js";
 import { Viewport } from "pixi-viewport";
 import { TerrainMesh } from "./layers/TerrianMesh";
 import type { GameMap } from "@/types/map-types";
-import { hslStringToHex } from "@/utils/color-utils";
+import { hexStringToHexNumber, hslStringToHex } from "@/utils/color-utils";
 import { InteractionManager } from "./systems/InteractionManager";
 import { OutlineLayer } from "./layers/OutlineLayer";
 import { DiceTrackLayer } from "./layers/DiceTrackLayer";
-import { useGameStore } from "@/stores/mapStateStore"; // For subscription
+import { useMapStore } from "@/stores/mapStateStore"; // For subscription
 import { pixiTargetLocator } from "@/animation/target-locator";
 import { TokenLayer } from "./layers/TokenLayer";
+import type { Hex } from "@/types/map-types";
+
+export const BACKGROUND_COLOR = 0x09090b
+export const SECONDARY_COLOR = 0x555555
 
 /* ============================
    ======== MAP TYPES =========
    ============================ */
 
-export type AxialHex = {
-  q: number;
-  r: number;
-  s: number;
-  stateId: string;
-};
-
-export type TestMap = {
-  id: string;
-  grid: {
-    orientation: "pointy" | "flat";
-    hexSize: number;
-    origin: { q: number; r: number };
-  };
-  hexes: AxialHex[];
-};
-
 /* ============================
    ===== COLOR RESOLVER =======
    ============================ */
-
-function colorByState(stateId: string): number {
-  switch (stateId) {
-    case "A":
-      return 0x4fa3ff;
-    case "B":
-      return 0xff8c4f;
-    default:
-      return 0xaaaaaa;
-  }
-}
 
 /* ============================
    ========= ENGINE ===========
@@ -76,6 +52,7 @@ export class PixiEngine {
   //
   private interaction: InteractionManager | null = null;
   private storeUnsub: (() => void) | null = null;
+  private territoryColorUnsub: (() => void) | null = null;
 
   // Getters
   getApp() {
@@ -107,7 +84,7 @@ export class PixiEngine {
 
       await localApp.init({
         resizeTo: root,
-        backgroundColor: 0x0,
+        backgroundColor: BACKGROUND_COLOR,
         antialias: true,
         powerPreference: "high-performance",
       });
@@ -131,7 +108,7 @@ export class PixiEngine {
         worldWidth: 1000, // Will be resized on map load
         worldHeight: 1000,
         events: this.app.renderer.events,
-        passiveWheel:false
+        passiveWheel: false,
       });
 
       this.viewport.drag().wheel().pinch().decelerate();
@@ -165,11 +142,24 @@ export class PixiEngine {
       this.generateHexTexture(50);
 
       //listen for state changes
-      this.storeUnsub = useGameStore.subscribe((s) => {
+      this.storeUnsub = useMapStore.subscribe((s) => {
         if (this.outlineLayer) {
-          this.outlineLayer.updateSelection(s.hoveredStateId, s.selectedStateId);
+          this.outlineLayer.updateSelection(s.hoveredTerritoryId, s.selectedTerritoryId);
         }
       });
+
+      this.territoryColorUnsub = useMapStore.subscribe(
+        (s) => s.colorMap,
+        (nextMap, prevMap) => {
+          if (!this.outlineLayer) return;
+          nextMap.forEach((color, territoryId) => {
+            if (prevMap?.get(territoryId) !== color) {
+              this.outlineLayer?.setTerritoryColor(territoryId, color);
+              this.terrain?.setTerritoryColor(territoryId, hexStringToHexNumber(color));
+            }
+          });
+        }
+      );
 
       window.addEventListener("resize", this.handleResize);
       this.viewport.on("zoomed", this.handleZoom);
@@ -267,153 +257,28 @@ export class PixiEngine {
      ===== DEBUG DRAWING ========
      ============================ */
 
-  private drawWorldBounds(w: number, h: number) {
-    if (!this.debugLayer) return;
-    const g = new PIXI.Graphics();
-    // Red Box (0,0 to w,h)
-    g.rect(0, 0, w, h).stroke({ width: 4, color: 0xff3333, alpha: 0.5 });
-    this.debugLayer.addChild(g);
-  }
+  // private drawWorldBounds(w: number, h: number) {
+  //   if (!this.debugLayer) return;
+  //   const g = new PIXI.Graphics();
+  //   // Red Box (0,0 to w,h)
+  //   g.rect(0, 0, w, h).stroke({ width: 4, color: 0xff3333, alpha: 0.5 });
+  //   this.debugLayer.addChild(g);
+  // }
 
-  private drawContentBounds(w: number, h: number) {
-    if (!this.debugLayer) return;
-    const g = new PIXI.Graphics();
-    // Green Box (Centered at 0,0 relative to terrain, so -w/2 to w/2)
-    // NOTE: This is drawn relative to the WORLD center now because we pivot the terrain
-    g.rect(-w / 2, -h / 2, w, h).stroke({ width: 4, color: 0x00ff00, alpha: 0.8 });
-    this.terrain?.addChild(g); // Attach to terrain so it moves with it
-  }
-
-  /* ============================
-     ===== LOAD TEST MAP ========
-     ============================ */
-
-  public loadTestMap(map: TestMap) {
-    if (
-      !this.app ||
-      !this.viewport ||
-      !this.worldLayer ||
-      !this.hexTexture ||
-      !this.terrain ||
-      !this.debugLayer
-    )
-      return;
-
-    // Reset Layers
-    this.debugLayer.removeChildren();
-
-    const { hexSize } = map.grid;
-    const widthPerHex = hexSize * Math.sqrt(3);
-    const heightPerHex = hexSize * 2;
-
-    // 1. Calculate Content Bounds (Raw Q/R logic)
-    let minQ = Infinity,
-      maxQ = -Infinity,
-      minR = Infinity,
-      maxR = -Infinity;
-    for (const h of map.hexes) {
-      if (h.q < minQ) minQ = h.q;
-      if (h.q > maxQ) maxQ = h.q;
-      if (h.r < minR) minR = h.r;
-      if (h.r > maxR) maxR = h.r;
-    }
-
-    // Convert Axial Extents to Local Cartesian Extents
-    // NOTE: This is an approximation of the bounding box.
-    // For precise bounds, we'd check all 6 corners of min/max hexes,
-    // but calculating centers of min/max Q/R is sufficient for the viewport logic.
-
-    const minX = widthPerHex * (minQ + minR / 2);
-    const maxX = widthPerHex * (maxQ + maxR / 2);
-
-    // More precise vertical calc: y = size * 3/2 * r
-    const realMinY = hexSize * 1.5 * minR;
-    const realMaxY = hexSize * 1.5 * maxR;
-
-    const contentWidth = Math.abs(maxX - minX) + widthPerHex * 2; // Add some margin for hex width
-    const contentHeight = Math.abs(realMaxY - realMinY) + heightPerHex * 2;
-
-    const mapCenterX = (minX + maxX) / 2;
-    const mapCenterY = (realMinY + realMaxY) / 2;
-
-    // 2. Calculate World Size (Red Box)
-    const aestheticPadding = 200;
-    const totalWidth = Math.max(this.viewport.screenWidth, contentWidth + aestheticPadding * 2);
-    const totalHeight = Math.max(this.viewport.screenHeight, contentHeight + aestheticPadding * 2);
-
-    // 3. Initialize Terrain Mesh
-    this.terrain.init(map.hexes, hexSize, this.hexTexture);
-
-    // 4. Colorize
-    for (const cell of map.hexes) {
-      this.terrain.setHexColor(cell.q, cell.r, colorByState(cell.stateId));
-    }
-
-    // 5. Position Terrain in Center of World
-    // We pivot the terrain so its internal center aligns with the world center
-    this.terrain.pivot.set(mapCenterX, mapCenterY);
-    this.terrain.position.set(totalWidth / 2, totalHeight / 2);
-
-    // 6. Draw Bounds
-    this.drawWorldBounds(totalWidth, totalHeight); // Red
-    this.drawContentBounds(contentWidth, contentHeight); // Green
-
-    // 7. Update Viewport
-    const parent = this.app.canvas.parentElement;
-    if (parent) {
-      // Update world size
-      this.viewport.resize(parent.clientWidth, parent.clientHeight, totalWidth, totalHeight);
-
-      // Hard clamp to the Red Box
-      this.viewport.clamp({
-        left: 0,
-        top: 0,
-        right: totalWidth,
-        bottom: totalHeight,
-        direction: "all",
-        underflow: "center",
-      });
-
-      // --- ZOOM LOGIC ---
-      // 1. Fit to see everything
-      this.viewport.fit(true, totalWidth, totalHeight);
-
-      const fittedScale = this.viewport.scale.x;
-
-      // 2. Set Zoom Constraints
-      this.viewport.clampZoom({
-        minScale: fittedScale * 0.5, // Allow zooming out slightly past the fit
-        maxScale: fittedScale * 6, // Allow deep zoom
-      });
-
-      // 3. Initial Zoom "Ease-In"
-      // Zoom in slightly so the user feels "in" the world, not looking at a small map
-      const initialZoom = fittedScale * 1.2;
-      const safeZoom = Math.min(initialZoom, fittedScale * 4);
-
-      this.viewport.setZoom(safeZoom);
-      this.viewport.moveCenter(totalWidth / 2, totalHeight / 2);
-    }
-  }
+  // private drawContentBounds(w: number, h: number) {
+  //   if (!this.debugLayer) return;
+  //   const g = new PIXI.Graphics();
+  //   // Green Box (Centered at 0,0 relative to terrain, so -w/2 to w/2)
+  //   // NOTE: This is drawn relative to the WORLD center now because we pivot the terrain
+  //   g.rect(-w / 2, -h / 2, w, h).stroke({ width: 4, color: 0x00ff00, alpha: 0.8 });
+  //   this.terrain?.addChild(g); // Attach to terrain so it moves with it
+  // }
 
   public loadMap(map: GameMap) {
-    if (
-      !this.app ||
-      !this.viewport ||
-      !this.worldLayer ||
-      !this.hexTexture ||
-      !this.terrain ||
-      !this.mapContent
-    )
-      return;
+    if ( !this.app || !this.viewport || !this.worldLayer || !this.hexTexture || !this.terrain || !this.mapContent ) return;
 
     // 1. Pre-calculate Colors
     // Create a lookup: StateID -> HexColorNumber
-    const colorMap = new Map<string, number>();
-
-    map.territories.forEach((state) => {
-      colorMap.set(state.id, hslStringToHex(state.displayColor));
-    });
 
     // 2. Setup Dimensions
     const { hexSize } = map.grid;
@@ -454,32 +319,31 @@ export class PixiEngine {
 
     // 3. Initialize Mesh
     // We map the incoming generic "MapHex" to the shape TerrainMesh expects
-    this.terrain.init(map.hexes as AxialHex[], hexSize, this.hexTexture);
+    this.terrain.init(map, hexSize, this.hexTexture);
 
     // build outlines for territories
     this.outlineLayer?.build(map);
 
-    // 4. Colorize Mesh
-    for (const hex of map.hexes) {
-      if (!hex.stateId) {
-        // Handle "Water" or "Void" - e.g., dark blue or transparent
-        this.terrain.setHexColor(hex.q, hex.r, 0x1a1a2e);
-        continue;
-      }
+    const colorMap = new Map<string, number>();
 
-      const color = colorMap.get(hex.stateId);
-      if (color !== undefined) {
-        this.terrain.setHexColor(hex.q, hex.r, color);
-      } else {
-        // Fallback for unknown state
-        this.terrain.setHexColor(hex.q, hex.r, 0xff00ff);
-      }
+    map.territories.forEach((state) => {
+      colorMap.set(state.id, hslStringToHex(state.displayColor));
+    });
+
+    // 4. Colorize Mesh
+    let cellColorMap: { q: number; r: number; color: number }[] = [];
+    for (const hex of map.hexes) {
+      cellColorMap.push({ q: hex.q, r: hex.r, color: SECONDARY_COLOR });
     }
+    this.terrain.setHexColor(cellColorMap);
 
     // 5. Update Viewport / Camera
     const aestheticPadding = 800;
     const totalWidth = Math.max(this.viewport.screenWidth, contentWidth + aestheticPadding);
-    const totalHeight = Math.max(this.viewport.screenHeight, contentHeight + aestheticPadding + 400);
+    const totalHeight = Math.max(
+      this.viewport.screenHeight,
+      contentHeight + aestheticPadding + 400,
+    );
 
     // Pivot terrain to center
     // this.terrain.pivot.set(mapCenterX, mapCenterY);
@@ -515,12 +379,12 @@ export class PixiEngine {
       // Start with a nice view
       // this.viewport.setZoom(fittedScale * 1.3);
       this.viewport.moveCenter(totalWidth / 2, totalHeight / 2);
-      this.viewport.zoomPercent(0.125,true)
-      this.viewport.snap(200,260,{
-        topLeft:true,
-        removeOnInterrupt:true,
-        removeOnComplete:true
-      })
+      this.viewport.zoomPercent(0.125, true);
+      this.viewport.snap(200, 260, {
+        topLeft: true,
+        removeOnInterrupt: true,
+        removeOnComplete: true,
+      });
 
       setTimeout(() => {
         this.handleZoom();

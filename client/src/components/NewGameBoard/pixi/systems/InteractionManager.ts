@@ -1,11 +1,11 @@
 import { PixiEngine } from "../engine";
-import { useGameStore } from "@/stores/mapStateStore";
-import type { MapHex } from "@/types/map-types";
+import { useMapStore } from "@/stores/mapStateStore";
+import type { Hex } from "@/types/map-types";
 import { FederatedPointerEvent } from "pixi.js";
 
 export class InteractionManager {
   private engine: PixiEngine;
-  private hexLookup = new Map<string, string>(); // "q,r" -> stateId
+  private hexLookup = new Map<string, string>();
   private hexSize = 0;
   private isDragging = false;
 
@@ -28,11 +28,11 @@ export class InteractionManager {
     }
   }
 
-  public initMap(hexes: MapHex[], size: number) {
+  public initMap(hexes: Hex[], size: number) {
     this.hexSize = size;
     this.hexLookup.clear();
     hexes.forEach((h) => {
-      if (h.stateId) this.hexLookup.set(`${h.q},${h.r}`, h.stateId);
+      if (h.territoryID) this.hexLookup.set(`${h.q},${h.r}`, h.territoryID);
     });
   }
 
@@ -51,12 +51,12 @@ export class InteractionManager {
     const hex = this.engine.worldToAxial(localPoint.x, localPoint.y, this.hexSize);
 
     // 3. Lookup State
-    const stateId = this.hexLookup.get(`${hex.q},${hex.r}`) || null;
+    const territoryID = this.hexLookup.get(`${hex.q},${hex.r}`) || null;
 
     // 4. Update Store (only if changed to avoid thrashing)
-    const currentHover = useGameStore.getState().hoveredStateId;
-    if (stateId !== currentHover) {
-      useGameStore.getState().setHoveredState(stateId);
+    const currentHover = useMapStore.getState().hoveredTerritoryId;
+    if (territoryID !== currentHover) {
+      useMapStore.getState().setHoveredTerritory(territoryID);
     }
   };
 
@@ -68,9 +68,9 @@ export class InteractionManager {
     if (!terrain) return;
     const localPoint = terrain.toLocal(e.global);
     const hex = this.engine.worldToAxial(localPoint.x, localPoint.y, this.hexSize);
-    const stateId = this.hexLookup.get(`${hex.q},${hex.r}`) || null;
+    const territoryID = this.hexLookup.get(`${hex.q},${hex.r}`) || null;
 
-    useGameStore.getState().setSelectedState(stateId);
+    useMapStore.getState().setSelectedTerritory(territoryID);
   };
 
   public destroy() {

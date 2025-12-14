@@ -7,6 +7,7 @@ import { useNetworkStore } from "@/stores/networkStore";
 import { useCountdown } from "@/hooks/useCountdown";
 import LobbyActions from "@/components/LobbyActions/LobbyActions";
 import ActionArea from "@/components/ActionArea";
+import { PixiCanvas } from "@/components/NewGameBoard/components/PixiCanvas";
 
 const RoomPage = () => {
   const navigate = useNavigate();
@@ -33,32 +34,28 @@ const RoomPage = () => {
 
   if (networkState === "connecting" || networkState === "reconnecting") {
     return (
-      <div className="room-page room-page--loading">
-        <div className="room-loading">
-          <div className="room-spinner"></div>
-          <p>Connecting to room...</p>
-        </div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <p className="text-4xl">Connecting to room...</p>
       </div>
     );
   }
 
   if (autoReconnect.inprogress && autoReconnect.attempt < 3) {
     return (
-      <div className="room-page room-page--loading">
-        <div className="room-loading">
-          <div className="room-spinner"></div>
-          <p>connection lost. retrying in {remainingSeconds}s...</p>
-        </div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <p className="text-4xl">connection lost. retrying in {remainingSeconds}s...</p>
       </div>
     );
   }
 
   if (networkState === "disconnected") {
     return (
-      <div className="room-page room-page--error">
-        <div className="room-error">
-          <h2>Connection Lost</h2>
-          <button onClick={() => navigate("/")}>Return to Lobby</button>
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex h-full w-full flex-col items-center justify-center">
+          <h1 className="text-4xl">Connection Lost</h1>
+          <button className="bg-secondary mt-4 rounded-md p-4" onClick={() => navigate("/")}>
+            Return to Lobby
+          </button>
         </div>
       </div>
     );
@@ -75,16 +72,15 @@ const RoomPage = () => {
 
   return (
     <div className="flex w-full flex-col items-center justify-center">
-      {/* {spectatorBanner} */}
-      <div className="w-full max-w-[420px]">{/* <DiceTrack/> */}</div>
-      <GameStatus />
+      <div className="w-full max-w-[720px]">
+        <PixiCanvas />
+        <GameStatus />
 
-      {/* Game HUD - only visible during active game */}
-
-      <ActionArea>
-        {roomPhase === "lobby" && <TurnControls />}
-        {roomPhase === "active" && <LobbyActions />}
-      </ActionArea>
+        <ActionArea>
+          {roomPhase === "active" && <TurnControls />}
+          {roomPhase === "lobby" && <LobbyActions />}
+        </ActionArea>
+      </div>
     </div>
   );
 };

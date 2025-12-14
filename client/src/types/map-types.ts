@@ -8,18 +8,18 @@ export interface MapGridConfig {
   resolutionTag?: string;
 }
 
-export interface MapHex {
+export interface Hex {
   q: number;
   r: number;
   s: number;
-  stateId: string | null; // null means water/void
+  territoryID: string | null; // null means water/void
 }
 
-export interface MapStateData {
+export interface Territory {
   id: string;
   name: string;
   displayColor: string; // "hsl(205 65% 55%)"
-  hexIds: string[]; // "q,r" strings
+  hexes: Hex[]; // "q,r" strings
 }
 
 export interface GameMap {
@@ -27,7 +27,7 @@ export interface GameMap {
   name: string;
   version: string;
   grid: MapGridConfig;
-  hexes: MapHex[];
-  territories: MapStateData[];
+  hexes: Hex[];
+  territories: Territory[];
   adjacencies: Record<string, string[]>;
 }

@@ -16,7 +16,7 @@ const LEVEL_LABEL: Record<ValidationIssue["level"], string> = {
 
 const ValidationPanel = () => {
   const issues = useMapEditorStore((state) => state.validationIssues);
-  const territories = useMapEditorStore((state) => state.map.states);
+  const territories = useMapEditorStore((state) => state.map.territories);
 
   const sortedIssues = useMemo(
     () => [...issues].sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]),

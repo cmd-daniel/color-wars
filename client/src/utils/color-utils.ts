@@ -31,3 +31,25 @@ function hslToHex(h: number, s: number, l: number): number {
   };
   return parseInt(`0x${f(0)}${f(8)}${f(4)}`, 16);
 }
+
+export function hexStringToHexNumber(hexString: string): number {
+  let cleanHex = hexString.trim();
+
+  if (cleanHex.startsWith("#")) {
+    cleanHex = cleanHex.slice(1);
+  }
+
+  // Support shorthand #RGB -> #RRGGBB
+  if (cleanHex.length === 3) {
+    cleanHex = cleanHex
+      .split("")
+      .map((ch) => ch + ch)
+      .join("");
+  }
+
+  if (!/^[0-9a-fA-F]{6}$/.test(cleanHex)) {
+    return 0xffffff;
+  }
+
+  return parseInt(cleanHex, 16);
+}

@@ -1,19 +1,23 @@
 // src/pixi/layers/TerrainMesh.ts
 import * as PIXI from "pixi.js";
-import type { AxialHex } from "../engine"; // Adjust path as needed
+import type { GameMap, Hex } from "@/types/map-types";
 
 export class TerrainMesh extends PIXI.Container {
   private mesh: PIXI.Mesh<PIXI.Geometry, PIXI.Shader> | null = null;
   private hexIndexMap = new Map<string, number>();
+  private territoryMap = new Map<string, Hex[]>
   private colorBuffer: Float32Array | null = null;
 
   constructor() {
     super();
   }
 
-  init(hexes: AxialHex[], hexSize: number, texture: PIXI.Texture) {
+  init(map: GameMap, hexSize: number, texture: PIXI.Texture) {
     this.clear();
-
+    const hexes = map.hexes
+    map.territories.forEach((t)=>{
+      this.territoryMap.set(t.id, t.hexes)
+    })
     const totalHexes = hexes.length;
 
     // --- 1. Allocate Buffers ---
@@ -35,7 +39,6 @@ export class TerrainMesh extends PIXI.Container {
     for (let i = 0; i < totalHexes; i++) {
       const hex = hexes[i];
       this.hexIndexMap.set(`${hex.q},${hex.r}`, i);
-
       const cx = width * (hex.q + hex.r / 2);
       const cy = hexSize * 1.5 * hex.r;
 
@@ -132,26 +135,35 @@ export class TerrainMesh extends PIXI.Container {
     this.addChild(this.mesh);
   }
 
-  setHexColor(q: number, r: number, color: number) {
+  setHexColor(cells: Array<{ q: number; r: number; color: number }>) {
     if (!this.mesh || !this.colorBuffer) return;
 
-    const index = this.hexIndexMap.get(`${q},${r}`);
-    if (index === undefined) return;
+    for(const cell of cells){
+      const index = this.hexIndexMap.get(`${cell.q},${cell.r}`);
+      if (index === undefined) return;
 
-    const red = ((color >> 16) & 0xff) / 255;
-    const green = ((color >> 8) & 0xff) / 255;
-    const blue = (color & 0xff) / 255;
+      const red =   ((cell.color >> 16) & 0xff) / 255;
+      const green = ((cell.color >> 8) & 0xff) / 255;
+      const blue =   (cell.color & 0xff) / 255;
 
-    let ptr = index * 16;
-    for (let i = 0; i < 4; i++) {
-      this.colorBuffer[ptr++] = red;
-      this.colorBuffer[ptr++] = green;
-      this.colorBuffer[ptr++] = blue;
-      this.colorBuffer[ptr++] = 1;
+      let ptr = index * 16;
+      for (let i = 0; i < 4; i++) {
+        this.colorBuffer[ptr++] = red;
+        this.colorBuffer[ptr++] = green;
+        this.colorBuffer[ptr++] = blue;
+        this.colorBuffer[ptr++] = 1;
+      }
     }
 
     // In V8, we access buffer via the attribute name
     this.mesh.geometry.getAttribute("aColor").buffer.update();
+  }
+
+  setTerritoryColor(territoryID: string, color: number){
+    const hexes = this.territoryMap.get(territoryID)
+    if(!hexes) return;
+    const cells = hexes.map((h)=>({q:h.q, r:h.r, color}))
+    this.setHexColor(cells)
   }
 
   clear() {
@@ -160,6 +172,7 @@ export class TerrainMesh extends PIXI.Container {
       this.mesh = null;
     }
     this.hexIndexMap.clear();
+    this.territoryMap.clear();
     this.colorBuffer = null;
   }
 }

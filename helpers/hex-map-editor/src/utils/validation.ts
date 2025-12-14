@@ -1,4 +1,4 @@
-import type { MapConfig, StateId, HexCell } from "../schema/mapConfig";
+import type { MapConfig, TerritoryId, HexCell } from "../schema/mapConfig";
 
 export type ValidationLevel = "info" | "warning" | "error";
 
@@ -6,7 +6,7 @@ export interface ValidationIssue {
   level: ValidationLevel;
   type: "empty-state" | "orphan-hex" | "disconnected-state";
   message: string;
-  stateId?: StateId;
+  stateId?: TerritoryId;
   hexKeys?: string[];
 }
 
@@ -23,7 +23,7 @@ const keyFor = (hex: Pick<HexCell, "q" | "r">) => `${hex.q},${hex.r}`;
 
 export const validateMap = (map: MapConfig): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
-  const stateLookup = new Map<StateId, Set<string>>();
+  const stateLookup = new Map<TerritoryId, Set<string>>();
   const hexLookup = new Map<string, HexCell>();
 
   map.hexes.forEach((hex) => {
@@ -37,13 +37,13 @@ export const validateMap = (map: MapConfig): ValidationIssue[] => {
   });
 
   // Empty states or state references without hex coverage
-  map.states.forEach((state) => {
-    if (state.hexIds.length === 0) {
+  map.territories.forEach((t) => {
+    if (t.hexes.length === 0) {
       issues.push({
         level: "warning",
         type: "empty-state",
-        stateId: state.id,
-        message: `Territory "${state.name}" has no hexes assigned.`,
+        stateId: t.id,
+        message: `Territory "${t.name}" has no hexes assigned.`,
       });
     }
   });

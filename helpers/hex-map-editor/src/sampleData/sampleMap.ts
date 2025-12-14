@@ -33,42 +33,42 @@ export const SAMPLE_MAP_CONFIG: MapConfig = {
     { q: 5, r: 0, s: -5, stateId: null },
     { q: 5, r: 1, s: -6, stateId: null },
   ],
-  states: [
+  territories: [
     {
       id: "aurora",
       name: "Aurora",
       displayColor: "#f39c12",
-      hexIds: ["-1,-1", "0,-1", "1,-1"],
+      hexes: ["-1,-1", "0,-1", "1,-1"],
     },
     {
       id: "borealis",
       name: "Borealis",
       displayColor: "#3498db",
-      hexIds: ["1,0", "2,0", "2,1"],
+      hexes: ["1,0", "2,0", "2,1"],
     },
     {
       id: "cerulea",
       name: "Cerulea",
       displayColor: "#1abc9c",
-      hexIds: ["0,1", "1,1", "0,2"],
+      hexes: ["0,1", "1,1", "0,2"],
     },
     {
       id: "dorado",
       name: "Dorado",
       displayColor: "#9b59b6",
-      hexIds: ["-2,0", "-2,1", "-1,1"],
+      hexes: ["-2,0", "-2,1", "-1,1"],
     },
     {
       id: "ember",
       name: "Ember",
       displayColor: "#e74c3c",
-      hexIds: ["3,-1", "3,0", "4,-1"],
+      hexes: ["3,-1", "3,0", "4,-1"],
     },
     {
       id: "fjord",
       name: "Fjord",
       displayColor: "#2ecc71",
-      hexIds: ["-1,2", "-1,3", "0,3"],
+      hexes: ["-1,2", "-1,3", "0,3"],
     },
   ],
   adjacencies: {

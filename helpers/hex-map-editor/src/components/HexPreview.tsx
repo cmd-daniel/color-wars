@@ -20,7 +20,7 @@ const NEUTRAL_FILL = 0x2a2a2a;
 const STROKE_DEFAULT = 0x161616;
 const STROKE_SELECTED = 0xffffff;
 const STROKE_NEIGHBOUR = 0xff1115;
-const STROKE_WIDTH = 1.5;
+//const STROKE_WIDTH = 1.5;
 const CANVAS_BACKGROUND = 0x080b12;
 const PADDING_FACTOR = 2.2;
 
@@ -101,6 +101,7 @@ const InteractiveViewport = ({ viewport, world, children }: InteractiveViewportP
       worldHeight={world.height}
       ticker={ticker}
       events={renderer.events}
+      passiveWheel={false}
     >
       {children}
     </viewport>
@@ -155,7 +156,7 @@ const HexPreview = () => {
     }
 
     const stateColorLookup = new Map(
-      map.states.map((state) => [state.id, colorToNumber(state.displayColor, NEUTRAL_FILL)]),
+      map.territories.map((t) => [t.id, colorToNumber(t.displayColor, NEUTRAL_FILL)]),
     );
     const neighbourSet = selectedStateId ? new Set(map.adjacencies[selectedStateId] ?? []) : null;
 
@@ -240,23 +241,20 @@ const HexPreview = () => {
     addHexAtWorldPoint({ x: local.x - offset.x, y: local.y - offset.y });
   };
 
-  const handleWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
-    event.preventDefault();
-  }, []);
-
   const worldSize = {
     width: Math.max(world.width, viewportSize.width),
     height: Math.max(world.height, viewportSize.height),
   };
 
   return (
-    <div ref={containerRef} className="hex-preview" onWheel={handleWheel}>
+    <div ref={containerRef} className="hex-preview">
       <Application
         width={viewportSize.width}
         height={viewportSize.height}
         background={CANVAS_BACKGROUND}
         antialias
         eventMode="static"
+        
       >
         <InteractiveViewport viewport={viewportSize} world={worldSize}>
           <pixiContainer sortableChildren>

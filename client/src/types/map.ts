@@ -35,7 +35,7 @@ export interface HexCellDefinition {
   q: number;
   r: number;
   s: number;
-  stateId: TerritoryId | null;
+  territoryID: TerritoryId | null;
 }
 
 export interface TerritoryDefinition {

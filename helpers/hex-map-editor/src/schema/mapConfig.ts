@@ -1,4 +1,4 @@
-export type StateId = string;
+export type TerritoryId = string;
 
 export interface MapConfig {
   id: string;
@@ -6,8 +6,8 @@ export interface MapConfig {
   version: string;
   grid: HexGridConfig;
   hexes: HexCell[];
-  states: StateRegion[];
-  adjacencies: Record<StateId, StateId[]>;
+  territories: Territory[];
+  adjacencies: Record<TerritoryId, TerritoryId[]>;
   metadata?: Record<string, unknown>;
 }
 
@@ -35,15 +35,13 @@ export interface HexCell {
   q: number;
   r: number;
   s: number;
-  stateId: StateId | null;
-  elevation?: number;
-  tags?: string[];
+  stateId: TerritoryId | null;
 }
 
-export interface StateRegion {
-  id: StateId;
+export interface Territory {
+  id: TerritoryId;
   name: string;
   displayColor: string;
-  hexIds: string[];
+  hexes: string[];
   tags?: string[];
 }
