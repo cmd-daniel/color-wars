@@ -98,7 +98,11 @@ export const useStore = create(
                 throw error;
               }
             },
-
+            setRoomLeader: (playerId: string)=>{
+              set((z)=>{
+                z.state.room.leaderId = playerId
+              })
+            },
             tryAutoReconnect: async () => {
               const { room } = get();
               if (!room.roomId || !room.reconnectionToken) return false;

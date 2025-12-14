@@ -1,11 +1,6 @@
 import { useEffect, useRef } from "react";
 import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
-import { Sprite } from "pixi.js";
 import { useMapStore } from "@/stores/mapStateStore";
-import { pixiTargetLocator } from "@/animation/target-locator";
-import { HexHop } from "@/actions/actions";
-import { network } from "@/lib/managers/network";
-import { GameEventBus } from "@/lib/managers/GameEventBus";
 
 // Example URL - in a real app this might come from props or a route param
 const MAP_URL = "/india_5.json";

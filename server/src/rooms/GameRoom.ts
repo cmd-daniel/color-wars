@@ -98,7 +98,7 @@ export class GameRoom extends Room<RoomState> {
   async onLeave(client: Client, consented?: boolean) {
     const { game, room } = this.state;
     const { players, playerOrder } = game;
-  
+    logger.debug('player disconnected: ', client.sessionId)
     const player = players.get(client.sessionId);
     if (!player) return;
   
@@ -117,7 +117,11 @@ export class GameRoom extends Room<RoomState> {
           : "null";
   
       if (isActive) game.activePlayerId = next;
-      if (isLeader) room.leaderId = next;
+      if (isLeader){ 
+        console.log('isLeader: true', room.leaderId, next)
+        room.leaderId = next;
+        logger.debug('player removed: ', client.sessionId)
+      }
   
       players.delete(client.sessionId);
       this.state.playersPings.delete(client.sessionId);

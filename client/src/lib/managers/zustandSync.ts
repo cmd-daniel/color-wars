@@ -44,6 +44,11 @@ class ZustandSyncManager {
       GameEventBus.on("UPDATE_DICE_STATE", ({ mode, rollTo }) => {
         useStore.getState().setDiceState(mode, rollTo);
       }),
+
+      GameEventBus.on("UPDATE_ROOM_LEADER", ({ id }) => {
+        useStore.getState().setRoomLeader(id)
+      }),
+
     );
   }
 

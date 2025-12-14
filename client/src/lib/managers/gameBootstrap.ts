@@ -2,11 +2,14 @@
 import { soundManager } from "./sound";
 import { toastManager } from "./toast";
 import { zustandSyncManager } from "./zustandSync";
+import { enableMapSet } from "immer";
+
 
 let bootstrapped = false;
 
 export function bootstrapGame() {
   if (bootstrapped) return;
+  enableMapSet();
   bootstrapped = true;
   console.log("bootstrapping");
   toastManager.init();

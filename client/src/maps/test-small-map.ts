@@ -1,7 +1,4 @@
-// src/maps/test-small-map.ts
-import type { TestMap } from "../components/NewGameBoard/pixi/engine";
-
-export const TEST_SMALL_MAP: TestMap = {
+export const TEST_SMALL_MAP = {
   id: "test-small",
   grid: {
     orientation: "pointy",

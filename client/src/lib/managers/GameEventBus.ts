@@ -10,6 +10,7 @@ export interface LOCAL_EVENT {
   UPDATE_PLAYER: { id: string; player: PlayerState };
   UPDATE_CURRENT_PLAYER: { player: PlayerState };
   REMOVE_PLAYER: { id: string };
+  UPDATE_ROOM_LEADER: { id: string };
   UPDATE_NETWORK_STATE: { state: NetworkState };
   UPDATE_ANIMATION_SPEED: { speedMultiplier: number };
   REQUEST_RECONNECT: undefined;
@@ -36,6 +37,7 @@ class GameEventBusSingleton {
    * Usage: bus.emit(CLIENT_EVENT.PLAYER_ADDED, { id: '1', name: 'Neo' })
    */
   public emit<K extends LocalEventType>(event: K, payload: LOCAL_EVENT[K]): void {
+    console.debug('Emit Event: ', event, payload)
     const handlers = this.events.get(event) as Set<LocalEventHandler<K>> | undefined;
     if (handlers) {
       handlers.forEach((fn) => fn(payload));

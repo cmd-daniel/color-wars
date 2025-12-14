@@ -4,9 +4,7 @@ import LobbyPage from "@/pages/LobbyPage";
 import RoomPage from "@/pages/RoomPage";
 import "./App.css";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { bootstrapGame } from "./lib/managers/gameBootstrap";
 
-bootstrapGame();
 
 const router = createBrowserRouter([
   {

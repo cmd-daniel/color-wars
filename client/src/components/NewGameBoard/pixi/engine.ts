@@ -9,7 +9,6 @@ import { DiceTrackLayer } from "./layers/DiceTrackLayer";
 import { useMapStore } from "@/stores/mapStateStore"; // For subscription
 import { pixiTargetLocator } from "@/animation/target-locator";
 import { TokenLayer } from "./layers/TokenLayer";
-import type { Hex } from "@/types/map-types";
 
 export const BACKGROUND_COLOR = 0x09090b
 export const SECONDARY_COLOR = 0x555555
@@ -37,7 +36,6 @@ export class PixiEngine {
   private mapContent: PIXI.Container | null = null;
   private terrain: TerrainMesh | null = null;
   private outlineLayer: OutlineLayer | null = null;
-  private debugLayer: PIXI.Container | null = null; // Separate layer for debug boxes
   private diceTrack: DiceTrackLayer | null = null;
   private uiLayer: PIXI.Container | null = null;
   private tokenLayer: TokenLayer | null = null;
@@ -153,7 +151,10 @@ export class PixiEngine {
         (nextMap, prevMap) => {
           if (!this.outlineLayer) return;
           nextMap.forEach((color, territoryId) => {
-            if (prevMap?.get(territoryId) !== color) {
+            console.log(territoryId, color)
+            console.log(prevMap.get(territoryId), color)
+            if (prevMap.size == 0 || prevMap?.get(territoryId) !== color) {
+              console.log('color change')
               this.outlineLayer?.setTerritoryColor(territoryId, color);
               this.terrain?.setTerritoryColor(territoryId, hexStringToHexNumber(color));
             }
@@ -431,6 +432,7 @@ export class PixiEngine {
 
     this.app?.destroy(true);
     this.storeUnsub?.();
+    this.territoryColorUnsub?.();
     this.interaction?.destroy();
     this.viewport?.off("zoomed", this.handleZoom);
 
@@ -440,6 +442,5 @@ export class PixiEngine {
     this.viewport = null;
     this.worldLayer = null;
     this.terrain = null;
-    this.debugLayer = null;
   }
 }

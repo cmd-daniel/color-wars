@@ -110,7 +110,7 @@ class Network {
           GameEventBus.emit("REMOVE_PLAYER", { id: playerId });
         }),
         $(this.room.state).playersPings.onChange((ping, playerId) => {
-          GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
+          //GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
         }),
         $(this.room.state.game).listen("diceState", (newDiceState) => {
           const diceState = newDiceState.toJSON();
@@ -122,6 +122,9 @@ class Network {
         $(this.room.state).listen("turnActionHistory", (newValue) => {
           this.handleActionHistory(newValue);
         }),
+        $(this.room.state.room).listen('leaderId',(newValue)=>{
+          GameEventBus.emit('UPDATE_ROOM_LEADER',{id:newValue})
+        })
       );
     });
     this.room.onError((code, message) => {

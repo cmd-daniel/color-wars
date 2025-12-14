@@ -1,6 +1,6 @@
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import Pinger from "./Pinger";
-import { useState, useRef, useLayoutEffect, useEffect } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import type { PlainStateOf, PlayerState } from "@color-wars/shared/src/types/RoomState";
 import { useStore } from "@/stores/sessionStore";
 import { PLAYER } from "@color-wars/shared/src/config/game";
@@ -34,7 +34,7 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
   const leaderId = useStore((z) => z.state.room.leaderId);
   const isLobbyPhase = useStore((z) => z.state.room.phase == "lobby");
   const players = useStore((z) => z.state.game.players);
-
+  console.log(leaderId)
   const ref = useRef<HTMLLIElement>(null);
 
 	useLayoutEffect(() => {

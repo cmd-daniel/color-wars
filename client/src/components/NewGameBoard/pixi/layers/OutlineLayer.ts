@@ -1,6 +1,5 @@
 import * as PIXI from "pixi.js";
 import type { GameMap, Hex } from "@/types/map-types";
-import { hslStringToHex } from "@/utils/color-utils";
 import { BACKGROUND_COLOR, SECONDARY_COLOR } from "../engine";
 
 export class OutlineLayer extends PIXI.Container {
@@ -100,8 +99,8 @@ export class OutlineLayer extends PIXI.Container {
       // Finalize Styles
 
       // Fill Style: Solid color, no stroke
-      gFill.fill({ color: defaultTerritoryColor, alpha: 1.0 });
-      
+      gFill.fill({ color: 0xffffff, alpha: 1.0 });
+      gFill.tint = defaultTerritoryColor
       // Border Style: Thick White
       gBorder.stroke({ width: 2, color: 0xffffff, alpha: 1, join: "round", cap: "round" });
       gBorder.tint=BACKGROUND_COLOR
@@ -165,6 +164,6 @@ export class OutlineLayer extends PIXI.Container {
     const obj = this.stateGraphics.get(territoryID)
     if(!obj) return;
 
-    obj.fill.fill({color, alpha:1})
+    obj.fill.tint = color
   }
 }

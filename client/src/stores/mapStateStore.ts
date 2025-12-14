@@ -1,6 +1,8 @@
 import { create } from "zustand";
-import type { GameMap, Territory } from "@/types/map-types";
+import type { GameMap } from "@/types/map-types";
 import { subscribeWithSelector } from "zustand/middleware";
+import { devtools, combine } from "zustand/middleware";
+import { immer} from "zustand/middleware/immer";
 
 interface MapState {
   currentMap: GameMap | null;
@@ -17,8 +19,6 @@ interface MapState {
   setTerritoryColor: (id: string, color: string) => void;
 }
 
-import { devtools, combine } from "zustand/middleware";
-import { immer } from "zustand/middleware/immer";
 
 export const useMapStore = create<MapState>()(
   subscribeWithSelector(
@@ -33,7 +33,7 @@ export const useMapStore = create<MapState>()(
             selectedTerritoryId: null as string | null,
             colorMap: new Map<string,string>(),
           },
-          (set, get) => ({
+          (set) => ({
             fetchMap: async (url: string) => {
               set((state) => {
                 state.isLoading = true;
@@ -71,6 +71,7 @@ export const useMapStore = create<MapState>()(
             },
             setTerritoryColor: (territoryID: string, color: string) => {
               set((s) => {
+                s.colorMap = new Map(s.colorMap)
                 s.colorMap.set(territoryID, color)
               });
             },
