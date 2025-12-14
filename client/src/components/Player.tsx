@@ -5,6 +5,7 @@ import type { PlainStateOf, PlayerState } from "@color-wars/shared/src/types/Roo
 import { useStore } from "@/stores/sessionStore";
 import { PLAYER } from "@color-wars/shared/src/config/game";
 import gsap from "@gsap";
+import { HandHelping } from "lucide-react";
 
 function PickerPopover({
   open,
@@ -34,8 +35,12 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
   const leaderId = useStore((z) => z.state.room.leaderId);
   const isLobbyPhase = useStore((z) => z.state.room.phase == "lobby");
   const players = useStore((z) => z.state.game.players);
-  console.log(leaderId)
+  const kickPlayer = useStore((z) => z.kickPlayer)
   const ref = useRef<HTMLLIElement>(null);
+
+  const handleKickPlayer = () => {
+    kickPlayer(player.id)
+  }
 
 	useLayoutEffect(() => {
 		if (!ref.current) return;
@@ -64,6 +69,7 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
 
   const isYou = player.id === sessionId;
   const isLeader = player.id === leaderId;
+  const leaderAccess = leaderId === sessionId;
   return (
     <li
       ref={ref}
@@ -133,7 +139,7 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
           <span className="text-sm font-semibold tabular-nums">${player.money}</span>
         )}
 
-        {isLeader && isLobbyPhase && !isYou && <button title="Kick player">❌</button>}
+        {leaderAccess && isLobbyPhase && !isYou && <button onClick={handleKickPlayer} title="Kick player">❌</button>}
 
         <Pinger playerId={player.id} />
       </div>

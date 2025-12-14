@@ -19,6 +19,9 @@ class ToastManager {
             toast(state);
         }
       }),
+      GameEventBus.on('KICKED', ({reason})=>{
+        toast.success(reason, {toasterId: 'center'})
+      })
     );
   }
 

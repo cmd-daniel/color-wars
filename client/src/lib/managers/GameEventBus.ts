@@ -15,6 +15,7 @@ export interface LOCAL_EVENT {
   UPDATE_ANIMATION_SPEED: { speedMultiplier: number };
   REQUEST_RECONNECT: undefined;
   UPDATE_DICE_STATE: { mode: DiceStateMode; rollTo: number[] };
+  KICKED: { reason?: string }
 }
 
 export type LocalEventType = Extract<keyof LOCAL_EVENT, string>;

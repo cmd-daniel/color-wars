@@ -5,7 +5,7 @@ import TurnControls from "@/components/TurnControls";
 import GameStatus from "@/components/GameStatus";
 import { useNetworkStore } from "@/stores/networkStore";
 import { useCountdown } from "@/hooks/useCountdown";
-import LobbyActions from "@/components/LobbyActions/LobbyActions";
+import LobbyActions from "@/components/LobbyActions";
 import ActionArea from "@/components/ActionArea";
 import { PixiCanvas } from "@/components/NewGameBoard/components/PixiCanvas";
 

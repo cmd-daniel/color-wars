@@ -28,6 +28,7 @@ const ACTION_RULES: {
   START_GAME: [rules.requireLeader],
   ACCELERATE_DICE: [],
   RAGDOLL_DICE: [],
+  KICK_PLAYER: [rules.requireLeader, rules.requireLobbyPhase]
 };
 
 export function validateOrThrow<K extends ClientActionType>(

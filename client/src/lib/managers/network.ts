@@ -132,9 +132,12 @@ class Network {
     });
     this.room.onLeave((code, message) => {
       console.log("[network] leave", { code, message });
+      
       this.leave();
       if (code == 1006) {
-        GameEventBus.emit("REQUEST_RECONNECT", undefined);
+        //GameEventBus.emit("REQUEST_RECONNECT", undefined);
+      }else{
+        GameEventBus.emit('KICKED', { reason: message })
       }
     });
   }
@@ -161,7 +164,7 @@ class Network {
     this.stateChangeCallbacks.forEach((fn) => fn());
     this.stateChangeCallbacks = [];
   }
-  async leave(reason: "auto" | "manual" | "refresh" | "disconnect" = "auto") {
+  async leave(reason: "auto" | "manual" | "kicked" | "disconnect" = "auto") {
     if (!this.room) return;
     this.setState("closing");
     const room = this.room;

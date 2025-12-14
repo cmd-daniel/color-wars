@@ -104,6 +104,7 @@ export const useStore = create(
               })
             },
             tryAutoReconnect: async () => {
+              console.log('calling reconnect')
               const { room } = get();
               if (!room.roomId || !room.reconnectionToken) return false;
 
@@ -187,6 +188,13 @@ export const useStore = create(
                 //network.room?.send('toggleReady')
               } catch (error) {
                 console.warn("Unable to toggle ready", error);
+              }
+            },
+            kickPlayer: (playerId:string) => {
+              try{
+                network.send('KICK_PLAYER', {playerId, reason:'GTFO'})
+              }catch(err){
+                console.warn('unable to do action: kick player', playerId)
               }
             },
             reset: () => set(useStore.getInitialState()),

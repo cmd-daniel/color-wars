@@ -6,6 +6,7 @@ export interface ClientMessages {
   START_GAME: {};
   ACCELERATE_DICE: {};
   RAGDOLL_DICE: {};
+  KICK_PLAYER: {playerId: string, reason?: string}
 }
 
 export interface ServerMessages {
@@ -22,7 +23,7 @@ export type ServerActionType = Extract<keyof ServerMessages, string>;
 
 // Context includes the payload + the player who sent it
 export type ActionContext<K extends ClientActionType> = ClientMessages[K] & {
-  playerId: string;
+  senderId: string;
 };
 
 export type PlayerJoinPayload = { playerName: string };

@@ -24,8 +24,8 @@ export class GameRoom extends Room<RoomState> {
   ) {
     this.onMessage(action, (client: Client, payload: ClientMessages[K]) => {
       try {
-        const playerId = client.sessionId;
-        const ctx = { playerId, ...payload } as ActionContext<K>;
+        const senderId = client.sessionId;
+        const ctx = { senderId, ...payload } as ActionContext<K>;
 
         // Validation Logic
         const plainState = this.state.toJSON();
@@ -167,14 +167,19 @@ export class GameRoom extends Room<RoomState> {
       this.state.game.diceState = new DiceState("RAGDOLLING", [1, 2]);
     });
 
-    this.onAction("PONG", (client, { serverT1, clientT2, playerId }) => {
+    this.onAction("PONG", (client, { serverT1, clientT2}) => {
       const serverT3 = Date.now();
       const rawRTT = serverT3 - serverT1;
 
-      this.state.playersPings.set(playerId, rawRTT);
+      this.state.playersPings.set(client.sessionId, rawRTT);
 
-      this.dispatch("PING_PONG", { serverT1, clientT2, serverT3 });
+      //this.dispatch("PING_PONG", { serverT1, clientT2, serverT3 });
     });
+
+    this.onAction("KICK_PLAYER", (client, {playerId})=>{
+      this.clients.getById(playerId)?.leave(1000,'kicked from lobby')
+      logger.debug('Kicked player: ', playerId)
+    })
   }
 
   private handleStartGame(client: Client) {
