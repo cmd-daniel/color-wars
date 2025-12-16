@@ -6,7 +6,7 @@ import { pixiTargetLocator } from "@/animation/target-locator";
 import { PlayerSprite } from "@/components/NewGameBoard/pixi/units/playerSprite";
 import { Sprite } from "pixi.js";
 import { TRACK_COORDINATES } from "@/components/NewGameBoard/config/dice-track-config";
-import { useGameStore } from "@/stores/diceTrackStore";
+import { useDiceTrackStore } from "@/stores/diceTrackStore";
 
 export class HexHop extends BaseAction<ActionRegistry["ANIMATE_HEX_HOP"]> {
   execute(): ActionHandle {
@@ -20,9 +20,7 @@ export class HexHop extends BaseAction<ActionRegistry["ANIMATE_HEX_HOP"]> {
     // 1. Calculate the number of clockwise steps needed
     // If to >= from: Simple difference (e.g., 5 to 10 = 5 steps)
     // If to < from: Wrap around difference (e.g., 30 to 2 with size 34 = 4 + 2 = 6 steps)
-    const stepCount = toTile >= fromTile 
-      ? toTile - fromTile 
-      : (totalTiles - fromTile) + toTile;
+    const stepCount = toTile >= fromTile ? toTile - fromTile : totalTiles - fromTile + toTile;
 
     // 2. Build the path using modulo (%) to handle the array wrap
 
@@ -33,7 +31,7 @@ export class HexHop extends BaseAction<ActionRegistry["ANIMATE_HEX_HOP"]> {
       const coord = TRACK_COORDINATES[currentIndex];
       const id = `track-tile-${coord.q}-${coord.r}`;
       const tile = pixiTargetLocator.get<Sprite>(id);
-      
+
       if (tile) {
         pathSprites.push(tile);
       } else {
@@ -41,16 +39,16 @@ export class HexHop extends BaseAction<ActionRegistry["ANIMATE_HEX_HOP"]> {
       }
     }
 
-    unit.isAnimating = true
-    useGameStore.getState().setActiveToken(null)
+    unit.isAnimating = true;
+    useDiceTrackStore.getState().setActiveToken(null);
     const newHopAction = animateUnitHop(unit, pathSprites);
 
     const actionHandle = ActionHandle.attachCallBack(newHopAction, async () => {
-      const finalTileId = pathSprites.at(pathSprites.length-1)!.label
-      unit.currentTileId = finalTileId
-      unit.isAnimating = false
-      useGameStore.getState().moveToken(unit.id, finalTileId);
-      useGameStore.getState().setActiveToken(unit.id)
+      const finalTileId = pathSprites.at(pathSprites.length - 1)!.label;
+      unit.currentTileId = finalTileId;
+      unit.isAnimating = false;
+      useDiceTrackStore.getState().upsertToken({ id: unit.id, tileId: finalTileId });
+      useDiceTrackStore.getState().setActiveToken(unit.id);
     });
     return actionHandle;
   }

@@ -41,8 +41,7 @@ class Network {
 
   async quickMatch(options: PlayerJoinPayload) {
     if (this.room) return this.room;
-    if (this.state == "reconnecting" || this.state == "connecting")
-      throw new Error("already connecting");
+    if (this.state == "reconnecting" || this.state == "connecting") throw new Error("already connecting");
     this.setState("connecting");
     const room = await this.client.joinOrCreate<RoomState>(
       DEFAULT_ROOM_TYPE,
@@ -187,13 +186,7 @@ class Network {
     // 3. Hard reset local networking
     this.room = null;
     this.setState("disconnected");
-
-    // 4. Reset all client-side domain state
-    // TODO
-    // useNetworkStore.getState().setRoom(null);
-    // useGameStore.getState().reset();
-    // usePlayerStore.getState().reset();
-    // useNetStatsStore?.getState().reset?.();
+    GameEventBus.emit('RESET_STATE', {})
 
     console.log("[network] leave cleanup complete");
   }

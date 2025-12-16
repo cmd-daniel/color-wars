@@ -40,7 +40,7 @@ export function PixiCanvas() {
     <div className="relative h-full w-full p-4">
       {isLoading && <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/50 text-white">Loading Map...</div>}
       <div ref={containerRef} className="aspect-square h-full w-full bg-[#111111]" />
-      <DebugGameControls />
+      {/* <DebugGameControls /> */}
     </div>
   );
 }

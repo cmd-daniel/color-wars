@@ -13,6 +13,7 @@ export const useAnimStore = create(
         (set) => ({
           setSpeed: (speedMultiplier: number) => set({ speedMultiplier }),
           setSkipping: (isSkipping: boolean) => set({ isSkipping }),
+          reset: ()=>{set(useAnimStore.getInitialState())}
         }),
       ),
     ),

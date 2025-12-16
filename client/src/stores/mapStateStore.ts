@@ -17,6 +17,7 @@ interface MapState {
   setHoveredTerritory: (id: string | null) => void;
   setSelectedTerritory: (id: string | null) => void;
   setTerritoryColor: (id: string, color: string) => void;
+  reset: () => void
 }
 
 
@@ -78,6 +79,7 @@ export const useMapStore = create<MapState>()(
                 s.colorMap.set(territoryID, color)
               });
             },
+            reset: ()=>{set(useMapStore.getInitialState())}
           }),
         ),
       ),

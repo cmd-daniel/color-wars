@@ -38,7 +38,7 @@ const LobbyPage = () => {
             PLAY NOW
             <Zap className="h-4 w-4 fill-black transition-transform group-hover/btn:rotate-12 group-hover/btn:fill-white" />
           </Button>
-          <PixiCanvas />
+          {/* <PixiCanvas /> */}
         </div>
       </div>
     </div>

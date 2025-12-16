@@ -16,6 +16,7 @@ export interface LOCAL_EVENT {
   REQUEST_RECONNECT: undefined;
   UPDATE_DICE_STATE: { mode: DiceStateMode; rollTo: number[] };
   KICKED: { reason?: string }
+  RESET_STATE: {}
 }
 
 export type LocalEventType = Extract<keyof LOCAL_EVENT, string>;

@@ -11,6 +11,7 @@ interface NetworkSlice {
     nextRetryAt: number | null;
   };
   setConnectionState: (state: NetworkState) => void;
+  reset: ()=>void
 }
 
 export const useNetworkStore = create<NetworkSlice>()(
@@ -24,5 +25,6 @@ export const useNetworkStore = create<NetworkSlice>()(
     setConnectionState: (state: NetworkState) => {
       set({ state });
     },
+    reset: ()=>{set(useNetworkStore.getInitialState())}
   })),
 );

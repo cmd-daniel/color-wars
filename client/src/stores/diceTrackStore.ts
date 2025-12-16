@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { subscribeWithSelector } from "zustand/middleware";
+import { subscribeWithSelector, combine, devtools } from "zustand/middleware";
+import { immer } from "zustand/middleware/immer";
 
 // The Data definition of a Token
 export interface TokenData {
@@ -14,49 +15,62 @@ interface GameState {
   activeTokenId: string | null;
 
   // Actions
-  addToken: (id: string, color: number, tileId: string) => void;
   removeToken: (id: string) => void;
   moveToken: (id: string, tileId: string) => void;
-  setActiveToken: (id:string|null)=>void;
+  setActiveToken: (id: string | null) => void;
+  upsertToken: (tokenData: { id: string; tileId: string; color?: number }) => void;
   clear: () => void;
 }
 
-export const useGameStore = create<GameState>()(
-  subscribeWithSelector((set) => ({
-    tokens: {},
-    activeTokenId: null,
 
-    clear: () => {
-      set(() => ({ tokens: {} }));
-    },
-    addToken: (id, color, tileId) =>
-      set((state) => ({
-        tokens: {
-          ...state.tokens,
-          [id]: { id, color, tileId },
-        },
-      })),
+const initialState: Omit<GameState, "removeToken" | "moveToken" | "setActiveToken" | "upsertToken" | "clear"> = {
+  tokens: {},
+  activeTokenId: null,
+};
 
-    removeToken: (id) =>
-      set((state) => {
-        const next = { ...state.tokens };
-        delete next[id];
-        return { tokens: next };
-      }),
 
-    moveToken: (id, tileId) =>
-      set((state) => {
-        const token = state.tokens[id];
-        if (!token) return {};
-        return {
-          tokens: {
-            ...state.tokens,
-            [id]: { ...token, tileId }, // Update position
+export const useDiceTrackStore = create<GameState>()(
+  devtools(
+    subscribeWithSelector(
+      immer(
+        combine(initialState, (set, get) => ({
+          clear: () => {
+            set(useDiceTrackStore.getInitialState());
           },
-        };
-      }),
-    setActiveToken: (id) => set({activeTokenId:id})
-  })),
+          removeToken: (id) =>
+            set((state) => {
+              delete state.tokens[id];
+            }),
+          upsertToken: (partial: { id: string; tileId: string; color?: number }) =>
+            set((state) => {
+              if (!state.tokens[partial.id]) {
+                state.tokens[partial.id] = {
+                  id: partial.id,
+                  color: partial.color ?? 0xffffff,
+                  tileId: partial.tileId,
+                };
+              } else {
+                state.tokens[partial.id] = {
+                  ...state.tokens[partial.id],
+                  ...partial,
+                };
+              }
+            }),
+          moveToken: (id, tileId) =>
+            set((state) => {
+              if (state.tokens[id]) {
+                state.tokens[id].tileId = tileId;
+              }
+            }),
+          setActiveToken: (id) =>
+            set((state) => {
+              state.activeTokenId = id;
+            }),
+        }))
+      )
+    ),
+    { name: "diceTrackStore" }
+  )
 );
 
 // Selector to get IDs on a tile

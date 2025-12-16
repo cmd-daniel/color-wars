@@ -1,7 +1,7 @@
 import * as PIXI from "pixi.js";
 import { PlayerSprite } from "../units/playerSprite";
 import { pixiTargetLocator } from "@/animation/target-locator";
-import { useGameStore, type TokenData, getTokensOnTile } from "@/stores/diceTrackStore";
+import { useDiceTrackStore, type TokenData, getTokensOnTile } from "@/stores/diceTrackStore";
 import gsap from "@/lib/gsap";
 import { debounce } from "@/lib/utils";
 
@@ -10,26 +10,27 @@ export class TokenLayer extends PIXI.Container {
 
   // Standard size of the token graphic (radius 20 * 2 = 40 roughly)
   // We use this to calculate how much to scale based on hex size
-  private readonly BASE_TOKEN_RATIO = 3; 
-  private currentHexSize: number = 64;
-  private _debouncedReconcileTokens:(tokens: Record<string, TokenData>)=>void
-  private unsub: ()=>void;
-  private unsubActive: ()=>void;
+  private readonly BASE_TOKEN_RATIO = 3;
+  private currentHexSize: number = 1;
+  private _debouncedReconcileTokens: (tokens: Record<string, TokenData>) => void;
+  private unsub: () => void;
+  private unsubActive: () => void;
 
   constructor() {
     super();
     // Use lodash debounce for reconcileTokens
-    
-    this._debouncedReconcileTokens = debounce(this.reconcileTokens,200)
-    this.unsub = useGameStore.subscribe(
-      (s)=> s.tokens,
+    this._debouncedReconcileTokens = debounce(this.reconcileTokens, 200);
+    const {tokens} = useDiceTrackStore.getState()
+    this.reconcileTokens(tokens, true)
+    this.unsub = useDiceTrackStore.subscribe(
+      (s) => s.tokens,
       (tokens) => {
-        this._debouncedReconcileTokens(tokens)
-      }
-    )
-    this.unsubActive = useGameStore.subscribe(
+        this._debouncedReconcileTokens(tokens);
+      },
+    );
+    this.unsubActive = useDiceTrackStore.subscribe(
       (s) => s.activeTokenId,
-      (newId, prevId)=>{
+      (newId, prevId) => {
         // If prevId and newId units are both present and have the same tile,
         // rearrange only once. Otherwise, rearrange both as needed.
         let prevTileId: string | undefined;
@@ -44,20 +45,20 @@ export class TokenLayer extends PIXI.Container {
           const activeUnit = this.units.get(newId)!;
           newTileId = activeUnit.currentTileId!;
         }
-
+        console.log('token sub')
         if (prevTileId && newTileId && prevTileId === newTileId) {
           this.rearrangeTile(prevTileId, true);
         } else {
           if (prevTileId) this.rearrangeTile(prevTileId, true);
           if (newTileId) this.rearrangeTile(newTileId, true);
         }
-      }
-    )
+      },
+    );
   }
 
   // In TokenLayer.ts
 
-  private reconcileTokens = (tokenDataMap: Record<string, TokenData>) => {
+  private reconcileTokens = (tokenDataMap: Record<string, TokenData>, init?: boolean) => {
     const affectedTiles = new Set<string>();
 
     // 1. ADDITIONS & MOVES (Iterate Source of Truth)
@@ -71,7 +72,6 @@ export class TokenLayer extends PIXI.Container {
       } else {
         // CASE: EXISTING TOKEN - CHECK FOR MOVE
         if (unit.currentTileId !== data.tileId) {
-          
           // A. Mark the OLD tile as affected (needs to close the gap)
           if (unit.currentTileId) {
             affectedTiles.add(unit.currentTileId);
@@ -81,7 +81,7 @@ export class TokenLayer extends PIXI.Container {
           affectedTiles.add(data.tileId);
 
           // C. Update the local logic state immediately
-          // This ensures that when rearrangeTile runs for the OLD tile, 
+          // This ensures that when rearrangeTile runs for the OLD tile,
           // it knows this unit is no longer there.
           unit.currentTileId = data.tileId;
         }
@@ -97,115 +97,121 @@ export class TokenLayer extends PIXI.Container {
       }
     });
 
-    console.log('affectedTiles', affectedTiles);
+    console.log("affectedTiles", affectedTiles);
 
     // 3. REARRANGE VISUALS
     affectedTiles.forEach((tileId) => {
-      this.rearrangeTile(tileId, true);
+      if(!init) this.rearrangeTile(tileId, true);
     });
-  }
+  };
 
-  private createTokenSprite(data: TokenData){
-    const unit = new PlayerSprite(data.id, data.color)
-    unit.currentTileId = data.tileId
-
-    const tileSprite = pixiTargetLocator.get<PIXI.Sprite>(data.tileId)
-    if(tileSprite){
+  private createTokenSprite(data: TokenData) {
+    const unit = new PlayerSprite(data.id, data.color);
+    unit.currentTileId = data.tileId;
+    const tileSprite = pixiTargetLocator.get<PIXI.Sprite>(data.tileId);
+    if (tileSprite) {
+      console.log(tileSprite)
       unit.position.copyFrom(tileSprite.position);
-      unit.scale.set(0)
+      console.log(unit)
+      //unit.scale.set(0);
     }
 
-    this.addChild(unit)
-    this.units.set(data.id, unit)
-    pixiTargetLocator.register(data.id, unit)
+    this.addChild(unit);
+    this.units.set(data.id, unit);
+    pixiTargetLocator.register(data.id, unit);
   }
 
-  private removeTokenSprite(id: string){
+  private removeTokenSprite(id: string) {
     const unit = this.units.get(id);
-    if(!unit) return;
-    pixiTargetLocator.unregister(id)
+    if (!unit) return;
+    pixiTargetLocator.unregister(id);
 
     gsap.to(unit, {
-      pixi:{
+      pixi: {
         scale: 0,
       },
       duration: 0.5,
-      onComplete: ()=>{
-        this.removeChild(unit)
-        unit.destroy({children: true})
-        this.units.delete(id)
-      }
-    })
+      onComplete: () => {
+        this.removeChild(unit);
+        unit.destroy({ children: true });
+        this.units.delete(id);
+      },
+    });
   }
 
-  public rearrangeTile(tileId: string, animate: boolean){
-    const state = useGameStore.getState()
-    const allTokenIds = getTokensOnTile(state, tileId)
+  public rearrangeTile(tileId: string, animate: boolean) {
 
-    const presentTokens = allTokenIds.filter((tokenId)=>{
-      const unit = this.units.get(tokenId)
-      return unit && !unit.isAnimating
-    })
-
-    const passiveTokens: string[] = []
-    let activeTokenId: string | null = null
-
-    presentTokens.forEach((t)=>{
-      if(t === state.activeTokenId) activeTokenId = t
-      else passiveTokens.push(t)
-    })
-
-    const tileSprite = pixiTargetLocator.get<PIXI.Sprite>(tileId)
-    if(!tileSprite || presentTokens.length === 0) return;
+    const state = useDiceTrackStore.getState();
+    const allTokenIds = getTokensOnTile(state, tileId);
     
-    const layoutConfig = getPolygonalConfiguration(passiveTokens.length, this.currentHexSize)
+    console.log('called for tile: ', allTokenIds)
+    const presentTokens = allTokenIds.filter((tokenId) => {
+      const unit = this.units.get(tokenId);
+      return unit && !unit.isAnimating;
+    });
 
-    passiveTokens.forEach((tokenId, index)=>{
-      const unit = this.units.get(tokenId)
-      if(!unit) return;
+    const passiveTokens: string[] = [];
+    let activeTokenId: string | null = null;
 
-      const config = layoutConfig[index]
+    presentTokens.forEach((t) => {
+      if (t === state.activeTokenId) activeTokenId = t;
+      else passiveTokens.push(t);
+    });
 
-      this.applyTransform(unit, tileSprite, config, animate)
-    })
+    const tileSprite = pixiTargetLocator.get<PIXI.Sprite>(tileId);
+    if (!tileSprite || presentTokens.length === 0) return;
 
-    if(activeTokenId){
-      const unit = this.units.get(activeTokenId)
-      if(unit){
-        const activeConfig = { x: 0, y: 0, scale: 1.0}
-        this.setChildIndex(unit, this.children.length - 1)
-        this.applyTransform(unit, tileSprite, activeConfig, animate, true)
+    const layoutConfig = getPolygonalConfiguration(passiveTokens.length, this.currentHexSize);
+
+    passiveTokens.forEach((tokenId, index) => {
+      const unit = this.units.get(tokenId);
+      if (!unit) return;
+
+      const config = layoutConfig[index];
+
+      this.applyTransform(unit, tileSprite, config, animate);
+    });
+
+    if (activeTokenId) {
+      const unit = this.units.get(activeTokenId);
+      if (unit) {
+        const activeConfig = { x: 0, y: 0, scale: 1.0 };
+        this.setChildIndex(unit, this.children.length - 1);
+        this.applyTransform(unit, tileSprite, activeConfig, false, true);
       }
     }
   }
 
-  /** 
-   * Helper to reduce code duplication 
+  /**
+   * Helper to reduce code duplication
    */
   private applyTransform(unit: PlayerSprite, tile: PIXI.Sprite, config: any, animate: boolean, pulse?: boolean) {
     const targetX = tile.x + config.x;
     const targetY = tile.y + config.y;
-    // Calculate scale relative to base size. 
+    // Calculate scale relative to base size.
     // If config.scale is 1.0 (Active), it renders full size.
-    const finalScale = (this.currentHexSize * this.BASE_TOKEN_RATIO) * config.scale;
-
-    const tl = gsap.timeline()
+    const finalScale = this.currentHexSize * this.BASE_TOKEN_RATIO * config.scale;
+    console.log(this.currentHexSize, this.BASE_TOKEN_RATIO, config.scale)
+    const tl = gsap.timeline();
 
     if (animate) {
       tl.to(unit, {
-        pixi:{
+        pixi: {
           x: targetX,
           y: targetY,
           scale: finalScale,
         },
         duration: 0.5,
         ease: "back.out(1.2)",
-        onComplete: ()=>{
+        onUpdate:()=>{
+          console.log('fired')
+        },
+        onComplete: () => {
           //TODO: change this, breaks when resizing
-          if(pulse) unit.startPulse()
-        }
-      })
-      
+          console.log('completed')
+          if (pulse) unit.startPulse();
+        },
+      });
     } else {
       unit.position.set(targetX, targetY);
       unit.scale.set(finalScale);
@@ -215,9 +221,9 @@ export class TokenLayer extends PIXI.Container {
   public resize(hexSize: number) {
     this.currentHexSize = hexSize;
     // Iterate over known tiles
-    const state = useGameStore.getState();
-    const tiles = new Set(Object.values(state.tokens).map(t => t.tileId));
-    tiles.forEach(t => this.rearrangeTile(t, false));
+    const state = useDiceTrackStore.getState();
+    const tiles = new Set(Object.values(state.tokens).map((t) => t.tileId));
+    tiles.forEach((t) => this.rearrangeTile(t, false));
   }
 
   public deleteToken(id: string) {
@@ -240,8 +246,8 @@ export class TokenLayer extends PIXI.Container {
       pixiTargetLocator.unregister(unit.id);
       unit.destroy({ children: true });
     });
-    this.unsub()
-    this.unsubActive()
+    this.unsub();
+    this.unsubActive();
     this.units.clear();
     this.removeChildren();
   }
@@ -274,7 +280,7 @@ export function getPolygonalConfiguration(total: number, hexSize: number): Layou
 
   // 3. Configuration Parameters
   // Distance from center (50% of hex radius)
-  const ringRadius = hexSize*25;
+  const ringRadius = hexSize * 25;
 
   // Scale logic: Shrink as count increases
   let scale = 0.8;
@@ -283,9 +289,9 @@ export function getPolygonalConfiguration(total: number, hexSize: number): Layou
 
   // 4. Generate points
   for (let i = 0; i < total; i++) {
-    // Theta: Divide circle by N. 
+    // Theta: Divide circle by N.
     // -PI/2 shifts start to 12 o'clock (Top)
-    const theta = ((Math.PI * 2) / total) * i - (Math.PI / 2);
+    const theta = ((Math.PI * 2) / total) * i - Math.PI / 2;
 
     configs.push({
       x: Math.cos(theta) * ringRadius,

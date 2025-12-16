@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { useGameStore } from "@/stores/diceTrackStore";
+import { useDiceTrackStore } from "@/stores/diceTrackStore";
 import { TRACK_COORDINATES } from "../config/dice-track-config";
 import { HexHop } from "@/actions/actions";
 
@@ -21,8 +21,8 @@ import { HexHop } from "@/actions/actions";
 
 /** Section 1: Add Player */
 const AddPlayerSection = () => {
-  const tokens = useGameStore((state) => state.tokens);
-  const addToken = useGameStore((state) => state.addToken);
+  const tokens = useDiceTrackStore((state) => state.tokens);
+  const upsertToken = useDiceTrackStore((state) => state.upsertToken);
   const [selectedTile, setSelectedTile] = useState<string>("");
 
   //   function testAnimation() {
@@ -41,7 +41,7 @@ const AddPlayerSection = () => {
   const handleAdd = () => {
     if (selectedTile) {
       const tokenNumber = Object.values(tokens).length;
-      addToken(`unit-${tokenNumber}`, 0x4450d4, selectedTile);
+      upsertToken({ id: `unit-${tokenNumber}`, tileId: selectedTile, color: 0x4450d4 });
     }
   };
 
@@ -73,8 +73,8 @@ const AddPlayerSection = () => {
 
 /** Section 2: Remove Player */
 const RemovePlayerSection = () => {
-  const tokens = useGameStore((state) => state.tokens);
-  const removeToken = useGameStore((state) => state.removeToken);
+  const tokens = useDiceTrackStore((state) => state.tokens);
+  const removeToken = useDiceTrackStore((state) => state.removeToken);
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
 
   const handleRemove = () => {
@@ -114,13 +114,13 @@ const RemovePlayerSection = () => {
 
 /** Section 2: Remove Player */
 const ActivatePlayerSection = () => {
-  const tokens = useGameStore((state) => state.tokens);
-  const activateToken = useGameStore((state) => state.setActiveToken);
+  const tokens = useDiceTrackStore((state) => state.tokens);
+  const activateToken = useDiceTrackStore((state) => state.setActiveToken);
   const [selectedPlayer, setSelectedPlayer] = useState<string>("");
 
   const handleActivate = () => {
     if (selectedPlayer) {
-			if(selectedPlayer === "null") activateToken(null)
+      if (selectedPlayer === "null") activateToken(null);
       activateToken(selectedPlayer);
       setSelectedPlayer("");
     }
@@ -155,7 +155,7 @@ const ActivatePlayerSection = () => {
 
 /** Section 3: Move Player (Player + From + To) */
 const MovePlayerSection = () => {
-  const tokens = useGameStore((state) => state.tokens);
+  const tokens = useDiceTrackStore((state) => state.tokens);
   let tiles = Array.from({ length: 34 }, (_, index) => index);
 
   const [targetPlayer, setTargetPlayer] = useState<string>("");
@@ -173,9 +173,7 @@ const MovePlayerSection = () => {
 
   const handleMove = () => {
     if (targetPlayer && fromTile && toTile) {
-      
-			new HexHop({fromTile:Number(fromTile), toTile: Number(toTile), tokenId: targetPlayer}).execute()
-			//moveToken(targetPlayer, toTile);
+      new HexHop({ fromTile: Number(fromTile), toTile: Number(toTile), tokenId: targetPlayer }).execute();
     }
   };
 
@@ -244,17 +242,17 @@ const MovePlayerSection = () => {
 // ------------------------------------------------------------------
 
 export const DebugGameControls = () => {
-  const clear = useGameStore((s) => s.clear);
+  const clear = useDiceTrackStore((s) => s.clear);
 
   return (
-    <div className="z-50 mb-4 h-[200px] w-full overflow-y-scroll [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] shadow-2xl duration-300">
+    <div className="z-50 mb-4 h-[200px] w-full overflow-y-scroll shadow-2xl duration-300 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <Card className="bg-background/95 supports-backdrop-filter:bg-background/80 border-orange-200/50 backdrop-blur">
         <CardContent className="flex flex-col gap-4">
           <Button onClick={clear} className="mt-1 h-8 w-full text-xs" variant="destructive">
             Reset
           </Button>
           <Separator />
-					<ActivatePlayerSection/>
+          <ActivatePlayerSection />
           <Separator />
           <AddPlayerSection />
           <Separator />
