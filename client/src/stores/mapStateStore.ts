@@ -5,7 +5,7 @@ import { devtools, combine } from "zustand/middleware";
 import { immer} from "zustand/middleware/immer";
 
 interface MapState {
-  currentMap: GameMap | null;
+  //currentMap: GameMap | null;
   isLoading: boolean;
   error: string | null;
   hoveredTerritoryId: string | null;
@@ -13,7 +13,7 @@ interface MapState {
   colorMap: Map<string, string>;
 
   // Actions
-  fetchMap: (url: string) => Promise<void>;
+  fetchMap: (url: string) => Promise<GameMap|null>;
   setHoveredTerritory: (id: string | null) => void;
   setSelectedTerritory: (id: string | null) => void;
   setTerritoryColor: (id: string, color: string) => void;
@@ -26,7 +26,7 @@ export const useMapStore = create<MapState>()(
       immer(
         combine(
           {
-            currentMap: null as GameMap | null,
+            //currentMap: null as GameMap | null,
             isLoading: false,
             error: null as string | null,
             hoveredTerritoryId: null as string | null,
@@ -48,19 +48,22 @@ export const useMapStore = create<MapState>()(
                 if (!data.hexes || !data.territories) throw new Error("Invalid map format");
 
                 set((state) => {
-                  state.currentMap = data;
+                  //state.currentMap = data;
                   state.isLoading = false;
                 });
+                return data
               } catch (err) {
                 console.error(err);
                 set((state) => {
                   state.error = (err as Error).message;
                   state.isLoading = false;
                 });
+                return null
               }
             },
             setHoveredTerritory: (id: string | null) => {
               set((state) => {
+                if (state.hoveredTerritoryId === id) return;
                 state.hoveredTerritoryId = id;
               });
             },

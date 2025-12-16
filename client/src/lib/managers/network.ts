@@ -109,9 +109,9 @@ class Network {
         $(this.room.state.game).players.onRemove((_, playerId) => {
           GameEventBus.emit("REMOVE_PLAYER", { id: playerId });
         }),
-        $(this.room.state).playersPings.onChange((ping, playerId) => {
-          //GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
-        }),
+        // $(this.room.state).playersPings.onChange((ping, playerId) => {
+        //   GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
+        // }),
         $(this.room.state.game).listen("diceState", (newDiceState) => {
           const diceState = newDiceState.toJSON();
           GameEventBus.emit("UPDATE_DICE_STATE", {

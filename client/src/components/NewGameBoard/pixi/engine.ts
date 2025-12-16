@@ -8,7 +8,6 @@ import { OutlineLayer } from "./layers/OutlineLayer";
 import { DiceTrackLayer } from "./layers/DiceTrackLayer";
 import { useMapStore } from "@/stores/mapStateStore"; // For subscription
 import { pixiTargetLocator } from "@/animation/target-locator";
-import { TokenLayer } from "./layers/TokenLayer";
 
 export const BACKGROUND_COLOR = 0x09090b
 export const SECONDARY_COLOR = 0x555555
@@ -38,7 +37,9 @@ export class PixiEngine {
   private outlineLayer: OutlineLayer | null = null;
   private diceTrack: DiceTrackLayer | null = null;
   private uiLayer: PIXI.Container | null = null;
-  private tokenLayer: TokenLayer | null = null;
+  private debugLayer: PIXI.Container | null = null;
+
+
   // Assets
   private hexTexture: PIXI.Texture | null = null;
 
@@ -49,8 +50,10 @@ export class PixiEngine {
 
   //
   private interaction: InteractionManager | null = null;
-  private storeUnsub: (() => void) | null = null;
   private territoryColorUnsub: (() => void) | null = null;
+  private hoverStateUnsub: (() => void) | null = null;
+  private selectedStateUnsub: (() => void) | null = null;
+
 
   // Getters
   getApp() {
@@ -63,7 +66,7 @@ export class PixiEngine {
     return this.terrain;
   }
   public getTokenLayer() {
-    return this.tokenLayer;
+    return this.diceTrack?.getTokenLayer();
   }
 
   /* ============================
@@ -85,6 +88,8 @@ export class PixiEngine {
         backgroundColor: BACKGROUND_COLOR,
         antialias: true,
         powerPreference: "high-performance",
+        resolution: Math.min(window.devicePixelRatio, 2),
+        autoDensity: true,
       });
 
       if (this.destroyed || myToken !== this.initToken) {
@@ -120,6 +125,9 @@ export class PixiEngine {
       this.mapContent = new PIXI.Container();
       this.worldLayer.addChild(this.mapContent);
 
+      this.debugLayer = new PIXI.Container();
+      this.worldLayer.addChild(this.debugLayer);
+
       this.terrain = new TerrainMesh();
       this.mapContent.addChild(this.terrain);
 
@@ -133,16 +141,22 @@ export class PixiEngine {
       this.uiLayer.addChild(this.diceTrack);
       this.diceTrack.init(this.app);
 
-      this.tokenLayer = new TokenLayer();
-      this.diceTrack.getTrackLayer().addChild(this.tokenLayer);
+      // this.tokenLayer = new TokenLayer();
+      // this.diceTrack.getTrackLayer().addChild(this.tokenLayer);
 
       // Generate Assets
       this.generateHexTexture(50);
 
       //listen for state changes
-      this.storeUnsub = useMapStore.subscribe((s) => {
+      this.hoverStateUnsub = useMapStore.subscribe(((s)=>s.hoveredTerritoryId),(s) => {
         if (this.outlineLayer) {
-          this.outlineLayer.updateSelection(s.hoveredTerritoryId, s.selectedTerritoryId);
+          this.outlineLayer.updateSelection(s, null);
+        }
+      });
+
+      this.selectedStateUnsub = useMapStore.subscribe(((s)=>s.selectedTerritoryId),(s) => {
+        if (this.outlineLayer) {
+          this.outlineLayer.updateSelection(null, s);
         }
       });
 
@@ -151,10 +165,7 @@ export class PixiEngine {
         (nextMap, prevMap) => {
           if (!this.outlineLayer) return;
           nextMap.forEach((color, territoryId) => {
-            console.log(territoryId, color)
-            console.log(prevMap.get(territoryId), color)
             if (prevMap.size == 0 || prevMap?.get(territoryId) !== color) {
-              console.log('color change')
               this.outlineLayer?.setTerritoryColor(territoryId, color);
               this.terrain?.setTerritoryColor(territoryId, hexStringToHexNumber(color));
             }
@@ -211,10 +222,11 @@ export class PixiEngine {
     const w = parent.clientWidth;
     const h = parent.clientHeight;
     this.app.renderer.resize(w, h);
+    this.diceTrack?.resize(w, h);
 
     // Resize viewport but keep world dimensions intact
-    this.viewport.resize(w, h, this.viewport.worldWidth, this.viewport.worldHeight);
-    this.diceTrack?.resize(w, h);
+    // this.viewport.resize(w, h, this.viewport.worldWidth, this.viewport.worldHeight);
+    this.viewport.fit(true, this.viewport.worldWidth, this.viewport.worldHeight);
 
     // Optional: Re-clamp if needed, though usually handled by Viewport logic
   };
@@ -272,7 +284,8 @@ export class PixiEngine {
   //   // Green Box (Centered at 0,0 relative to terrain, so -w/2 to w/2)
   //   // NOTE: This is drawn relative to the WORLD center now because we pivot the terrain
   //   g.rect(-w / 2, -h / 2, w, h).stroke({ width: 4, color: 0x00ff00, alpha: 0.8 });
-  //   this.terrain?.addChild(g); // Attach to terrain so it moves with it
+  //   g.position = this.mapContent?.position!
+  //   this.debugLayer.addChild(g); // Attach to terrain so it moves with it
   // }
 
   public loadMap(map: GameMap) {
@@ -306,9 +319,9 @@ export class PixiEngine {
     }
 
     const minX = widthPerHex * (minQ + minR / 2);
-    const maxX = widthPerHex * (maxQ + maxR / 2);
+    const maxX = (widthPerHex * (maxQ + maxR / 2))-300;
     // Rough estimation for pointy top vertical
-    const minY = hexSize * 1.5 * minR;
+    const minY = (hexSize * 1.5 * minR) - 100;
     const maxY = hexSize * 1.5 * maxR;
 
     const contentWidth = Math.abs(maxX - minX) + widthPerHex * 2;
@@ -343,7 +356,7 @@ export class PixiEngine {
     const totalWidth = Math.max(this.viewport.screenWidth, contentWidth + aestheticPadding);
     const totalHeight = Math.max(
       this.viewport.screenHeight,
-      contentHeight + aestheticPadding + 400,
+      contentHeight + aestheticPadding + 800,
     );
 
     // Pivot terrain to center
@@ -361,15 +374,10 @@ export class PixiEngine {
 
       // Update Viewport Bounds
       this.viewport.clamp({
-        left: 0,
-        top: 0,
-        right: totalWidth,
-        bottom: totalHeight,
-        // direction: "all",
-        underflow: "center",
+        direction: "all"
       });
 
-      this.viewport.fit(true, totalWidth, totalHeight);
+      this.viewport.fit();
       const fittedScale = this.viewport.scale.x;
 
       this.viewport.clampZoom({
@@ -377,14 +385,12 @@ export class PixiEngine {
         maxScale: fittedScale * 1000,
       });
 
-      // Start with a nice view
-      // this.viewport.setZoom(fittedScale * 1.3);
-      this.viewport.moveCenter(totalWidth / 2, totalHeight / 2);
-      this.viewport.zoomPercent(0.125, true);
-      this.viewport.snap(200, 260, {
-        topLeft: true,
-        removeOnInterrupt: true,
-        removeOnComplete: true,
+      this.viewport.snapZoom({
+        width:1500,
+        height:1500,
+        center: new PIXI.Point(totalWidth / 2, totalHeight / 2),
+        removeOnComplete:true,
+        removeOnInterrupt: true
       });
 
       setTimeout(() => {
@@ -431,7 +437,8 @@ export class PixiEngine {
     window.removeEventListener("resize", this.handleResize);
 
     this.app?.destroy(true);
-    this.storeUnsub?.();
+    this.hoverStateUnsub?.();
+    this.selectedStateUnsub?.();
     this.territoryColorUnsub?.();
     this.interaction?.destroy();
     this.viewport?.off("zoomed", this.handleZoom);

@@ -72,7 +72,7 @@ const RoomPage = () => {
 
   return (
     <div className="flex w-full flex-col items-center justify-center">
-      <div className="w-full max-w-[720px]">
+      <div className="w-full max-w-[720px] pb-[34vh]">
         <PixiCanvas />
         <GameStatus />
 

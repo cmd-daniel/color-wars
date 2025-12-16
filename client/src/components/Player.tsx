@@ -5,21 +5,8 @@ import type { PlainStateOf, PlayerState } from "@color-wars/shared/src/types/Roo
 import { useStore } from "@/stores/sessionStore";
 import { PLAYER } from "@color-wars/shared/src/config/game";
 import gsap from "@gsap";
-import { HandHelping } from "lucide-react";
 
-function PickerPopover({
-  open,
-  setOpen,
-  enabled,
-  trigger,
-  children,
-}: {
-  open: boolean;
-  setOpen: (v: boolean) => void;
-  enabled: boolean;
-  trigger: React.ReactNode;
-  children: React.ReactNode;
-}) {
+function PickerPopover({ open, setOpen, enabled, trigger, children }: { open: boolean; setOpen: (v: boolean) => void; enabled: boolean; trigger: React.ReactNode; children: React.ReactNode }) {
   return (
     <Popover open={open} onOpenChange={(v) => setOpen(v && enabled)}>
       <PopoverTrigger asChild>{trigger}</PopoverTrigger>
@@ -35,27 +22,27 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
   const leaderId = useStore((z) => z.state.room.leaderId);
   const isLobbyPhase = useStore((z) => z.state.room.phase == "lobby");
   const players = useStore((z) => z.state.game.players);
-  const kickPlayer = useStore((z) => z.kickPlayer)
+  const kickPlayer = useStore((z) => z.kickPlayer);
   const ref = useRef<HTMLLIElement>(null);
 
   const handleKickPlayer = () => {
-    kickPlayer(player.id)
-  }
+    kickPlayer(player.id);
+  };
 
-	useLayoutEffect(() => {
-		if (!ref.current) return;
-	
-		const ctx = gsap.context(() => {
-			gsap.from(ref.current, {
-				x: 800,
-				delay:0.2,
-				duration: 0.25,
-				ease: "power2.out"
-			});
-		});
-	
-		return () => ctx.revert();
-	}, []);
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+
+    const ctx = gsap.context(() => {
+      gsap.from(ref.current, {
+        x: 800,
+        delay: 0.2,
+        duration: 0.25,
+        ease: "power2.out",
+      });
+    });
+
+    return () => ctx.revert();
+  }, []);
 
   const takenIcons = Object.values(players)
     .map((p) => p.icon)
@@ -71,12 +58,7 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
   const isLeader = player.id === leaderId;
   const leaderAccess = leaderId === sessionId;
   return (
-    <li
-      ref={ref}
-      className={`player bg-secondary/10 relative flex items-center justify-between rounded-lg px-3 py-2 transition-opacity ${
-        !player.connected ? "opacity-40" : ""
-      }`}
-    >
+    <li ref={ref} className={`player bg-secondary/10 relative flex items-center justify-between rounded-lg px-3 py-2 transition-opacity ${!player.connected ? "opacity-40" : ""}`}>
       {/* LEFT — Player Info */}
       <div className="flex h-full items-center gap-3">
         {/* Color Picker */}
@@ -84,22 +66,11 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
           open={openColor}
           setOpen={setOpenColor}
           enabled={isLobbyPhase && isYou}
-          trigger={
-            <span
-              className={`h-full w-3 self-stretch rounded-[2px] border ${
-                isYou ? "cursor-pointer" : ""
-              }`}
-              style={{ backgroundColor: player.color }}
-            />
-          }
+          trigger={<span className={`h-full w-3 self-stretch rounded-[2px] border ${isYou ? "cursor-pointer" : ""}`} style={{ backgroundColor: player.color }} />}
         >
           <div className="grid grid-cols-5 gap-2 p-2">
             {availableColors.map((color) => (
-              <button
-                key={color}
-                className="h-6 w-6 rounded-full border transition hover:scale-110"
-                style={{ backgroundColor: color }}
-              />
+              <button key={color} className="h-6 w-6 rounded-full border transition hover:scale-110" style={{ backgroundColor: color }} />
             ))}
           </div>
         </PickerPopover>
@@ -109,11 +80,7 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
           open={openIcon}
           setOpen={setOpenIcon}
           enabled={isLobbyPhase && isYou}
-          trigger={
-            <span className={`text-lg select-none ${isYou ? "cursor-pointer" : ""}`}>
-              {player.icon || "❓"}
-            </span>
-          }
+          trigger={<span className={`text-lg select-none ${isYou ? "cursor-pointer" : ""}`}>{player.icon || "❓"}</span>}
         >
           <div className="grid grid-cols-6 gap-2 p-2">
             {availableIcons.map((icon) => (
@@ -135,11 +102,13 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
 
       {/* RIGHT — Actions */}
       <div className="flex items-center gap-2">
-        {!isLobbyPhase && (
-          <span className="text-sm font-semibold tabular-nums">${player.money}</span>
-        )}
+        {!isLobbyPhase && <span className="text-sm font-semibold tabular-nums">${player.money}</span>}
 
-        {leaderAccess && isLobbyPhase && !isYou && <button onClick={handleKickPlayer} title="Kick player">❌</button>}
+        {leaderAccess && isLobbyPhase && !isYou && (
+          <button onClick={handleKickPlayer} title="Kick player">
+            ❌
+          </button>
+        )}
 
         <Pinger playerId={player.id} />
       </div>

@@ -1,7 +1,12 @@
+import gsap from "@/lib/gsap";
 import * as PIXI from "pixi.js";
 
 export class PlayerSprite extends PIXI.Container {
   public id: string;
+  // Track where this unit logically belongs
+  public currentTileId: string | null = null; 
+  public isAnimating: boolean = false; // Prevents resize from snapping mid-animation
+  private pulseTl?: gsap.core.Timeline;
   private graphics: PIXI.Graphics;
   private shadow: PIXI.Graphics;
 
@@ -15,7 +20,7 @@ export class PlayerSprite extends PIXI.Container {
     this.addChild(this.shadow);
 
     this.graphics = new PIXI.Graphics();
-    this.graphics.circle(0, 0, 20).fill({ color }).stroke({ width: 2, color: 0xffffff });
+    this.graphics.circle(0, 0, 10).fill({ color }).stroke({ width: 2, color: 0xffffff });
 
     this.graphics.eventMode = "static";
     this.graphics.cursor = "pointer";
@@ -25,5 +30,38 @@ export class PlayerSprite extends PIXI.Container {
 
   public setSelected(selected: boolean) {
     this.graphics.tint = selected ? 0xffff00 : 0xffffff;
+  }
+
+  public startPulse(){
+    if(this.pulseTl) return
+    
+    this.pulseTl = gsap.timeline()
+
+    this.pulseTl.to(this, {
+      pixi: {
+        scale: 0.85,
+      },
+      duration: 0.4,
+      ease: "power1.inOut",
+      repeat: -1,
+      yoyo: true,
+    });
+  }
+
+  public stopPulse(){
+    this.pulseTl?.kill()
+    this.pulseTl = undefined
+    gsap.to(this, {
+      pixi: {
+        scale: 1,
+      },
+      duration: 0.2,
+      ease: "power1.inOut",
+    });
+  }
+
+  destroy(_?: PIXI.DestroyOptions): void {
+    this.pulseTl?.kill()
+    this.pulseTl = undefined
   }
 }

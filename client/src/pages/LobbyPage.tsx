@@ -3,6 +3,7 @@ import { useStore } from "@/stores/sessionStore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Gamepad2, Zap } from "lucide-react";
+import { PixiCanvas } from "@/components/NewGameBoard/components/PixiCanvas";
 
 const LobbyPage = () => {
   const playerName = useStore((z) => z.room.playerName);
@@ -37,6 +38,7 @@ const LobbyPage = () => {
             PLAY NOW
             <Zap className="h-4 w-4 fill-black transition-transform group-hover/btn:rotate-12 group-hover/btn:fill-white" />
           </Button>
+          <PixiCanvas />
         </div>
       </div>
     </div>

@@ -2,12 +2,14 @@ import * as PIXI from "pixi.js";
 import { TRACK_COORDINATES, INNER_EDGE_SPEC } from "../../config/dice-track-config";
 import { pixiTargetLocator } from "@/animation/target-locator";
 import { BACKGROUND_COLOR } from "../engine";
+import { TokenLayer } from "./TokenLayer";
 
 export class DiceTrackLayer extends PIXI.Container {
   private background: PIXI.Graphics;
   private trackContainer: PIXI.Container;
   private hexTexture: PIXI.Texture | null = null;
   private sprites: PIXI.Sprite[] = [];
+  public tokenLayer: TokenLayer | null = null; 
 
   // Configuration
   private readonly PADDING = 0; // Padding from screen edge
@@ -24,7 +26,6 @@ export class DiceTrackLayer extends PIXI.Container {
     this.trackContainer = new PIXI.Container();
     this.addChild(this.trackContainer);
   }
-
   /**
    * Called once by engine to setup the sprites
    */
@@ -43,10 +44,18 @@ export class DiceTrackLayer extends PIXI.Container {
       this.sprites.push(sprite);
       this.trackContainer.addChild(sprite);
     });
+
+    this.tokenLayer = new TokenLayer();
+    pixiTargetLocator.register('tokenLayer', this.tokenLayer)
+    this.trackContainer.addChild(this.tokenLayer);
   }
 
   public getTrackLayer() {
     return this.trackContainer;
+  }
+
+  public getTokenLayer() {
+    return this.tokenLayer;
   }
 
   /**
@@ -93,6 +102,7 @@ export class DiceTrackLayer extends PIXI.Container {
     // Calculate offset to center the grid within the container
     const offsetX = (-(minX + maxX) / 2) * hexSize;
     const offsetY = (-(minY + maxY) / 2) * hexSize;
+    const scale = hexSize / 64;
 
     // Update Sprites
     TRACK_COORDINATES.forEach((c, i) => {
@@ -100,12 +110,12 @@ export class DiceTrackLayer extends PIXI.Container {
       this.sprites[i].position.set(x + offsetX, y + offsetY);
       // Scale texture to match the calculated size
       // Texture radius is 64. Real radius is hexSize.
-      const scale = hexSize / 64;
       this.sprites[i].scale.set(scale);
     });
 
     // --- 4. Draw Overlay with Hole ---
     this.drawOverlay(screenWidth, screenHeight, hexSize, offsetX, offsetY);
+    this.tokenLayer!.resize(scale);
   }
 
   private drawOverlay(w: number, h: number, size: number, offX: number, offY: number) {

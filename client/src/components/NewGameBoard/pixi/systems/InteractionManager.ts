@@ -15,7 +15,7 @@ export class InteractionManager {
     const viewport = engine.getViewport();
     if (viewport) {
       // Use 'pointermove' on the viewport
-      viewport.on("pointermove", this.onPointerMove);
+      //viewport.on("pointermove", this.onPointerMove);
       viewport.on("pointertap", this.onPointerTap);
 
       // Prevent click triggers while panning
@@ -23,7 +23,7 @@ export class InteractionManager {
         this.isDragging = true;
       });
       viewport.on("drag-end", () => {
-        setTimeout(() => (this.isDragging = false), 50);
+        setTimeout(() => (this.isDragging = false),0);
       });
     }
   }
@@ -36,29 +36,23 @@ export class InteractionManager {
     });
   }
 
-  private onPointerMove = (e: FederatedPointerEvent) => {
-    if (this.isDragging) return;
+  // private onPointerMove = (e: FederatedPointerEvent) => {
+  //   if (this.isDragging) return;
 
-    // 1. Get world position from Interaction Event
-    // Note: Pixi events have global (screen) coords.
-    // We convert screen -> world using the Terrain container to account for pivot/scale.
-    const terrain = this.engine.getTerrain();
-    if (!terrain) return;
+  //   // 1. Get world position from Interaction Event
+  //   const terrain = this.engine.getTerrain();
+  //   if (!terrain) return;
 
-    const localPoint = terrain.toLocal(e.global);
+  //   const localPoint = terrain.toLocal(e.global);
 
-    // 2. Convert to Axial
-    const hex = this.engine.worldToAxial(localPoint.x, localPoint.y, this.hexSize);
+  //   // 2. Convert to Axial
+  //   const hex = this.engine.worldToAxial(localPoint.x, localPoint.y, this.hexSize);
 
-    // 3. Lookup State
-    const territoryID = this.hexLookup.get(`${hex.q},${hex.r}`) || null;
+  //   // 3. Lookup State
+  //   const territoryID = this.hexLookup.get(`${hex.q},${hex.r}`) || null;
 
-    // 4. Update Store (only if changed to avoid thrashing)
-    const currentHover = useMapStore.getState().hoveredTerritoryId;
-    if (territoryID !== currentHover) {
-      useMapStore.getState().setHoveredTerritory(territoryID);
-    }
-  };
+  //   useMapStore.getState().setHoveredTerritory(territoryID);
+  // };
 
   private onPointerTap = (e: FederatedPointerEvent) => {
     if (this.isDragging) return;
@@ -76,7 +70,7 @@ export class InteractionManager {
   public destroy() {
     const viewport = this.engine.getViewport();
     if (viewport) {
-      viewport.off("pointermove", this.onPointerMove);
+      //viewport.off("pointermove", this.onPointerMove);
       viewport.off("pointertap", this.onPointerTap);
     }
   }

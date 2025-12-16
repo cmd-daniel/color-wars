@@ -1,5 +1,5 @@
 // pages/_app.tsx
-import { Toaster as DefaultToaster } from "@components/ui/sonner";
+import { Toaster as DefaultToaster } from "@/components/ui/sonner";
 
 export default function Toaster() {
   return (
