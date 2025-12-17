@@ -356,7 +356,7 @@ export class PixiEngine {
     const totalWidth = Math.max(this.viewport.screenWidth, contentWidth + aestheticPadding);
     const totalHeight = Math.max(
       this.viewport.screenHeight,
-      contentHeight + aestheticPadding + 800,
+      contentHeight + aestheticPadding,
     );
 
     // Pivot terrain to center
@@ -381,7 +381,7 @@ export class PixiEngine {
       const fittedScale = this.viewport.scale.x;
 
       this.viewport.clampZoom({
-        minScale: fittedScale * 1.3,
+        minScale: fittedScale * 1,
         maxScale: fittedScale * 1000,
       });
 

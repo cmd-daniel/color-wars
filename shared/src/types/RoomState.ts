@@ -154,4 +154,10 @@ export class RoomState extends Schema {
   }
 }
 
+export type Message = {
+  senderId: string,
+  content: string,
+  timeStamp: number
+}
+
 export type PlainStateOf<K extends Schema> = ReturnType<K["toJSON"]>;

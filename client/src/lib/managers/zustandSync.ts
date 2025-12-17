@@ -6,6 +6,7 @@ import { useAnimStore } from "@/stores/animStore";
 import { useDiceTrackStore } from "@/stores/diceTrackStore";
 import { hexStringToHexNumber } from "@/utils/color-utils";
 import { useMapStore } from "@/stores/mapStateStore";
+import { useChatStore } from "@/stores/chatStore";
 
 class ZustandSyncManager {
   private unsubs: (() => void)[] = [];
@@ -63,6 +64,10 @@ class ZustandSyncManager {
         useMapStore.getState().reset()
         useDiceTrackStore.getState().clear()
         useAnimStore.getState().reset()
+      }),
+
+      GameEventBus.on('RELAY_MESSAGE', (message)=>{
+        useChatStore.getState().addMessage(message)
       })
     );
   }

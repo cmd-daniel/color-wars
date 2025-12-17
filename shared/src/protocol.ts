@@ -1,12 +1,12 @@
 export interface ClientMessages {
   PURCHASE_TERRITORY: { territoryId: string; price: number };
   ROLL_DICE: {}; // Empty payload
-  CHAT: { message: string };
   PONG: { serverT1: number; clientT2: number };
   START_GAME: {};
   ACCELERATE_DICE: {};
   RAGDOLL_DICE: {};
   KICK_PLAYER: {playerId: string, reason?: string}
+  SEND_MESSAGE: {senderId: string, content: string, timeStamp: number}
 }
 
 export interface ServerMessages {
@@ -14,6 +14,7 @@ export interface ServerMessages {
   PING_PONG: { serverT1: number; clientT2: number; serverT3: number };
   ACCELERATE_DICE: {};
   RAGDOLL_DICE: {};
+  RELAY_MESSAGE: {senderId: string, content: string, timeStamp: number}
 }
 
 // Helper Types

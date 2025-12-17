@@ -21,14 +21,13 @@ const ACTION_RULES: {
     // rules.requirePlayersTurn
   ],
 
-  CHAT: [rules.requireNonEmptyMessage],
-
   PONG: [],
 
   START_GAME: [rules.requireLeader],
   ACCELERATE_DICE: [],
   RAGDOLL_DICE: [],
-  KICK_PLAYER: [rules.requireLeader, rules.requireLobbyPhase]
+  KICK_PLAYER: [rules.requireLeader, rules.requireLobbyPhase],
+  SEND_MESSAGE: [rules.requirePlayerExists, rules.requireNonEmptyMessage]
 };
 
 export function validateOrThrow<K extends ClientActionType>(

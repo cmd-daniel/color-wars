@@ -80,6 +80,10 @@ class Network {
       this.send("PONG", { serverT1, clientT2: Date.now() });
     });
 
+    this.onMessage('RELAY_MESSAGE', (message) =>{
+      GameEventBus.emit('RELAY_MESSAGE', message)
+    })
+
     this.room.onStateChange.once((state) => {
       if (!this.room?.roomId) return;
       this.setState("connected");

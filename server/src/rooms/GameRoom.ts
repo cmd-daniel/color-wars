@@ -162,10 +162,15 @@ export class GameRoom extends Room<RoomState> {
       logger.info("received accel dice");
       this.state.game.diceState = new DiceState("ACCELERATING", [1, 2]);
     });
+
     this.onAction("RAGDOLL_DICE", (client) => {
       logger.info("received ragdoll dice");
       this.state.game.diceState = new DiceState("RAGDOLLING", [1, 2]);
     });
+
+    this.onAction("SEND_MESSAGE", (client, message) => {
+      this.dispatch('RELAY_MESSAGE', message)
+    })
 
     this.onAction("PONG", (client, { serverT1, clientT2}) => {
       const serverT3 = Date.now();

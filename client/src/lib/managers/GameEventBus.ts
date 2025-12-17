@@ -3,6 +3,7 @@
  * --------------------------------------------- */
 import type { RoomState, PlayerState, DiceStateMode } from "@color-wars/shared/src/types/RoomState";
 import type { NetworkState } from "./network";
+import type { Message } from "@color-wars/shared/src/types/RoomState";
 
 export interface LOCAL_EVENT {
   FULL_SEND: RoomState;
@@ -15,8 +16,9 @@ export interface LOCAL_EVENT {
   UPDATE_ANIMATION_SPEED: { speedMultiplier: number };
   REQUEST_RECONNECT: undefined;
   UPDATE_DICE_STATE: { mode: DiceStateMode; rollTo: number[] };
-  KICKED: { reason?: string }
-  RESET_STATE: {}
+  KICKED: { reason?: string };
+  RESET_STATE: {};
+  RELAY_MESSAGE: Message
 }
 
 export type LocalEventType = Extract<keyof LOCAL_EVENT, string>;

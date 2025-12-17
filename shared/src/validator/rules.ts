@@ -1,4 +1,4 @@
-import type { PlainStateOf, RoomState } from "../types/RoomState";
+import type { Message, PlainStateOf, RoomState } from "../types/RoomState";
 
 // 1. Define the Shapes (The requirements)
 // Every action context in your app seems to have a playerId
@@ -8,9 +8,7 @@ interface WithPlayer {
 interface WithPrice extends WithPlayer {
   price: number;
 }
-interface WithMessage {
-  message: string;
-}
+
 
 // 2. The Rules
 // notice we don't reference specific Actions here, just data shapes.
@@ -34,8 +32,8 @@ export const requireEnoughMoney = (s: PlainStateOf<RoomState>, c: WithPrice) => 
   }
 };
 
-export const requireNonEmptyMessage = (s: PlainStateOf<RoomState>, c: WithMessage) => {
-  if (c.message.trim().length === 0) {
+export const requireNonEmptyMessage = (s: PlainStateOf<RoomState>, c: Message) => {
+  if (c.content.trim().length === 0) {
     throw new Error("Message is Empty");
   }
 };
