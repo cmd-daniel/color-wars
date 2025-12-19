@@ -148,36 +148,19 @@ export class TokenLayer extends PIXI.Container {
       return unit && !unit.isAnimating;
     });
 
-    const passiveTokens: string[] = [];
-    let activeTokenId: string | null = null;
-
-    presentTokens.forEach((t) => {
-      if (t === state.activeTokenId) activeTokenId = t;
-      else passiveTokens.push(t);
-    });
-
     const tileSprite = pixiTargetLocator.get<PIXI.Sprite>(tileId);
     if (!tileSprite || presentTokens.length === 0) return;
 
-    const layoutConfig = getPolygonalConfiguration(passiveTokens.length, this.currentHexSize);
+    const layoutConfig = getPolygonalConfiguration(presentTokens.length, this.currentHexSize);
 
-    passiveTokens.forEach((tokenId, index) => {
+    presentTokens.forEach((tokenId, index) => {
       const unit = this.units.get(tokenId);
       if (!unit) return;
 
       const config = layoutConfig[index];
 
-      this.applyTransform(unit, tileSprite, config, animate);
+      this.applyTransform(unit, tileSprite, config, animate, tokenId === state.activeTokenId);
     });
-
-    if (activeTokenId) {
-      const unit = this.units.get(activeTokenId);
-      if (unit) {
-        const activeConfig = { x: 0, y: 0, scale: 1.0 };
-        this.setChildIndex(unit, this.children.length - 1);
-        this.applyTransform(unit, tileSprite, activeConfig, true, true);
-      }
-    }
   }
 
   /**
