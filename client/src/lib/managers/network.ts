@@ -74,6 +74,7 @@ class Network {
   }
 
   private attachRoomListeners() {
+    console.log("Attaching room listeners");
     if (!this.room) throw new Error("Not connected");
 
     this.onMessage("PING", ({ serverT1 }) => {
@@ -82,6 +83,14 @@ class Network {
 
     this.onMessage('RELAY_MESSAGE', (message) =>{
       GameEventBus.emit('RELAY_MESSAGE', message)
+    })
+
+    this.onMessage('ACCELERATE_DICE', ({}) => {
+      GameEventBus.emit('ACCELERATE_DICE', {})
+    })
+
+    this.onMessage('RAGDOLL_DICE', ({}) => {
+      GameEventBus.emit('RAGDOLL_DICE', {})
     })
 
     this.room.onStateChange.once((state) => {
@@ -115,18 +124,18 @@ class Network {
         // $(this.room.state).playersPings.onChange((ping, playerId) => {
         //   GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
         // }),
-        $(this.room.state.game).listen("diceState", (newDiceState) => {
-          const diceState = newDiceState.toJSON();
-          GameEventBus.emit("UPDATE_DICE_STATE", {
-            mode: diceState.mode,
-            rollTo: diceState.rollTo,
-          });
+        $(this.room.state.room).listen('phase', (newPhase) => {
+          GameEventBus.emit('UPDATE_ROOM_PHASE', {phase: newPhase})
         }),
-        $(this.room.state).listen("turnActionHistory", (newValue) => {
-          this.handleActionHistory(newValue);
+        $(this.room.state).turnActionHistory.onAdd((action, actionId) => {
+          console.log('action type', action.type)
+          this.handleActionHistory([action])
         }),
         $(this.room.state.room).listen('leaderId',(newValue)=>{
           GameEventBus.emit('UPDATE_ROOM_LEADER',{id:newValue})
+        }),
+        $(this.room.state.game).listen('activePlayerId', (newValue) => {
+          GameEventBus.emit('UPDATE_ACTIVE_PLAYER', {playerId: newValue})
         })
       );
     });
@@ -202,9 +211,11 @@ class Network {
 
   private handleActionHistory(actions: GameAction[]) {
     // Grab only actions we have NOT played yet
+    console.log('lastPlayedActionID: ',this.lastPlayedActionID, 'current actions: ', actions.map(a => a.id))
     const pending = actions
-      .filter((a) => a.id > this.lastPlayedActionID)
-      .sort((a, b) => a.id - b.id); // safety
+    .filter((a) => a.id > this.lastPlayedActionID)
+    .sort((a, b) => a.id - b.id); // safety
+    console.log('pending actions: ', pending)
 
     if (pending.length === 0) return;
 
@@ -223,6 +234,7 @@ class Network {
 
         continue;
       } else if (mode == 'fast') this.setSpeed(2)
+        else this.restoreSpeed();
 
       // Create action executor
       const parsed = this.parseServerAction(action.type, action.payload);
@@ -232,8 +244,9 @@ class Network {
       this.actionQueue.enqueue(executable);
     }
 
-    // Update pointer
-    this.lastPlayedActionID = pending[pending.length - 1].id;
+    // Update pointer, cause only one gets called.
+    // update function to take in only one action at a time
+    this.lastPlayedActionID = actions[actions.length - 1].id;
   }
 
   private playActionInstantly(action: GameAction) {

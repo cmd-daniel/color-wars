@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { devtools, combine } from "zustand/middleware";
 import { immer } from "zustand/middleware/immer";
-import gsap from "@gsap";
+import gsap from "@/lib/gsap";
 export const useAnimStore = create(
   devtools(
     immer(

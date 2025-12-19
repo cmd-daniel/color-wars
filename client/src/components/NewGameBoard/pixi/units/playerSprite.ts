@@ -33,15 +33,18 @@ export class PlayerSprite extends PIXI.Container {
   }
 
   public startPulse(){
-    if(this.pulseTl) return
+    if(this.pulseTl) {
+      console.log('start pulse, oh no')
+      this.pulseTl.kill()
+    }
     
     this.pulseTl = gsap.timeline()
 
-    this.pulseTl.to(this, {
+    this.pulseTl.to(this.graphics, {
       pixi: {
         scale: 0.85,
       },
-      duration: 0.4,
+      duration: 0.3,
       ease: "power1.inOut",
       repeat: -1,
       yoyo: true,
@@ -51,7 +54,7 @@ export class PlayerSprite extends PIXI.Container {
   public stopPulse(){
     this.pulseTl?.kill()
     this.pulseTl = undefined
-    gsap.to(this, {
+    gsap.to(this.graphics, {
       pixi: {
         scale: 1,
       },

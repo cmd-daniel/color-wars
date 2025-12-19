@@ -40,7 +40,7 @@ export class DiceTrackLayer extends PIXI.Container {
     TRACK_COORDINATES.forEach((coord, i) => {
       const sprite = new PIXI.Sprite(this.hexTextures[DICE_TRACK[i]]);
       sprite.anchor.set(0.5);
-      const targetID = `track-tile-${coord.q}-${coord.r}`;
+      const targetID = `track-tile-${i}`;
       if (!sprite.destroyed) pixiTargetLocator.register(targetID, sprite); // register for animation
       sprite.label = targetID; // Debug label
       this.sprites.push(sprite);
@@ -238,7 +238,7 @@ export class DiceTrackLayer extends PIXI.Container {
   
       // FILL PATH
       g.roundPoly(0, 0, radius - outerStrokeWidth - innerStrokeWidth, 6, 10, Math.PI / 6);
-      g.fill(innerStrokeColor);
+      g.fill(fillColor);
   
       return app.renderer.textureGenerator.generateTexture({
         target: g,

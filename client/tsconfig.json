@@ -8,7 +8,6 @@
       "@lib/*": ["./src/lib/*"],
       "@animation/*": ["./src/animation/*"],
       "@actions/*": ["./src/actions/*"],
-      "@gsap": ["./src/lib/gsap.ts"],
       "@/*": ["./src/*"]
     }
   }

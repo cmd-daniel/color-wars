@@ -1,7 +1,7 @@
 /* ---------------------------------------------
  * 1. DEFINITIONS
  * --------------------------------------------- */
-import type { RoomState, PlayerState, DiceStateMode } from "@color-wars/shared/src/types/RoomState";
+import type { RoomState, PlayerState, DiceStateMode, RoomPhase } from "@color-wars/shared/src/types/RoomState";
 import type { NetworkState } from "./network";
 import type { Message } from "@color-wars/shared/src/types/RoomState";
 
@@ -19,6 +19,11 @@ export interface LOCAL_EVENT {
   KICKED: { reason?: string };
   RESET_STATE: {};
   RELAY_MESSAGE: Message
+  ACCELERATE_DICE: {};
+  RAGDOLL_DICE: {};
+  ROLL_DICE_TO: {die1: number, die2: number};
+  UPDATE_ACTIVE_PLAYER: {playerId: string}
+  UPDATE_ROOM_PHASE: {phase: RoomPhase}
 }
 
 export type LocalEventType = Extract<keyof LOCAL_EVENT, string>;

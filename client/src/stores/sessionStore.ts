@@ -8,6 +8,7 @@ import type {
   PlayerState,
   RoomState,
   GameState,
+  RoomPhase,
 } from "@color-wars/shared/src/types/RoomState";
 import type { TerritoryId } from "@/types/map";
 import { useNetworkStore } from "./networkStore";
@@ -103,6 +104,33 @@ export const useStore = create(
                 z.state.room.leaderId = playerId
               })
             },
+            accelerateDice: ()=>{
+              set((z)=>{
+                z.state.game.diceState.mode = 'ACCELERATING'
+              })
+            },
+            ragdollDice: ()=>{
+              set((z)=>{
+                z.state.game.diceState.mode = 'RAGDOLLING'
+              })
+            },
+            updateRoomPhase: (phase: RoomPhase)=>{
+              set((z)=>{
+                z.state.room.phase = phase
+              })
+            },
+            rollDiceTo: (die1:number, die2: number)=>{
+              set((z)=>{
+                console.log('called rollDiceTo from: ', z.state.game.diceState.mode)
+                z.state.game.diceState.mode = 'ROLLINGTOFACE'
+                z.state.game.diceState.rollTo = [die1, die2]
+              })
+            },
+            setActivePlayer: (playerId: string)=>{
+              set((z)=>{
+                z.state.game.activePlayerId = playerId
+              })
+            },
             tryAutoReconnect: async () => {
               console.log('calling reconnect')
               const { room } = get();
@@ -149,13 +177,6 @@ export const useStore = create(
                 console.warn("Unable to leave game", error);
               }
             },
-            rollDice: () => {
-              try {
-                network.send("ROLL_DICE", {});
-              } catch (error) {
-                console.error("[rollDice] Error sending rollDice message:", error);
-              }
-            },
             sendDiceMode: (mode: "acc" | "rag" | "roll") => {
               try {
                 console.log("sending ", mode);
@@ -168,7 +189,7 @@ export const useStore = create(
             },
             endTurn: () => {
               try {
-                //network.room?.send('endTurn')
+                network.send("END_TURN", {});
               } catch (error) {
                 console.warn("Unable to end turn", error);
               }

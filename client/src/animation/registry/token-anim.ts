@@ -1,5 +1,5 @@
 import * as PIXI from "pixi.js";
-import gsap from "@gsap";
+import gsap from "@/lib/gsap";
 import { PlayerSprite } from "@/components/NewGameBoard/pixi/units/playerSprite";
 
 /**
@@ -10,6 +10,8 @@ export function animateUnitHop(unit: PlayerSprite, pathTiles: PIXI.Sprite[]) {
 
   // We start from the unit's current position (or the first tile in the path if we want to be strict)
   // But usually, the path[0] is the tile the unit is currently on.
+
+  
   
   for (let i = 0; i < pathTiles.length - 1; i++) {
     const startTile = pathTiles[i];
@@ -19,7 +21,7 @@ export function animateUnitHop(unit: PlayerSprite, pathTiles: PIXI.Sprite[]) {
     const tweenObj = { t: 0 };
 
     tl.to(tweenObj, {
-      duration: 0.4,
+      duration: 0.3,
       t: 1,
       ease: "power1.inOut",
       onStart: () => {

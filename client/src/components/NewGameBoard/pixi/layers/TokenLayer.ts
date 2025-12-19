@@ -15,7 +15,9 @@ export class TokenLayer extends PIXI.Container {
   private _debouncedReconcileTokens: (tokens: Record<string, TokenData>) => void;
   private unsub: () => void;
   private unsubActive: () => void;
-
+  public rearrangeTile = debounce((tileId: string, instant: boolean) => {
+     this._rearrangeTile(tileId, instant);
+  }, 200)
   constructor() {
     super();
     // Use lodash debounce for reconcileTokens
@@ -139,12 +141,14 @@ export class TokenLayer extends PIXI.Container {
     });
   }
 
-  public rearrangeTile(tileId: string, animate: boolean) {
+  private _rearrangeTile(tileId: string, animate: boolean) {
+    const err = new Error();
+    console.log(err.stack);
 
     const state = useDiceTrackStore.getState();
     const allTokenIds = getTokensOnTile(state, tileId);
     
-    console.log('called for tile: ', allTokenIds)
+    console.log('called for tile: ', tileId, ', tokens: ', allTokenIds)
     const presentTokens = allTokenIds.filter((tokenId) => {
       const unit = this.units.get(tokenId);
       return unit && !unit.isAnimating;
@@ -177,7 +181,7 @@ export class TokenLayer extends PIXI.Container {
       if (unit) {
         const activeConfig = { x: 0, y: 0, scale: 1.0 };
         this.setChildIndex(unit, this.children.length - 1);
-        this.applyTransform(unit, tileSprite, activeConfig, false, true);
+        this.applyTransform(unit, tileSprite, activeConfig, true, true);
       }
     }
   }
@@ -208,8 +212,9 @@ export class TokenLayer extends PIXI.Container {
         },
         onComplete: () => {
           //TODO: change this, breaks when resizing
-          console.log('completed')
-          if (pulse) unit.startPulse();
+          if (pulse) {
+            unit.startPulse();
+          }
         },
       });
     } else {

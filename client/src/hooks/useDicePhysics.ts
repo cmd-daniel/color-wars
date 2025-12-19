@@ -68,7 +68,8 @@ export const useDicePhysics = () => {
     const rotationAxis = getRandomVertexAxis();
 
     let SPEED = 0;
-    let last = Date.now();
+    const first = Date.now()
+    let last = first;
     let shouldContinue = true;
 
     // LOCAL SOURCE OF TRUTH (NOT REACT)
@@ -81,11 +82,17 @@ export const useDicePhysics = () => {
       const now = Date.now();
       const dt = now - last;
       last = now;
-
+      
       const mode = stateRef.current.mode;
-
+      
+      console.log(mode)
       // ACCELERATE
       if (mode === "accelerate") {
+        // If spinning for over 10s, transition to 'ragdoll' mode
+        if (now - first > 10000) {
+          console.warn('no input for dice, resetting it')
+          setMode("ragdoll");
+        }
         SPEED = Math.min(SPEED + ACCELERATION * dt, MAX_SPEED);
       }
 
@@ -104,9 +111,10 @@ export const useDicePhysics = () => {
       else if (mode === "auto-spin") {
         SPEED = MAX_SPEED;
       }
-
+      
       // HANDOFF TO STEERING
       else if (mode === "spin-to-target") {
+        if(SPEED == 0) SPEED = MAX_SPEED;
         const face = stateRef.current.targetFace!;
         shouldContinue = false;
         animationRef.current = null;
@@ -245,7 +253,7 @@ export const useDicePhysics = () => {
     rolledNumber,
     startPhysicsLoop,
     setMode,
-
+    animationRef,
     rotateToFace,
     randomRotate,
 

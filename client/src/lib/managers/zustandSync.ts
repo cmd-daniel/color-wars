@@ -18,8 +18,12 @@ class ZustandSyncManager {
       }),
 
       GameEventBus.on("UPDATE_PLAYER", ({ id, player }) => {
+        const playerExists = useStore.getState().state.game.players[id];
+        if (!playerExists){
+          console.log('adding token for new player:', id);
+          useDiceTrackStore.getState().upsertToken({ id: player.id, tileId: `track-tile-${player.position}`, color: hexStringToHexNumber(player.color) });
+        }
         useStore.getState().setPlayer(id, player.toJSON());
-        useDiceTrackStore.getState().upsertToken({ id: player.id, tileId: "track-tile-0-0", color: hexStringToHexNumber(player.color) });
       }),
 
       GameEventBus.on("UPDATE_CURRENT_PLAYER", ({ player }) => {
@@ -27,9 +31,15 @@ class ZustandSyncManager {
       }),
 
       GameEventBus.on("FULL_SEND", (state) => {
-        useStore.setState({ state: state.toJSON() });
+        if(state.turnCheckpoint){
+          console.log('not null', state)
+          state.game = state.turnCheckpoint
+          useStore.setState({ state: state.toJSON()});
+        }else{
+          useStore.setState({ state: state.toJSON()});
+        }
         state.game.players.forEach((player) => {
-          useDiceTrackStore.getState().upsertToken({ id: player.id, tileId: "track-tile-0-0", color: hexStringToHexNumber(player.color) });
+          useDiceTrackStore.getState().upsertToken({ id: player.id, tileId: `track-tile-${player.position}`, color: hexStringToHexNumber(player.color) });
         });
       }),
 
@@ -68,6 +78,23 @@ class ZustandSyncManager {
 
       GameEventBus.on('RELAY_MESSAGE', (message)=>{
         useChatStore.getState().addMessage(message)
+      }),
+
+      GameEventBus.on('ACCELERATE_DICE', ()=>{
+        useStore.getState().accelerateDice()
+      }),
+
+      GameEventBus.on('RAGDOLL_DICE', ()=>{
+        useStore.getState().ragdollDice()
+      }),
+
+      GameEventBus.on('UPDATE_ACTIVE_PLAYER', ({playerId})=>{
+        useDiceTrackStore.getState().setActiveToken(playerId)
+        useStore.getState().setActivePlayer(playerId)
+      }),
+
+      GameEventBus.on('UPDATE_ROOM_PHASE', ({phase})=>{
+        useStore.getState().updateRoomPhase(phase)
       })
     );
   }

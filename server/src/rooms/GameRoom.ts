@@ -1,4 +1,4 @@
-import { Client, Delayed, Room, logger } from "colyseus";
+import { AuthContext, Client, Delayed, Room, logger } from "colyseus";
 
 import { RoomManager } from "../matchmaking/RoomManager";
 import { GameEngine } from "../game/GameEngine";
@@ -56,7 +56,7 @@ export class GameRoom extends Room<RoomState> {
     this.autoDispose = true;
 
     this.state = new RoomState(this.roomId);
-    this.gameEngine = new GameEngine(this.state.game);
+    this.gameEngine = new GameEngine(this.state);
     this.gameEngine.setRoomClock(this.clock);
 
     this.pinger = this.clock.setInterval(() => {
@@ -136,7 +136,7 @@ export class GameRoom extends Room<RoomState> {
       }
   
       // allow reconnect
-      await this.allowReconnection(client, 120);
+      await this.allowReconnection(client, 10);
   
       // client returned
       player.connected = true;
@@ -153,19 +153,21 @@ export class GameRoom extends Room<RoomState> {
   }
 
   private registerMessageHandlers() {
-    this.onAction("ROLL_DICE", () => {
+    this.onAction("ROLL_DICE", (client) => {
       logger.info("received roll dice");
-      this.state.game.diceState = new DiceState("ROLLINGTOFACE", [1, 2]);
+      this.gameEngine.handleRoll(client)
     });
 
     this.onAction("ACCELERATE_DICE", (client) => {
       logger.info("received accel dice");
-      this.state.game.diceState = new DiceState("ACCELERATING", [1, 2]);
+      this.dispatch('ACCELERATE_DICE', {})
+      //this.state.game.diceState = new DiceState("ACCELERATING");
     });
 
     this.onAction("RAGDOLL_DICE", (client) => {
       logger.info("received ragdoll dice");
-      this.state.game.diceState = new DiceState("RAGDOLLING", [1, 2]);
+      this.dispatch('RAGDOLL_DICE', {})
+      //this.state.game.diceState = new DiceState("RAGDOLLING");
     });
 
     this.onAction("SEND_MESSAGE", (client, message) => {
@@ -185,18 +187,28 @@ export class GameRoom extends Room<RoomState> {
       this.clients.getById(playerId)?.leave(1000,'kicked from lobby')
       logger.debug('Kicked player: ', playerId)
     })
+
+    this.onAction('START_GAME', () => {
+      this.lock();
+      this.state.room.phase = 'active'
+      this.updateMetadata();
+      logger.info('Game started')
+      this.gameEngine.startGame()
+    })
+
+    this.onAction('END_TURN', (client) => {
+      logger.info('received end turn');
+      this.gameEngine.endTurn();
+    })
   }
 
-  private handleStartGame(client: Client) {
-    // Only leader can start the game
-    if (client.sessionId !== this.state.room.leaderId) return;
+  onAuth(client: Client<any, any>, options: any, context: AuthContext) {
+    const hasGameStarted = this.state.room.phase === "active";
+    if (hasGameStarted) {
+      throw new Error("Game has already started");
+    }
 
-    if (this.state.room.phase !== "lobby") return;
-
-    this.state.room.phase = "active";
-
-    this.gameEngine.startGame();
-    void this.updateMetadata();
+    return super.onAuth(client, options, context);
   }
 
   public finishGame(reason: string = "completed") {

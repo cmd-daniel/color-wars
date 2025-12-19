@@ -18,7 +18,8 @@ const ACTION_RULES: {
 
   ROLL_DICE: [
     rules.requirePlayerExists,
-    // rules.requirePlayersTurn
+    rules.requirePlayersTurn,
+    rules.requireHasNotRolledDice,
   ],
 
   PONG: [],
@@ -27,7 +28,13 @@ const ACTION_RULES: {
   ACCELERATE_DICE: [],
   RAGDOLL_DICE: [],
   KICK_PLAYER: [rules.requireLeader, rules.requireLobbyPhase],
-  SEND_MESSAGE: [rules.requirePlayerExists, rules.requireNonEmptyMessage]
+  SEND_MESSAGE: [rules.requirePlayerExists, rules.requireNonEmptyMessage],
+
+  END_TURN: [
+    rules.requirePlayerExists,
+    rules.requirePlayersTurn,
+    rules.requireHasRolledDice,
+  ],
 };
 
 export function validateOrThrow<K extends ClientActionType>(

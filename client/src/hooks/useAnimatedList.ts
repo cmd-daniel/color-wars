@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
-import gsap from "@gsap";
-import { Flip } from "@gsap";
+import gsap from '@/lib/gsap';
+import { Flip } from '@/lib/gsap';
 
 export function useAnimatedList<T>(
   items: T[],
@@ -49,6 +49,12 @@ export function useAnimatedList<T>(
         absolute: false,
       });
     });
+
+  return () => {
+    // Optional: Cleanup previous FLIP state or animations if needed
+    // In this usage, no explicit cleanup for gsap/Flip is needed,
+    // but if you attach event listeners or run side effects, clean up here.
+  };
   }, [items]);
 
   return containerRef;

@@ -1,10 +1,11 @@
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import Pinger from "./Pinger";
-import { useState, useRef, useLayoutEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { PlainStateOf, PlayerState } from "@color-wars/shared/src/types/RoomState";
 import { useStore } from "@/stores/sessionStore";
 import { PLAYER } from "@color-wars/shared/src/config/game";
-import gsap from "@gsap";
+import gsap from "@/lib/gsap";
+import { useGSAP } from "@gsap/react";
 
 function PickerPopover({ open, setOpen, enabled, trigger, children }: { open: boolean; setOpen: (v: boolean) => void; enabled: boolean; trigger: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -28,21 +29,30 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
   const handleKickPlayer = () => {
     kickPlayer(player.id);
   };
+  console.log('player called', player.id)
 
-  useLayoutEffect(() => {
-    if (!ref.current) return;
+  useGSAP(() => {
+    const tl = gsap.timeline()
+    tl.from(ref.current, {
+      x: 800,
+      delay: 0.2,
+      duration: 0.25,
+      ease: "power2.out",
+    })
+  });
 
-    const ctx = gsap.context(() => {
-      gsap.from(ref.current, {
-        x: 800,
-        delay: 0.2,
-        duration: 0.25,
-        ease: "power2.out",
-      });
-    });
-
-    return () => ctx.revert();
-  }, []);
+  // useEffect(() => {
+  //   if (!ref.current) return;
+  //   const ctx = gsap.context(() => {
+  //     gsap.from(ref.current, {
+  //       x: 800,
+  //       delay: 0.2,
+  //       duration: 0.25,
+  //       ease: "power2.out",
+  //     });
+  //   });
+  //   return () => ctx.revert();
+  // }, []);
 
   const takenIcons = Object.values(players)
     .map((p) => p.icon)

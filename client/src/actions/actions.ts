@@ -7,8 +7,9 @@ import { PlayerSprite } from "@/components/NewGameBoard/pixi/units/playerSprite"
 import { Sprite } from "pixi.js";
 import { TRACK_COORDINATES } from "@/components/NewGameBoard/config/dice-track-config";
 import { useDiceTrackStore } from "@/stores/diceTrackStore";
+import { useStore } from "@/stores/sessionStore";
 
-export class HexHop extends BaseAction<ActionRegistry["ANIMATE_HEX_HOP"]> {
+export class HexHop extends BaseAction<ActionRegistry["MOVE_PLAYER"]> {
   execute(): ActionHandle {
     const { fromTile, toTile, tokenId } = this.payload;
     const unit = pixiTargetLocator.get<PlayerSprite>(tokenId);
@@ -28,8 +29,7 @@ export class HexHop extends BaseAction<ActionRegistry["ANIMATE_HEX_HOP"]> {
       // This ensures that when we hit index 34, it wraps back to 0
       const currentIndex = (fromTile + i) % totalTiles;
 
-      const coord = TRACK_COORDINATES[currentIndex];
-      const id = `track-tile-${coord.q}-${coord.r}`;
+      const id = `track-tile-${currentIndex}`;
       const tile = pixiTargetLocator.get<Sprite>(id);
 
       if (tile) {
@@ -51,5 +51,18 @@ export class HexHop extends BaseAction<ActionRegistry["ANIMATE_HEX_HOP"]> {
       useDiceTrackStore.getState().setActiveToken(unit.id);
     });
     return actionHandle;
+  }
+}
+
+export class RollDice extends BaseAction<ActionRegistry["ROLL_DICE"]> {
+  execute(): ActionHandle {
+    const { die1, die2 } = this.payload;
+    console.log('called rollTo: ')
+    useStore.getState().rollDiceTo(die1, die2);
+    return new ActionHandle(
+      new Promise<void>((resolve) => setTimeout(resolve, 2500)),
+      () => {},
+      () => {},
+    );
   }
 }

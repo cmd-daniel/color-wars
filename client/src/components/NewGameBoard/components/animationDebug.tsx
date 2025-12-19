@@ -57,7 +57,7 @@ const AddPlayerSection = () => {
           </SelectTrigger>
           <SelectContent>
             {tiles.map((tile) => (
-              <SelectItem key={tile} value={`track-tile-${TRACK_COORDINATES[tile].q}-${TRACK_COORDINATES[tile].r}`} className="text-xs">
+              <SelectItem key={tile} value={`track-tile-${tile}`} className="text-xs">
                 {`track-tile-[${tile}]`}
               </SelectItem>
             ))}

@@ -33,7 +33,6 @@
       "@animation/*": ["./src/animation/*"],
       "@actions/*": ["./src/actions/*"],
       "@store/*": ["./src/store/*"],
-      "@gsap": ["./src/lib/gsap.ts"],
     },
     "types": ["vite/client", "@pixi/react"]
   },

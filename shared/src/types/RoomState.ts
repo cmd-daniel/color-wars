@@ -1,9 +1,15 @@
 import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
 
 export type RoomPhase = "lobby" | "active" | "finished";
-export type TurnPhase = "awaiting-roll" | "awaiting-end-turn";
 export type RoomVisibility = "private" | "public";
 export type TradeStatus = "pending" | "accepted" | "rejected";
+export type BuildingType = "none" | "city" | "factory" | "silo";
+export type TurnPhase = "awaiting-roll" | "resolving-draft" | "resolving-bankruptcy" | "awaiting-end-turn" | "game-over";
+
+export class TerritoryState extends Schema {
+  @type("string") ownerId: string = "";
+  @type("string") buildingType: BuildingType = "none";
+}
 
 export class StatusEffect extends Schema {
   @type("string") id: string;
@@ -129,11 +135,19 @@ export class GameAction extends Schema {
 export class GameState extends Schema {
   @type("string") activePlayerId: string = "";
   @type("string") turnPhase: TurnPhase = "awaiting-roll";
+  
+  //Map <tradeID, trade>
   @type({ map: Trade }) activeTrades = new MapSchema<Trade>();
+  
   @type(DiceState) diceState: DiceState = new DiceState();
+  
+  //Map <playerID, playerState>
   @type({ map: PlayerState }) players: MapSchema<PlayerState> = new MapSchema<PlayerState>();
-  @type({ map: "string" }) territoryOwnership: MapSchema<string> = new MapSchema<string>();
+  
+  //Map <territoryID, territoryState>
+  @type({ map: TerritoryState }) territoryOwnership: MapSchema<TerritoryState> = new MapSchema<TerritoryState>();
   @type(["string"]) playerOrder: ArraySchema<string> = new ArraySchema<string>();
+  @type("number") currentRound: number = 0;
   @type(["string"]) trackOrder = new ArraySchema<string>();
 }
 

@@ -49,3 +49,17 @@ export const requireLobbyPhase = (s: PlainStateOf<RoomState>) => {
     throw new Error('Room is not in Lobby Phase')
   }
 }
+
+export const requireHasRolledDice = (s: PlainStateOf<RoomState>, c: WithPlayer) => {
+  const player = s.game.players[c.senderId];
+  if (!player || !player.hasRolled) {
+    throw new Error("Player has not rolled dice yet");
+  }
+};
+
+export const requireHasNotRolledDice = (s: PlainStateOf<RoomState>, c: WithPlayer) => {
+  const player = s.game.players[c.senderId];
+  if (!player || player.hasRolled) {
+    throw new Error("Player has already rolled dice this turn");
+  }
+};

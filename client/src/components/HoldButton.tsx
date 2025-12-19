@@ -63,9 +63,10 @@ type HoldButton2Props = {
   onHoldStart: () => void;
   onHoldEnd: () => void;
   onHoldCancel: () => void;
+  hasRolled: boolean;
 };
 
-export const HoldButton2 = ({ onHoldStart, onHoldEnd, onHoldCancel }: HoldButton2Props) => {
+export const HoldButton2 = ({ onHoldStart, onHoldEnd, onHoldCancel, hasRolled }: HoldButton2Props) => {
   const listeners = {
     onPointerDown: (e: React.PointerEvent) => {
       e.preventDefault();
@@ -87,8 +88,9 @@ export const HoldButton2 = ({ onHoldStart, onHoldEnd, onHoldCancel }: HoldButton
   return (
     <div
       {...listeners}
-      className={`pointer-events-auto z-50 grow flex items-center justify-center transition-all rounded-md self-stretch  duration-100`}>
-      <div className="w-full h-full flex justify-center pt-2 select-none border-dashed border rounded-md border-black border-2">
+      className={`pointer-events-auto z-50 grow flex items-center justify-center transition-all rounded-md self-stretch duration-100 ${hasRolled ? 'hidden' : ''} `}
+    >
+      <div className="w-full h-full flex justify-center pt-2 select-none border-dashed rounded-md border-black border-2">
         hold to rotate dice
       </div>
     </div>

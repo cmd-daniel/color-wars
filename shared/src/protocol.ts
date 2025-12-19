@@ -7,6 +7,7 @@ export interface ClientMessages {
   RAGDOLL_DICE: {};
   KICK_PLAYER: {playerId: string, reason?: string}
   SEND_MESSAGE: {senderId: string, content: string, timeStamp: number}
+  END_TURN: {};
 }
 
 export interface ServerMessages {
