@@ -34,7 +34,7 @@ export class PlayerSprite extends PIXI.Container {
 
   public startPulse(){
     if(this.pulseTl) {
-      console.log('start pulse, oh no')
+      console.log('start pulse, killing existing')
       this.pulseTl.kill()
     }
     

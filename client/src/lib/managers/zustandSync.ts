@@ -20,7 +20,6 @@ class ZustandSyncManager {
       GameEventBus.on("UPDATE_PLAYER", ({ id, player }) => {
         const playerExists = useStore.getState().state.game.players[id];
         if (!playerExists){
-          console.log('adding token for new player:', id);
           useDiceTrackStore.getState().upsertToken({ id: player.id, tileId: `track-tile-${player.position}`, color: hexStringToHexNumber(player.color) });
         }
         useStore.getState().setPlayer(id, player.toJSON());
@@ -32,7 +31,6 @@ class ZustandSyncManager {
 
       GameEventBus.on("FULL_SEND", (state) => {
         if(state.turnCheckpoint){
-          console.log('not null', state)
           state.game = state.turnCheckpoint
           useStore.setState({ state: state.toJSON()});
         }else{

@@ -39,12 +39,9 @@ export default function ChatInterface() {
   }, [lastMessage, isOpen]);
 
   useEffect(() => {
-    console.log("isOpen", isOpen);
-    console.log("messagesEndRef", messagesEndRef.current);
     if (isOpen) {
       // slight timeout to allow drawer animation/keyboard resize to finish
       setTimeout(() => {
-        console.log("scrolling called");
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     }

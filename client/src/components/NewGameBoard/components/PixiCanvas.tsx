@@ -22,14 +22,13 @@ export function PixiCanvas() {
     engineRef.current = engine;
 
     engine.init(node).then(() => {
-      console.log("Pixi Engine Initialized");
       fetchMap(MAP_URL).then((map)=>{
         engine.loadMap(map!)
       })
     });
 
     return () => {
-      console.log("Pixi Engine Destroyed");
+      console.log('destroying pixi engine')
       engine.destroy();
       engineRef.current = null;
     };

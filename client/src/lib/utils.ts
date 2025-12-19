@@ -13,9 +13,7 @@ export function debounce<T extends (...args: any[]) => void>(
 
   return (...args: Parameters<T>) => {
     if (timer) clearTimeout(timer);
-    console.log('cleared')
     timer = setTimeout(() => {
-      console.log('called')
       fn(...args);
     }, delay);
   };

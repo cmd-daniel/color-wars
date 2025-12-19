@@ -57,7 +57,6 @@ export class HexHop extends BaseAction<ActionRegistry["MOVE_PLAYER"]> {
 export class RollDice extends BaseAction<ActionRegistry["ROLL_DICE"]> {
   execute(): ActionHandle {
     const { die1, die2 } = this.payload;
-    console.log('called rollTo: ')
     useStore.getState().rollDiceTo(die1, die2);
     return new ActionHandle(
       new Promise<void>((resolve) => setTimeout(resolve, 2500)),

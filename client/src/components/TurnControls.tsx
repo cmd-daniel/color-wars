@@ -29,38 +29,16 @@ const TurnControls = () => {
 
   useEffect(() => {
     if (diceMode == "ROLLINGTOFACE") {
-      console.log('TurnControls vars:', {
-        diceMode,
-        rollTo: [a, b],
-        currentPlayerID,
-        activePlayerId,
-        isNOTActivePlayer
-      });
       if (diceA.animationRef.current == null) diceA.startPhysicsLoop(nanoid());
       if (diceB.animationRef.current == null) diceB.startPhysicsLoop(nanoid());
       diceA.setMode("spin-to-target", { face: a });
       diceB.setMode("spin-to-target", { face: b });
     } else if (diceMode == "ACCELERATING" && isNOTActivePlayer) {
-      console.log('TurnControls vars:', {
-        diceMode,
-        rollTo: [a, b],
-        currentPlayerID,
-        activePlayerId,
-        isNOTActivePlayer
-      });
       diceA.setMode("accelerate");
       diceB.setMode("accelerate");
       diceA.startPhysicsLoop(nanoid());
       diceB.startPhysicsLoop(nanoid());
     } else if (diceMode == "RAGDOLLING" && isNOTActivePlayer) {
-      console.log('TurnControls vars:', {
-        diceMode,
-        rollTo: [a, b],
-        currentPlayerID,
-        activePlayerId,
-        isNOTActivePlayer
-      });
-      console.log("not active player");
       diceA.setMode("ragdoll");
       diceB.setMode("ragdoll");
     }

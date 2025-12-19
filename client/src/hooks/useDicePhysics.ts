@@ -84,8 +84,7 @@ export const useDicePhysics = () => {
       last = now;
       
       const mode = stateRef.current.mode;
-      
-      console.log(mode)
+
       // ACCELERATE
       if (mode === "accelerate") {
         // If spinning for over 10s, transition to 'ragdoll' mode

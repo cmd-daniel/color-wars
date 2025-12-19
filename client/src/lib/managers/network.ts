@@ -81,15 +81,15 @@ class Network {
       this.send("PONG", { serverT1, clientT2: Date.now() });
     });
 
-    this.onMessage('RELAY_MESSAGE', (message) =>{
+    this.onMessage('RELAY_MESSAGE', (message) => {
       GameEventBus.emit('RELAY_MESSAGE', message)
     })
 
-    this.onMessage('ACCELERATE_DICE', ({}) => {
+    this.onMessage('ACCELERATE_DICE', ({ }) => {
       GameEventBus.emit('ACCELERATE_DICE', {})
     })
 
-    this.onMessage('RAGDOLL_DICE', ({}) => {
+    this.onMessage('RAGDOLL_DICE', ({ }) => {
       GameEventBus.emit('RAGDOLL_DICE', {})
     })
 
@@ -121,21 +121,20 @@ class Network {
         $(this.room.state.game).players.onRemove((_, playerId) => {
           GameEventBus.emit("REMOVE_PLAYER", { id: playerId });
         }),
-        // $(this.room.state).playersPings.onChange((ping, playerId) => {
-        //   GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
-        // }),
+        $(this.room.state).playersPings.onChange((ping, playerId) => {
+         // GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
+        }),
         $(this.room.state.room).listen('phase', (newPhase) => {
-          GameEventBus.emit('UPDATE_ROOM_PHASE', {phase: newPhase})
+          GameEventBus.emit('UPDATE_ROOM_PHASE', { phase: newPhase })
         }),
         $(this.room.state).turnActionHistory.onAdd((action, actionId) => {
-          console.log('action type', action.type)
-          this.handleActionHistory([action])
+          this.handleActionHistory(action)
         }),
-        $(this.room.state.room).listen('leaderId',(newValue)=>{
-          GameEventBus.emit('UPDATE_ROOM_LEADER',{id:newValue})
+        $(this.room.state.room).listen('leaderId', (newValue) => {
+          GameEventBus.emit('UPDATE_ROOM_LEADER', { id: newValue })
         }),
         $(this.room.state.game).listen('activePlayerId', (newValue) => {
-          GameEventBus.emit('UPDATE_ACTIVE_PLAYER', {playerId: newValue})
+          GameEventBus.emit('UPDATE_ACTIVE_PLAYER', { playerId: newValue })
         })
       );
     });
@@ -144,11 +143,11 @@ class Network {
     });
     this.room.onLeave((code, message) => {
       console.log("[network] leave", { code, message });
-      
+
       this.leave();
       if (code == 1006) {
         //GameEventBus.emit("REQUEST_RECONNECT", undefined);
-      }else{
+      } else {
         GameEventBus.emit('KICKED', { reason: message })
       }
     });
@@ -209,44 +208,34 @@ class Network {
     GameEventBus.emit("UPDATE_NETWORK_STATE", { state });
   }
 
-  private handleActionHistory(actions: GameAction[]) {
-    // Grab only actions we have NOT played yet
-    console.log('lastPlayedActionID: ',this.lastPlayedActionID, 'current actions: ', actions.map(a => a.id))
-    const pending = actions
-    .filter((a) => a.id > this.lastPlayedActionID)
-    .sort((a, b) => a.id - b.id); // safety
-    console.log('pending actions: ', pending)
+  private handleActionHistory(action: GameAction) {
+    console.log('lastPlayedActionID: ',this.lastPlayedActionID, "currentActionID", action.id, 'action type:', action.type);
+    if (this.lastPlayedActionID >= action.id) return; // already played
 
-    if (pending.length === 0) return;
+    const mode = this.getPlaybackMode(action.timestamp);
 
-    for (const action of pending) {
-      const mode = this.getPlaybackMode(action.timestamp);
-
-      if (mode === "skip") {
-        // Hard-sync: kill queue, apply state instantly
-        console.warn("Skipping animations due to heavy desync");
-
-        this.actionQueue.clear("complete"); // complete everything instantly
-        this.restoreSpeed(); // make sure we don’t stay in fast mode
-
-        // Manually apply this action’s final state
-        this.playActionInstantly(action);
-
-        continue;
-      } else if (mode == 'fast') this.setSpeed(2)
-        else this.restoreSpeed();
-
-      // Create action executor
-      const parsed = this.parseServerAction(action.type, action.payload);
-      const executable = ActionFactory.create(parsed);
-
-      // Wrap in a speed-aware action
-      this.actionQueue.enqueue(executable);
+    if (mode === "skip") {
+      // Hard-sync: kill queue, apply state instantly
+      console.warn("Skipping animations due to heavy desync");
+      this.actionQueue.clear("complete"); // complete everything instantly
+      this.restoreSpeed(); // make sure we don’t stay in fast mode
+      this.playActionInstantly(action);
+      this.lastPlayedActionID = action.id;
+      return;
+    } else if (mode == 'fast') {
+      this.setSpeed(2)
+    } else {
+      this.restoreSpeed();
     }
+    // Create action executor
+    const parsed = this.parseServerAction(action.type, action.payload);
+    const executable = ActionFactory.create(parsed);
+    // Wrap in a speed-aware action
+    this.actionQueue.enqueue(executable);
 
     // Update pointer, cause only one gets called.
     // update function to take in only one action at a time
-    this.lastPlayedActionID = actions[actions.length - 1].id;
+    this.lastPlayedActionID = action.id;
   }
 
   private playActionInstantly(action: GameAction) {
@@ -267,6 +256,7 @@ class Network {
 
   private getPlaybackMode(actionTimestamp: number): "normal" | "fast" | "skip" {
     const delay = Date.now() - actionTimestamp;
+    console.log('action delay:', (delay/1000).toFixed(2), 'seconds')
     if (delay < 2000) return "normal";
     if (delay < 10000) return "fast";
     return "skip";

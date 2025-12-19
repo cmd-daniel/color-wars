@@ -29,7 +29,6 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
   const handleKickPlayer = () => {
     kickPlayer(player.id);
   };
-  console.log('player called', player.id)
 
   useGSAP(() => {
     const tl = gsap.timeline()

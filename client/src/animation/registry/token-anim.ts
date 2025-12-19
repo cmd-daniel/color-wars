@@ -38,7 +38,6 @@ export function animateUnitHop(unit: PlayerSprite, pathTiles: PIXI.Sprite[]) {
       onComplete: () => {
         // Snap explicitly to ensure precision at end of step
         unit.position.copyFrom(endTile.position);
-        console.log('setting currentTileId: ', endTile.label)
         unit.currentTileId = endTile.label; // Update logical position step-by-step
       }
     });

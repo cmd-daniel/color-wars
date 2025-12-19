@@ -47,7 +47,6 @@ export class TokenLayer extends PIXI.Container {
           const activeUnit = this.units.get(newId)!;
           newTileId = activeUnit.currentTileId!;
         }
-        console.log('token sub')
         if (prevTileId && newTileId && prevTileId === newTileId) {
           this.rearrangeTile(prevTileId, true);
         } else {
@@ -112,9 +111,7 @@ export class TokenLayer extends PIXI.Container {
     unit.currentTileId = data.tileId;
     const tileSprite = pixiTargetLocator.get<PIXI.Sprite>(data.tileId);
     if (tileSprite) {
-      console.log(tileSprite)
       unit.position.copyFrom(tileSprite.position);
-      console.log(unit)
       //unit.scale.set(0);
     }
 
@@ -142,9 +139,6 @@ export class TokenLayer extends PIXI.Container {
   }
 
   private _rearrangeTile(tileId: string, animate: boolean) {
-    const err = new Error();
-    console.log(err.stack);
-
     const state = useDiceTrackStore.getState();
     const allTokenIds = getTokensOnTile(state, tileId);
     
@@ -195,7 +189,6 @@ export class TokenLayer extends PIXI.Container {
     // Calculate scale relative to base size.
     // If config.scale is 1.0 (Active), it renders full size.
     const finalScale = this.currentHexSize * this.BASE_TOKEN_RATIO * config.scale;
-    console.log(this.currentHexSize, this.BASE_TOKEN_RATIO, config.scale)
     const tl = gsap.timeline();
 
     if (animate) {
@@ -207,9 +200,6 @@ export class TokenLayer extends PIXI.Container {
         },
         duration: 0.5,
         ease: "back.out(1.2)",
-        onUpdate:()=>{
-          console.log('fired')
-        },
         onComplete: () => {
           //TODO: change this, breaks when resizing
           if (pulse) {
