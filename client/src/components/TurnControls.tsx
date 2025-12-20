@@ -72,7 +72,7 @@ const TurnControls = () => {
 
   return (
     <section className="relative flex h-full w-full items-center justify-between">
-      <div className="flex relative w-full h-full flex-1 grow-2 justify-center">
+      <div className="flex relative w-full h-full flex-1 grow-2 justify-center gap-[1%] items-center">
         <Dice quaternion={diceA.quat} />
         <Dice quaternion={diceB.quat} />
       </div> 
