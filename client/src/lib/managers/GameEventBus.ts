@@ -9,6 +9,8 @@ export interface LOCAL_EVENT {
   FULL_SEND: RoomState;
   UPDATE_PLAYER_PING: { id: string; ping: number };
   UPDATE_PLAYER: { id: string; player: PlayerState };
+  UPDATE_PLAYER_MONEY: { id: string; amount: number };
+  UPDATE_PLAYER_ROLLED_DICE: {id: string; hasRolledDice: boolean};
   UPDATE_CURRENT_PLAYER: { player: PlayerState };
   REMOVE_PLAYER: { id: string };
   UPDATE_ROOM_LEADER: { id: string };

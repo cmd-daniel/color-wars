@@ -3,12 +3,10 @@ import { useStore } from "@/stores/sessionStore";
 import Dice from "./BetterDice";
 import { nanoid } from "nanoid";
 import { useDicePhysics } from "@/hooks/useDicePhysics";
-import { HoldButton2 } from "./HoldButton";
 import { Button } from "./ui/button";
+import DiceHoldButton from "./DiceHoldButton";
 
 const TurnControls = () => {
-  //const canEndTurn = useStore((state) => (state.player.id == state.state.activePlayerId) && state.state.turnPhase == 'awaiting-end-turn')
-
   const sendDiceMode = useStore((z) => z.sendDiceMode);
   // -----------------------------------------------------
   // DICE STATE
@@ -77,8 +75,8 @@ const TurnControls = () => {
         <Dice quaternion={diceB.quat} />
       </div> 
       <div className={`flex w-full h-full flex-1 justify-center items center flex-col gap-2  ${isNOTActivePlayer ? 'hidden' : ''}`}>
-        <HoldButton2 hasRolled={hasRolledDice} isActive={true} onHoldStart={holdStart} onHoldEnd={holdEnd} onHoldCancel={holdEnd} />
-        <div className={`${hasRolledDice ? '' : 'hidden'}`}>
+        <DiceHoldButton hasRolled={hasRolledDice} onHoldStart={holdStart} onHoldEnd={holdEnd} />
+        <div className={`${hasRolledDice ? '' : 'hidden'} w-full flex justify-center`}>
           <Button onClick={endTurn}>End Turn</Button>
         </div>
       </div>

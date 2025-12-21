@@ -3,6 +3,8 @@ export const ACTION_REGISTRY = {
   PLAY_SOUND: {} as { soundId: string; volume?: number },
   UPDATE_UI_COUNTER: {} as { counterId: string; value: number },
   ROLL_DICE: {} as { die1: number, die2: number },
+  INCR_MONEY: {} as { playerId: string; amount: number },
+  DECR_MONEY: {} as { playerId: string; amount: number },
 } as const;
 
 export type ActionRegistry = typeof ACTION_REGISTRY;

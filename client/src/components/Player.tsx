@@ -6,6 +6,7 @@ import { useStore } from "@/stores/sessionStore";
 import { PLAYER } from "@color-wars/shared/src/config/game";
 import gsap from "@/lib/gsap";
 import { useGSAP } from "@gsap/react";
+import Counter from "./Money";
 
 function PickerPopover({ open, setOpen, enabled, trigger, children }: { open: boolean; setOpen: (v: boolean) => void; enabled: boolean; trigger: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -111,7 +112,7 @@ const Player = ({ player }: { player: PlainStateOf<PlayerState> }) => {
 
       {/* RIGHT — Actions */}
       <div className="flex items-center gap-2">
-        {!isLobbyPhase && <span className="text-sm font-semibold tabular-nums">${player.money}</span>}
+        {!isLobbyPhase && <Counter playerId={player.id} />}
 
         {leaderAccess && isLobbyPhase && !isYou && (
           <button onClick={handleKickPlayer} title="Kick player">

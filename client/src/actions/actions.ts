@@ -1,4 +1,4 @@
-import { animateUnitHop } from "@/animation/registry/token-anim";
+import { animateCoinConfettiToDom, animateUnitHop } from "@/animation/registry/anim";
 import { BaseAction } from "./core";
 import type { ActionRegistry } from "@color-wars/shared/src/types/registry";
 import { ActionHandle } from "@/animation/driver/AnimationHandle";
@@ -8,6 +8,7 @@ import { Sprite } from "pixi.js";
 import { TRACK_COORDINATES } from "@/components/NewGameBoard/config/dice-track-config";
 import { useDiceTrackStore } from "@/stores/diceTrackStore";
 import { useStore } from "@/stores/sessionStore";
+import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
 
 export class HexHop extends BaseAction<ActionRegistry["MOVE_PLAYER"]> {
   execute(): ActionHandle {
@@ -60,8 +61,35 @@ export class RollDice extends BaseAction<ActionRegistry["ROLL_DICE"]> {
     useStore.getState().rollDiceTo(die1, die2);
     return new ActionHandle(
       new Promise<void>((resolve) => setTimeout(resolve, 2500)),
-      () => {},
-      () => {},
+      () => { },
+      () => { },
     );
+  }
+}
+
+export class IncrMoney extends BaseAction<ActionRegistry["INCR_MONEY"]> {
+  execute(): ActionHandle {
+    const { playerId, amount } = this.payload;
+
+    const unit = pixiTargetLocator.get<PlayerSprite>(playerId);
+    if (!unit) throw new Error("PlayerSprite unit not found for IncrMoney animation");
+    const tileID = unit.currentTileId
+    if(!tileID) throw new Error("PlayerSprite has no currentTileId for IncrMoney animation");
+    const tile = pixiTargetLocator.get<Sprite>(tileID);
+    const engine = pixiTargetLocator.get("pixi-engine") as PixiEngine;
+    if (!engine) throw new Error("PixiEngine not found in target locator");
+
+    const app = engine.getApp()!;
+    if (!app) throw new Error("Pixi Application not found in engine");
+    
+    const ele = document.getElementById(`player-money-${playerId}`)
+    if(!ele) throw new Error("Target DOM element for money transfer not found");
+
+    const anim = animateCoinConfettiToDom(tile!, ele, app, 50);
+
+    return ActionHandle.attachCallBack(anim, async () => {
+      useStore.getState().updatePlayerMoney(playerId, useStore.getState().state.game.players[playerId].money + amount);
+      console.log("IncrMoney animation complete");
+    });
   }
 }

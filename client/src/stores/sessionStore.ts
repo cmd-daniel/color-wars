@@ -163,6 +163,17 @@ export const useStore = create(
                 return false;
               }
             },
+            updatePlayerMoney: (playerId: string, amount: number)=>{
+              set((z)=>{
+                z.state.game.players[playerId].money = amount
+              })
+            },
+            updatePlayerRolledDice: (playerId: string, hasRolledDice: boolean)=>{
+              
+              set((z)=>{
+                z.state.game.players[playerId].hasRolled = hasRolledDice
+              })
+            },
             startGame: () => {
               try {
                 network.send("START_GAME", {});

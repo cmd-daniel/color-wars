@@ -110,6 +110,16 @@ export class GameEngine {
     player.position = toTile
     this.state.turnActionHistory.push(moveAction)
 
+    const IncrMoneyAction = new GameAction(
+      'INCR_MONEY',
+      client.sessionId,
+      JSON.stringify({playerId: client.sessionId, amount: 200}),
+      Date.now(),
+      lastActionId + 3
+    )
+    player.money += 200
+    this.state.turnActionHistory.push(IncrMoneyAction)
+
     player.hasRolled = true;
   }
 

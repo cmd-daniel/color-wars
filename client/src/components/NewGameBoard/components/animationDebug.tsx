@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useDiceTrackStore } from "@/stores/diceTrackStore";
 import { TRACK_COORDINATES } from "../config/dice-track-config";
-import { HexHop } from "@/actions/actions";
+import { HexHop, IncrMoney } from "@/actions/actions";
 
 // ------------------------------------------------------------------
 // 1. MOCK STORE
@@ -237,6 +237,54 @@ const MovePlayerSection = () => {
   );
 };
 
+const AnimateMoney = () => {
+  const [selectedTile, setSelectedTile] = useState<string>("");
+
+  //   function testAnimation() {
+  //     // 1. Find the target (The Hex at 0,0 on the dice track)
+  //     const targetSprite = pixiTargetLocator.get<Sprite>("unit-1");
+  //     GameEventBus.emit("UPDATE_ANIMATION_SPEED", {
+  //       speedMultiplier: 2,
+  //     });
+  //     if (targetSprite) {
+  //       network.actionQueue.enqueue(new HexHop({ fromTile: 0, toTile: 17 }));
+  //     } else {
+  //       console.error("Sprite not found in registry");
+  //     }
+  //   }
+
+  const handleAnimate = () => {
+    if (selectedTile) {
+      new IncrMoney({ playerId: "unit-0", amount: 50 }).execute();
+    }
+  };
+
+  let tiles = Array.from({ length: 34 }, (_, index) => index);
+
+  return (
+    <div className="flex flex-col gap-2 pb-20">
+      <Label className="text-muted-foreground text-[10px] font-bold tracking-wider uppercase">Animate Coins</Label>
+      <div className="flex gap-2">
+        <Select value={selectedTile} onValueChange={setSelectedTile}>
+          <SelectTrigger className="h-8 w-full text-xs">
+            <SelectValue placeholder="Select Spawn Tile" />
+          </SelectTrigger>
+          <SelectContent>
+            {tiles.map((tile) => (
+              <SelectItem key={tile} value={`track-tile-${tile}`} className="text-xs">
+                {`track-tile-[${tile}]`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button id="animattion" onClick={handleAnimate} disabled={!selectedTile} size="sm" className="h-8 w-8 shrink-0 p-0">
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------
 // 3. MAIN COMPONENT
 // ------------------------------------------------------------------
@@ -259,6 +307,8 @@ export const DebugGameControls = () => {
           <RemovePlayerSection />
           <Separator />
           <MovePlayerSection />
+          <Separator />
+          <AnimateMoney />
         </CardContent>
       </Card>
     </div>

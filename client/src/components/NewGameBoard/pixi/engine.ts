@@ -94,7 +94,9 @@ export class PixiEngine {
 
       if (this.destroyed || myToken !== this.initToken) {
         try {
+          console.log("PixiEngine init aborted, cleaning up");
           localApp.destroy(true);
+          throw new Error("PixiEngine init aborted");
         } catch (error) {
           throw new Error(`${error}`);
         }

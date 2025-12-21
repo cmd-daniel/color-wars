@@ -25,6 +25,10 @@ class ZustandSyncManager {
         useStore.getState().setPlayer(id, player.toJSON());
       }),
 
+      GameEventBus.on("UPDATE_PLAYER_ROLLED_DICE", ({ id, hasRolledDice }) => {
+        useStore.getState().updatePlayerRolledDice(id, hasRolledDice);
+      }),
+
       GameEventBus.on("UPDATE_CURRENT_PLAYER", ({ player }) => {
         useStore.getState().setCurrentPlayer(player.toJSON());
       }),

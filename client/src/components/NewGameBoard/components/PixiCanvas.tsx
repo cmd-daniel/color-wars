@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
 import { useMapStore } from "@/stores/mapStateStore";
 import DebugGameControls from "./animationDebug";
+import { pixiTargetLocator } from "@/animation/target-locator";
 
 // Example URL - in a real app this might come from props or a route param
 const MAP_URL = "/india_5.json";
@@ -24,6 +25,7 @@ export function PixiCanvas() {
     engine.init(node).then(() => {
       fetchMap(MAP_URL).then((map)=>{
         engine.loadMap(map!)
+        pixiTargetLocator.register("pixi-engine", engineRef.current!);
       })
     });
 
@@ -31,6 +33,7 @@ export function PixiCanvas() {
       console.log('destroying pixi engine')
       engine.destroy();
       engineRef.current = null;
+      pixiTargetLocator.unregister("pixi-engine");
     };
   }, []);
 

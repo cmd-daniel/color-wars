@@ -109,13 +109,11 @@ class Network {
 
       this.stateChangeCallbacks.push(
         $(this.room.state.game).players.onAdd((player, playerId) => {
+          GameEventBus.emit("UPDATE_PLAYER", { id: playerId, player });
           this.stateChangeCallbacks.push(
-            $(player).onChange(() => {
-              GameEventBus.emit("UPDATE_PLAYER", {
-                id: playerId,
-                player: player,
-              });
-            }),
+            $(player).listen('hasRolled', (hasRolledDice) => {
+              GameEventBus.emit("UPDATE_PLAYER_ROLLED_DICE", { id: playerId, hasRolledDice });
+            })
           );
         }),
         $(this.room.state.game).players.onRemove((_, playerId) => {
@@ -126,6 +124,9 @@ class Network {
         }),
         $(this.room.state.room).listen('phase', (newPhase) => {
           GameEventBus.emit('UPDATE_ROOM_PHASE', { phase: newPhase })
+          this.room!.state.game.players.forEach((player) => {
+            GameEventBus.emit("UPDATE_PLAYER", { id: player.id, player })
+          });
         }),
         $(this.room.state).turnActionHistory.onAdd((action, actionId) => {
           this.handleActionHistory(action)
