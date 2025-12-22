@@ -1,4 +1,4 @@
-import { animateCoinConfettiToDom, animateUnitHop } from "@/animation/registry/anim";
+import { animateCoinConfettiToDom, animateCoinConfetti, animateUnitHop } from "@/animation/registry/anim";
 import { BaseAction } from "./core";
 import type { ActionRegistry } from "@color-wars/shared/src/types/registry";
 import { ActionHandle } from "@/animation/driver/AnimationHandle";
@@ -89,6 +89,30 @@ export class IncrMoney extends BaseAction<ActionRegistry["INCR_MONEY"]> {
 
     return ActionHandle.attachCallBack(anim, async () => {
       useStore.getState().updatePlayerMoney(playerId, useStore.getState().state.game.players[playerId].money + amount);
+      console.log("IncrMoney animation complete");
+    });
+  }
+}
+
+export class DecrMoney extends BaseAction<ActionRegistry["DECR_MONEY"]> {
+  execute(): ActionHandle {
+    const { playerId, amount } = this.payload;
+
+    const unit = pixiTargetLocator.get<PlayerSprite>(playerId);
+    if (!unit) throw new Error("PlayerSprite unit not found for DecrMoney animation");
+    const tileID = unit.currentTileId
+    if(!tileID) throw new Error("PlayerSprite has no currentTileId for DecrMoney animation");
+    const tile = pixiTargetLocator.get<Sprite>(tileID);
+    const engine = pixiTargetLocator.get("pixi-engine") as PixiEngine;
+    if (!engine) throw new Error("PixiEngine not found in target locator");
+
+    const app = engine.getApp()!;
+    if (!app) throw new Error("Pixi Application not found in engine");
+
+    const anim = animateCoinConfetti(tile!, app, 50);
+
+    return ActionHandle.attachCallBack(anim, async () => {
+      useStore.getState().updatePlayerMoney(playerId, useStore.getState().state.game.players[playerId].money - amount);
       console.log("IncrMoney animation complete");
     });
   }

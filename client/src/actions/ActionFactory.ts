@@ -1,7 +1,7 @@
 // src/actions/ActionFactory.ts
 import type { ActionData, ActionRegistry, ActionType } from "@color-wars/shared/src/types/registry";
 import type { IExecutable } from "./core";
-import { HexHop, IncrMoney, RollDice } from "./actions";
+import { HexHop, IncrMoney, RollDice, DecrMoney } from "./actions";
 
 export class ActionFactory {
   static create<T extends ActionType>(data: ActionData<T>): IExecutable {
@@ -14,6 +14,9 @@ export class ActionFactory {
 
       case 'INCR_MONEY':
         return new IncrMoney(data.payload as ActionRegistry['INCR_MONEY']);
+      
+      case 'DECR_MONEY':
+        return new DecrMoney(data.payload as ActionRegistry['DECR_MONEY']);
 
       default:
         throw new Error(`Unknown Action Type: ${data.type}`);

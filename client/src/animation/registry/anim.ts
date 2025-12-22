@@ -68,7 +68,7 @@ export function animateCoinConfettiToDom(sprite: PIXI.Sprite, targetEl: HTMLElem
     const el = document.createElement("div");
     el.style.width = `${coinSize}px`;
     el.style.height = `${coinSize}px`;
-    el.style.background = "gold";
+    el.style.background = "#31d652";
     el.style.borderRadius = "50%";
     el.style.border = "1px solid #262626";
     el.style.position = "fixed";
@@ -110,6 +110,70 @@ export function animateCoinConfettiToDom(sprite: PIXI.Sprite, targetEl: HTMLElem
     .to(confettiEls, {
       transform: () => {
         return `translate(${endX}px, ${endY}px)`;
+      },
+      opacity: 0,
+      duration: 0.2,
+      ease: "power2.in",
+      stagger: 0.005,
+      onComplete: () => {
+        confettiEls.forEach((el) => el.remove());
+      },
+    });
+}
+
+export function animateCoinConfetti(sprite: PIXI.Sprite, app: PIXI.Application, count = 12) {
+  const confettiEls: HTMLElement[] = [];
+  const meta: { burstOffset: { x: number; y: number } }[] = [];
+  const coinSize = sprite.width / 4;
+  const global = sprite.getGlobalPosition();
+  const canvasRect = app.canvas.getBoundingClientRect();
+  const baseX = canvasRect.left + global.x - coinSize / 2;
+  const baseY = canvasRect.top + global.y - coinSize / 2;
+
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement("div");
+    el.style.width = `${coinSize}px`;
+    el.style.height = `${coinSize}px`;
+    el.style.background = "red";
+    el.style.borderRadius = "50%";
+    el.style.border = "1px solid #262626";
+    el.style.position = "fixed";
+    el.style.pointerEvents = "none";
+    el.style.left = "0px";
+    el.style.top = "0px";
+    el.style.zIndex = "10";
+
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.random() * coinSize * 3;
+
+    el.style.transform = `translate(${baseX}px, ${baseY}px)`;
+    document.body.appendChild(el);
+
+    meta.push({
+      burstOffset: {
+        x: baseX + Math.cos(angle) * radius,
+        y: baseY + Math.sin(angle) * radius,
+      },
+    });
+
+    confettiEls.push(el);
+  }
+
+  return gsap
+    .timeline()
+    .to(confettiEls, {
+      transform: (i) => {
+        const { burstOffset } = meta[i];
+        return `translate(${burstOffset.x}px, ${burstOffset.y}px)`;
+      },
+      stagger: 0.002,
+      duration: 0.4,
+      ease: "power2.out",
+    })
+    .to(confettiEls, {
+      transform: (i) => {
+        const { burstOffset } = meta[i];
+        return `translate(${burstOffset.x}px, ${burstOffset.y-30}px)`;
       },
       opacity: 0,
       duration: 0.2,
