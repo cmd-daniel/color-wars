@@ -1,3 +1,4 @@
+import { GameEventBus } from "@/lib/managers/GameEventBus";
 import type { ActionHandle } from "@animation/driver/AnimationHandle";
 
 export interface IExecutable {
@@ -44,7 +45,10 @@ export class ActionQueue {
 
   private async process() {
     if (this.isRunning) return;
-    if (this.queue.length == 0) return;
+    if (this.queue.length == 0){ 
+      GameEventBus.emit('UPDATE_ANIMATION_SPEED', { speedMultiplier: 1 });
+      return;
+    }
 
     this.isRunning = true;
 
