@@ -17,7 +17,7 @@ export const TILE_STYLE: Record<
     label: "START",
     textColor: 0xffffff,
   },
-  EMPTY: {
+  SAFE: {
     fill: 0x2d2d2d,
     stroke: 0x4b5563,
     icon: "",

@@ -33,7 +33,7 @@ export const useDiceTrackStore = create<GameState>()(
   devtools(
     subscribeWithSelector(
       immer(
-        combine(initialState, (set, get) => ({
+        combine(initialState, (set) => ({
           clear: () => {
             set(useDiceTrackStore.getInitialState());
           },

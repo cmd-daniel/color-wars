@@ -1,6 +1,6 @@
 import { Popover, PopoverTrigger, PopoverContent } from "./ui/popover";
 import Pinger from "./Pinger";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import type { PlainStateOf, PlayerState } from "@color-wars/shared/src/types/RoomState";
 import { useStore } from "@/stores/sessionStore";
 import { PLAYER } from "@color-wars/shared/src/config/game";

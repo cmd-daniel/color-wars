@@ -2,33 +2,15 @@
 import { Client, Room, getStateCallbacks } from "colyseus.js";
 import { wsEndpoint } from "../serverConfig";
 import { GameAction, RoomState } from "@color-wars/shared/src/types/RoomState";
-import type {
-  ClientMessages,
-  ServerMessages,
-  ClientActionType,
-  ServerActionType,
-  PlayerJoinPayload,
-} from "@color-wars/shared/src/protocol";
+import type { ClientMessages, ServerMessages, ClientActionType, ServerActionType, PlayerJoinPayload } from "@color-wars/shared/src/protocol";
 import { DEFAULT_ROOM_TYPE } from "@color-wars/shared/src/config/room";
 import { GameEventBus } from "./GameEventBus";
 import { ActionQueue } from "@/actions/core";
 import { ActionFactory } from "@/actions/ActionFactory";
-import {
-  ACTION_REGISTRY,
-  type ActionType,
-  type ActionRegistry,
-} from "@color-wars/shared/src/types/registry";
+import { type ActionData, isActionType, type TurnActionRegistry } from "@color-wars/shared/src/types/turnActionRegistry";
 
 // network.types.ts
-export type NetworkState =
-  | "disconnected"
-  | "connecting"
-  | "connected"
-  | "reconnecting"
-  | "degraded"
-  | "desynced"
-  | "closing"
-  | "zombie";
+export type NetworkState = "disconnected" | "connecting" | "connected" | "reconnecting" | "degraded" | "desynced" | "closing" | "zombie";
 
 class Network {
   private state: NetworkState = "disconnected";
@@ -43,17 +25,13 @@ class Network {
     if (this.room) return this.room;
     if (this.state == "reconnecting" || this.state == "connecting") throw new Error("already connecting");
     this.setState("connecting");
-    const room = await this.client.joinOrCreate<RoomState>(
-      DEFAULT_ROOM_TYPE,
-      options,
-    );
+    const room = await this.client.joinOrCreate<RoomState>(DEFAULT_ROOM_TYPE, options);
     return this.registerRoom(room);
   }
 
   async reconnect(reconnectionToken: string) {
     if (this.room) return this.room;
-    if (this.state == "reconnecting" || this.state == "connecting")
-      throw new Error("already connecting");
+    if (this.state == "reconnecting" || this.state == "connecting") throw new Error("already connecting");
     this.setState("reconnecting");
     try {
       const room = await this.client.reconnect(reconnectionToken);
@@ -81,17 +59,17 @@ class Network {
       this.send("PONG", { serverT1, clientT2: Date.now() });
     });
 
-    this.onMessage('RELAY_MESSAGE', (message) => {
-      GameEventBus.emit('RELAY_MESSAGE', message)
-    })
+    this.onMessage("RELAY_MESSAGE", (message) => {
+      GameEventBus.emit("RELAY_MESSAGE", message);
+    });
 
-    this.onMessage('ACCELERATE_DICE', ({ }) => {
-      GameEventBus.emit('ACCELERATE_DICE', {})
-    })
+    this.onMessage("ACCELERATE_DICE", ({}) => {
+      GameEventBus.emit("ACCELERATE_DICE", {});
+    });
 
-    this.onMessage('RAGDOLL_DICE', ({ }) => {
-      GameEventBus.emit('RAGDOLL_DICE', {})
-    })
+    this.onMessage("RAGDOLL_DICE", ({}) => {
+      GameEventBus.emit("RAGDOLL_DICE", {});
+    });
 
     this.room.onStateChange.once((state) => {
       if (!this.room?.roomId) return;
@@ -111,32 +89,32 @@ class Network {
         $(this.room.state.game).players.onAdd((player, playerId) => {
           GameEventBus.emit("UPDATE_PLAYER", { id: playerId, player });
           this.stateChangeCallbacks.push(
-            $(player).listen('hasRolled', (hasRolledDice) => {
+            $(player).listen("hasRolled", (hasRolledDice) => {
               GameEventBus.emit("UPDATE_PLAYER_ROLLED_DICE", { id: playerId, hasRolledDice });
-            })
+            }),
           );
         }),
         $(this.room.state.game).players.onRemove((_, playerId) => {
           GameEventBus.emit("REMOVE_PLAYER", { id: playerId });
         }),
-        $(this.room.state).playersPings.onChange((ping, playerId) => {
-         // GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
-        }),
-        $(this.room.state.room).listen('phase', (newPhase) => {
-          GameEventBus.emit('UPDATE_ROOM_PHASE', { phase: newPhase })
+        // $(this.room.state).playersPings.onChange((ping, playerId) => {
+        //   // GameEventBus.emit("UPDATE_PLAYER_PING", { id: playerId, ping });
+        // }),
+        $(this.room.state.room).listen("phase", (newPhase) => {
+          GameEventBus.emit("UPDATE_ROOM_PHASE", { phase: newPhase });
           this.room!.state.game.players.forEach((player) => {
-            GameEventBus.emit("UPDATE_PLAYER", { id: player.id, player })
+            GameEventBus.emit("UPDATE_PLAYER", { id: player.id, player });
           });
         }),
-        $(this.room.state).turnActionHistory.onAdd((action, actionId) => {
-          this.handleActionHistory(action)
+        $(this.room.state).turnActionHistory.onAdd((action) => {
+          this.handleActionHistory(action);
         }),
-        $(this.room.state.room).listen('leaderId', (newValue) => {
-          GameEventBus.emit('UPDATE_ROOM_LEADER', { id: newValue })
+        $(this.room.state.room).listen("leaderId", (newValue) => {
+          GameEventBus.emit("UPDATE_ROOM_LEADER", { id: newValue });
         }),
-        $(this.room.state.game).listen('activePlayerId', (newValue) => {
-          GameEventBus.emit('UPDATE_ACTIVE_PLAYER', { playerId: newValue })
-        })
+        $(this.room.state.game).listen("activePlayerId", (newValue) => {
+          GameEventBus.emit("UPDATE_ACTIVE_PLAYER", { playerId: newValue });
+        }),
       );
     });
     this.room.onError((code, message) => {
@@ -149,7 +127,7 @@ class Network {
       if (code == 1006) {
         //GameEventBus.emit("REQUEST_RECONNECT", undefined);
       } else {
-        GameEventBus.emit('KICKED', { reason: message })
+        GameEventBus.emit("KICKED", { reason: message });
       }
     });
   }
@@ -161,10 +139,7 @@ class Network {
     this.room.send(type, payload);
   }
 
-  onMessage<K extends ServerActionType>(
-    type: K,
-    handler: (payload: ServerMessages[K]) => void,
-  ) {
+  onMessage<K extends ServerActionType>(type: K, handler: (payload: ServerMessages[K]) => void) {
     if (!this.room) {
       throw new Error("Network not connected: handle() unavailable");
     }
@@ -199,7 +174,7 @@ class Network {
     // 3. Hard reset local networking
     this.room = null;
     this.setState("disconnected");
-    GameEventBus.emit('RESET_STATE', {})
+    GameEventBus.emit("RESET_STATE", {});
 
     console.log("[network] leave cleanup complete");
   }
@@ -210,7 +185,7 @@ class Network {
   }
 
   private handleActionHistory(action: GameAction) {
-    console.log('lastPlayedActionID: ',this.lastPlayedActionID, "currentActionID", action.id, 'action type:', action.type);
+    console.log("lastPlayedActionID: ", this.lastPlayedActionID, "currentActionID", action.id, "action type:", action.type);
     if (this.lastPlayedActionID >= action.id) return; // already played
 
     const mode = this.getPlaybackMode(action.timestamp);
@@ -223,13 +198,17 @@ class Network {
       this.playActionInstantly(action);
       this.lastPlayedActionID = action.id;
       return;
-    } else if (mode == 'fast') {
-      this.setSpeed(2)
+    } else if (mode == "fast") {
+      this.setSpeed(2);
     } else {
       this.restoreSpeed();
     }
     // Create action executor
-    const parsed = this.parseServerAction(action.type, action.payload);
+    const parsed = this.decodeGameAction(action);
+    if (!parsed) {
+      console.error("Failed to parse action for playback:", action);
+      return;
+    }
     const executable = ActionFactory.create(parsed);
     // Wrap in a speed-aware action
     this.actionQueue.enqueue(executable);
@@ -240,24 +219,38 @@ class Network {
   }
 
   private playActionInstantly(action: GameAction) {
-    const parsed = this.parseServerAction(action.type, action.payload);
+    const parsed = this.decodeGameAction(action);
+    if (!parsed) {
+      console.error("Failed to parse action for instant playback:", action);
+      return;
+    }
     const executable = ActionFactory.create(parsed);
 
     const handle = executable.execute();
     handle.complete(); // jump animation to end immediately
   }
 
-  private parseServerAction(type: string, payload: string) {
-    if (!isActionType(type)) throw new Error("Invalid action");
+  private decodeGameAction(action: GameAction): ActionData | null {
+    if (!isActionType(action.type)) return null;
+
+    const type = action.type; // 🔑 NOW this is ActionType
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(action.payload);
+    } catch {
+      return null;
+    }
+
     return {
       type,
-      payload: JSON.parse(payload) as ActionRegistry[typeof type],
-    };
+      payload: payload as TurnActionRegistry[typeof type],
+    } as ActionData;
   }
 
   private getPlaybackMode(actionTimestamp: number): "normal" | "fast" | "skip" {
     const delay = Date.now() - actionTimestamp;
-    console.log('action delay:', (delay/1000).toFixed(2), 'seconds')
+    console.log("action delay:", (delay / 1000).toFixed(2), "seconds");
     if (delay < 2000) return "normal";
     if (delay < 10000) return "fast";
     return "skip";
@@ -279,8 +272,5 @@ class Network {
   }
 }
 
-export function isActionType(v: string): v is ActionType {
-  return v in ACTION_REGISTRY;
-}
 
 export const network = new Network();

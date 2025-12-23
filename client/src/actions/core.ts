@@ -4,6 +4,15 @@ export interface IExecutable {
   execute(): ActionHandle;
 }
 
+export abstract class BaseAction<TPayload> implements IExecutable {
+  protected payload: TPayload;
+  constructor(payload: TPayload) {
+    this.payload = payload;
+  }
+
+  abstract execute(): ActionHandle;
+}
+
 export class ActionQueue {
   private queue: IExecutable[] = [];
   private isRunning = false;
@@ -55,14 +64,7 @@ export class ActionQueue {
   }
 }
 
-export abstract class BaseAction<TPayload> implements IExecutable {
-  protected payload: TPayload;
-  constructor(payload: TPayload) {
-    this.payload = payload;
-  }
 
-  abstract execute(): ActionHandle;
-}
 
 /**
  * Concrete Composite Action

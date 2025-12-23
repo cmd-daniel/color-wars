@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useChatStore } from "@/stores/chatStore";
 import { gsap } from "gsap";
-import { Send, CircleUserRound } from "lucide-react";
-import { format } from "date-fns";
+import { Send } from "lucide-react";
 
 // Shadcn UI Components
 import { Button } from "@/components/ui/button";

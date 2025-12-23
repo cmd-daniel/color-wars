@@ -1,25 +1,25 @@
 // src/actions/ActionFactory.ts
-import type { ActionData, ActionRegistry, ActionType } from "@color-wars/shared/src/types/registry";
+import type { ActionData } from "@color-wars/shared/src/types/turnActionRegistry";
 import type { IExecutable } from "./core";
 import { HexHop, IncrMoney, RollDice, DecrMoney } from "./actions";
 
 export class ActionFactory {
-  static create<T extends ActionType>(data: ActionData<T>): IExecutable {
+  static create(data: ActionData): IExecutable {
     switch (data.type) {
       case 'MOVE_PLAYER':
-        return new HexHop(data.payload as ActionRegistry['MOVE_PLAYER']);
+        return new HexHop(data.payload);
         
       case 'ROLL_DICE':
-        return new RollDice(data.payload as ActionRegistry['ROLL_DICE']);
+        return new RollDice(data.payload);
 
       case 'INCR_MONEY':
-        return new IncrMoney(data.payload as ActionRegistry['INCR_MONEY']);
+        return new IncrMoney(data.payload);
       
       case 'DECR_MONEY':
-        return new DecrMoney(data.payload as ActionRegistry['DECR_MONEY']);
+        return new DecrMoney(data.payload);
 
       default:
-        throw new Error(`Unknown Action Type: ${data.type}`);
+        throw new Error(`Unknown Action Type, unable to create action: ${JSON.stringify(data)}`);
     }
   }
 }

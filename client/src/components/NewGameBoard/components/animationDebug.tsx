@@ -8,7 +8,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useDiceTrackStore } from "@/stores/diceTrackStore";
-import { TRACK_COORDINATES } from "../config/dice-track-config";
 import { HexHop, IncrMoney } from "@/actions/actions";
 
 // ------------------------------------------------------------------

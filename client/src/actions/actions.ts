@@ -1,6 +1,6 @@
 import { animateCoinConfettiToDom, animateCoinConfetti, animateUnitHop } from "@/animation/registry/anim";
 import { BaseAction } from "./core";
-import type { ActionRegistry } from "@color-wars/shared/src/types/registry";
+import type { TurnActionRegistry } from "@color-wars/shared/src/types/turnActionRegistry";
 import { ActionHandle } from "@/animation/driver/AnimationHandle";
 import { pixiTargetLocator } from "@/animation/target-locator";
 import { PlayerSprite } from "@/components/NewGameBoard/pixi/units/playerSprite";
@@ -10,7 +10,7 @@ import { useDiceTrackStore } from "@/stores/diceTrackStore";
 import { useStore } from "@/stores/sessionStore";
 import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
 
-export class HexHop extends BaseAction<ActionRegistry["MOVE_PLAYER"]> {
+export class HexHop extends BaseAction<TurnActionRegistry["MOVE_PLAYER"]> {
   execute(): ActionHandle {
     const { fromTile, toTile, tokenId } = this.payload;
     const unit = pixiTargetLocator.get<PlayerSprite>(tokenId);
@@ -55,7 +55,7 @@ export class HexHop extends BaseAction<ActionRegistry["MOVE_PLAYER"]> {
   }
 }
 
-export class RollDice extends BaseAction<ActionRegistry["ROLL_DICE"]> {
+export class RollDice extends BaseAction<TurnActionRegistry["ROLL_DICE"]> {
   execute(): ActionHandle {
     const { die1, die2 } = this.payload;
     useStore.getState().rollDiceTo(die1, die2);
@@ -67,7 +67,7 @@ export class RollDice extends BaseAction<ActionRegistry["ROLL_DICE"]> {
   }
 }
 
-export class IncrMoney extends BaseAction<ActionRegistry["INCR_MONEY"]> {
+export class IncrMoney extends BaseAction<TurnActionRegistry["INCR_MONEY"]> {
   execute(): ActionHandle {
     const { playerId, amount } = this.payload;
 
@@ -94,7 +94,7 @@ export class IncrMoney extends BaseAction<ActionRegistry["INCR_MONEY"]> {
   }
 }
 
-export class DecrMoney extends BaseAction<ActionRegistry["DECR_MONEY"]> {
+export class DecrMoney extends BaseAction<TurnActionRegistry["DECR_MONEY"]> {
   execute(): ActionHandle {
     const { playerId, amount } = this.payload;
 

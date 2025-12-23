@@ -1,4 +1,5 @@
 import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
+import type { ActionType, TurnActionRegistry } from "./turnActionRegistry";
 
 export type RoomPhase = "lobby" | "active" | "finished";
 export type RoomVisibility = "private" | "public";
@@ -135,15 +136,15 @@ export class GameAction extends Schema {
 export class GameState extends Schema {
   @type("string") activePlayerId: string = "";
   @type("string") turnPhase: TurnPhase = "awaiting-roll";
-  
+
   //Map <tradeID, trade>
   @type({ map: Trade }) activeTrades = new MapSchema<Trade>();
-  
+
   @type(DiceState) diceState: DiceState = new DiceState();
-  
+
   //Map <playerID, playerState>
   @type({ map: PlayerState }) players: MapSchema<PlayerState> = new MapSchema<PlayerState>();
-  
+
   //Map <territoryID, territoryState>
   @type({ map: TerritoryState }) territoryOwnership: MapSchema<TerritoryState> = new MapSchema<TerritoryState>();
   @type(["string"]) playerOrder: ArraySchema<string> = new ArraySchema<string>();
@@ -152,6 +153,7 @@ export class GameState extends Schema {
 }
 
 export class RoomState extends Schema {
+  private _nextActionId: number = 0;
   @type(Room) room: Room;
   @type({ map: "number" }) playersPings = new MapSchema<number>();
   @type(GameState) game = new GameState();
@@ -166,12 +168,22 @@ export class RoomState extends Schema {
   createSnapshot() {
     this.turnCheckpoint = this.game.clone();
   }
+
+  pushAction<T extends ActionType>(type: T, playerId: string, payload: TurnActionRegistry[T]) {
+    const action = new GameAction(type as string, playerId, JSON.stringify(payload), Date.now(), this._nextActionId++);
+    this.turnActionHistory.push(action);
+  }
+  
+  clearTurnHistory() {
+    this.turnActionHistory.clear();
+    this._nextActionId = 0;
+  }
 }
 
 export type Message = {
-  senderId: string,
-  content: string,
-  timeStamp: number
-}
+  senderId: string;
+  content: string;
+  timeStamp: number;
+};
 
 export type PlainStateOf<K extends Schema> = ReturnType<K["toJSON"]>;

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
 import { useMapStore } from "@/stores/mapStateStore";
-import DebugGameControls from "./animationDebug";
+//import DebugGameControls from "./animationDebug";
 import { pixiTargetLocator } from "@/animation/target-locator";
 
 // Example URL - in a real app this might come from props or a route param

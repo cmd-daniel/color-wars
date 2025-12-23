@@ -8,7 +8,6 @@ import { type TileType, DICE_TRACK } from "@color-wars/shared/src/config/diceTra
 export class DiceTrackLayer extends PIXI.Container {
   private background: PIXI.Graphics;
   private trackContainer: PIXI.Container;
-  private hexTexture: PIXI.Texture | null = null;
   private sprites: PIXI.Sprite[] = [];
   public tokenLayer: TokenLayer | null = null;
   private hexTextures: Partial<Record<TileType, PIXI.Texture>> = {};
@@ -33,11 +32,10 @@ export class DiceTrackLayer extends PIXI.Container {
    */
   public init(app: PIXI.Application) {
     // Generate a high-res texture for the hexes
-    this.hexTexture = this.generateRoundedHexTexture(app, 64);
     this.hexTextures = this.generateRoundedHexTextures(app, 64);
 
     // Create Sprites
-    TRACK_COORDINATES.forEach((coord, i) => {
+    TRACK_COORDINATES.forEach((_, i) => {
       const sprite = new PIXI.Sprite(this.hexTextures[DICE_TRACK[i]]);
       sprite.anchor.set(0.5);
       const targetID = `track-tile-${i}`;
@@ -198,22 +196,6 @@ export class DiceTrackLayer extends PIXI.Container {
       x: cx + size * Math.cos(angle_rad),
       y: cy + size * Math.sin(angle_rad),
     };
-  }
-
-  private generateRoundedHexTexture(app: PIXI.Application, radius: number) {
-    const g = new PIXI.Graphics();
-    const r = radius;
-
-    g.roundPoly(0, 0, r, 6, 10, Math.PI / 6);
-
-    g.fill(0xffffff); // White for tinting
-    g.stroke({ width: 0, color: 0x111111 }); // Inner border
-
-    return app.renderer.textureGenerator.generateTexture({
-      target: g,
-      resolution: 1,
-      antialias: true,
-    });
   }
 
   private generateRoundedHexTextures(app: PIXI.Application, radius: number) {
