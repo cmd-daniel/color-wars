@@ -61,18 +61,9 @@ const RoomPage = () => {
     );
   }
 
-  // Show spectator banner if in spectator mode
-  //   const spectatorBanner = isSpectator && (
-  //     <div className="room-spectator-banner">
-  //       <span>👁️ Spectator Mode - {isGameActive ? 'Watching the game' : 'Room is full or game already started'}</span>
-  //     </div>
-  //   )
-
-  // Show game board + GameStatus component for both lobby and active phases
-
   return (
     <div className="flex w-full flex-col items-center justify-center">
-      <div className="w-full max-w-[720px] pb-[100vh]">
+      <div id='game-container' className="w-full max-w-[720px] pb-[100vh]">
         <PixiCanvas />
         <GameStatus />
 

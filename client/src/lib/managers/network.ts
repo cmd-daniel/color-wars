@@ -7,7 +7,7 @@ import { DEFAULT_ROOM_TYPE } from "@color-wars/shared/src/config/room";
 import { GameEventBus } from "./GameEventBus";
 import { ActionQueue } from "@/actions/core";
 import { ActionFactory } from "@/actions/ActionFactory";
-import { type ActionData, isActionType, type TurnActionRegistry } from "@color-wars/shared/src/types/turnActionRegistry";
+import { type ActionData, isActionType, TURN_ACTION_REGISTRY } from "@color-wars/shared/src/types/turnActionRegistry";
 
 // network.types.ts
 export type NetworkState = "disconnected" | "connecting" | "connected" | "reconnecting" | "degraded" | "desynced" | "closing" | "zombie";
@@ -244,7 +244,7 @@ class Network {
 
     return {
       type,
-      payload: payload as TurnActionRegistry[typeof type],
+      payload: payload as typeof TURN_ACTION_REGISTRY[typeof type],
     } as ActionData;
   }
 

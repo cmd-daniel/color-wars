@@ -21,6 +21,9 @@ class ToastManager {
       }),
       GameEventBus.on('KICKED', ({reason})=>{
         toast.success(reason, {toasterId: 'center'})
+      }),
+      GameEventBus.on('TOAST', ({content, type})=>{
+        toast[type](content, { toasterId: "center", duration: 1000 })
       })
     );
   }

@@ -1,6 +1,6 @@
 import { animateCoinConfettiToDom, animateCoinConfetti, animateUnitHop } from "@/animation/registry/anim";
 import { BaseAction } from "./core";
-import type { TurnActionRegistry } from "@color-wars/shared/src/types/turnActionRegistry";
+import { TURN_ACTION_REGISTRY } from "@color-wars/shared/src/types/turnActionRegistry";
 import { ActionHandle } from "@/animation/driver/AnimationHandle";
 import { pixiTargetLocator } from "@/animation/target-locator";
 import { PlayerSprite } from "@/components/NewGameBoard/pixi/units/playerSprite";
@@ -9,8 +9,9 @@ import { TRACK_COORDINATES } from "@/components/NewGameBoard/config/dice-track-c
 import { useDiceTrackStore } from "@/stores/diceTrackStore";
 import { useStore } from "@/stores/sessionStore";
 import { PixiEngine } from "@/components/NewGameBoard/pixi/engine";
+import { useCardStore } from "@/stores/cardSelectionStore";
 
-export class HexHop extends BaseAction<TurnActionRegistry["MOVE_PLAYER"]> {
+export class HexHop extends BaseAction<typeof TURN_ACTION_REGISTRY["MOVE_PLAYER"]> {
   execute(): ActionHandle {
     const { fromTile, toTile, tokenId } = this.payload;
     const unit = pixiTargetLocator.get<PlayerSprite>(tokenId);
@@ -55,7 +56,7 @@ export class HexHop extends BaseAction<TurnActionRegistry["MOVE_PLAYER"]> {
   }
 }
 
-export class RollDice extends BaseAction<TurnActionRegistry["ROLL_DICE"]> {
+export class RollDice extends BaseAction<typeof TURN_ACTION_REGISTRY["ROLL_DICE"]> {
   execute(): ActionHandle {
     const { die1, die2 } = this.payload;
     useStore.getState().rollDiceTo(die1, die2);
@@ -67,7 +68,7 @@ export class RollDice extends BaseAction<TurnActionRegistry["ROLL_DICE"]> {
   }
 }
 
-export class IncrMoney extends BaseAction<TurnActionRegistry["INCR_MONEY"]> {
+export class IncrMoney extends BaseAction<typeof TURN_ACTION_REGISTRY["INCR_MONEY"]> {
   execute(): ActionHandle {
     const { playerId, amount } = this.payload;
 
@@ -94,7 +95,7 @@ export class IncrMoney extends BaseAction<TurnActionRegistry["INCR_MONEY"]> {
   }
 }
 
-export class DecrMoney extends BaseAction<TurnActionRegistry["DECR_MONEY"]> {
+export class DecrMoney extends BaseAction<typeof TURN_ACTION_REGISTRY["DECR_MONEY"]> {
   execute(): ActionHandle {
     const { playerId, amount } = this.payload;
 
@@ -115,5 +116,56 @@ export class DecrMoney extends BaseAction<TurnActionRegistry["DECR_MONEY"]> {
       useStore.getState().updatePlayerMoney(playerId, useStore.getState().state.game.players[playerId].money - amount);
       console.log("IncrMoney animation complete");
     });
+  }
+}
+
+// --- Action 1: Draw Cards ---
+export class DrawCardsAction extends BaseAction<{ cardIds: string[] }> {
+  execute(): ActionHandle {
+    // Wrap the store interaction and waiting logic in a Promise
+    const drawAnimationTask = new Promise<void>((resolve) => {
+      // 1. Trigger the UI to mount and start animating
+      useCardStore.getState().setupDraw(this.payload.cardIds);
+
+      // 2. Wait for the entrance animation to complete (phase becomes 'interacting')
+      const unsubscribe = useCardStore.subscribe(
+        (state) => state.phase,
+        (phase) => {
+          if (phase === 'interacting') {
+            unsubscribe();
+            resolve();
+          }
+        }
+      );
+    });
+
+    // Return the ActionHandle with empty cancel/fast-forward callbacks for now
+    return new ActionHandle(drawAnimationTask, () => {}, () => {});
+  }
+}
+
+// --- Action 2: Resolve Selection ---
+export class ResolveSelectionAction extends BaseAction<{ selectedCardId: string }> {
+  execute(): ActionHandle {
+    const { selectedCardId } = this.payload;
+
+    const resolveAnimationTask = new Promise<void>((resolve) => {
+      // 1. Trigger the UI to start the exit/resolution animation
+      useCardStore.getState().resolveSelection(selectedCardId);
+
+      // 2. Wait for the exit animation to complete and cleanup (phase becomes 'idle')
+      const unsubscribe = useCardStore.subscribe(
+        (state) => state.phase,
+        (phase) => {
+          if (phase === 'idle') {
+            unsubscribe();
+            console.log("Card exit animation complete");
+            resolve();
+          }
+        }
+      );
+    });
+
+    return new ActionHandle(resolveAnimationTask, () => {}, () => {});
   }
 }

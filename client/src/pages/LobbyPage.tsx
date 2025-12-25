@@ -3,6 +3,8 @@ import { useStore } from "@/stores/sessionStore";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Gamepad2, Zap } from "lucide-react";
+import { CardSelectionOverlay } from "@/lib/cardOverlay";
+//import { DrawCardsAction } from "@/actions/actions";
 //import { PixiCanvas } from "@/components/NewGameBoard/components/PixiCanvas";
 
 const LobbyPage = () => {
@@ -21,6 +23,10 @@ const LobbyPage = () => {
       console.error("Error in quick match:", error);
     }
   };
+  // const handleOnClick = ()=>{
+  //   new DrawCardsAction({cardIds: ['a', 'b', 'c']}).execute();
+  //   console.log("button clicked");
+  // }
 
   return (
     <div className="bg-background relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-4 font-sans selection:bg-cyan-500/30">
@@ -38,6 +44,7 @@ const LobbyPage = () => {
             PLAY NOW
             <Zap className="h-4 w-4 fill-black transition-transform group-hover/btn:rotate-12 group-hover/btn:fill-white" />
           </Button>
+          <CardSelectionOverlay/>
           {/* <PixiCanvas /> */}
         </div>
       </div>

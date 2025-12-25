@@ -2,9 +2,10 @@ import { readFileSync } from "fs";
 import path from "path";
 import { GameAction, PlayerState, RoomState } from "@color-wars/shared/src/types/RoomState";
 import { PLAYER } from "@color-wars/shared/src/config/game";
-import { env } from "../config/env";
-import { DiceState } from "@color-wars/shared/src/types/RoomState";
-import { Client } from "colyseus";
+import { Client, Room } from "colyseus";
+import { StatusEffect } from "@color-wars/shared/src/types/RoomState";
+import { RewardID, StatusEffectID } from "@color-wars/shared/src/types/effectId";
+import { cli } from "winston/lib/winston/config";
 
 type MapTerritory = {
   id: string;
@@ -85,50 +86,23 @@ export class GameEngine {
     const die1 = Math.floor(Math.random() * 6) + 1;
     const die2 = Math.floor(Math.random() * 6) + 1;
     const roll = die1 + die2;
-    const lastActionId = this.state.turnActionHistory.length > 0 ? this.state.turnActionHistory[this.state.turnActionHistory.length -1].id : -1
 
-    const rollAction = new GameAction(
-      'ROLL_DICE',
-      client.sessionId,
-      JSON.stringify({die1, die2}),
-      Date.now(),
-      lastActionId + 1
-    )
-
-    this.state.turnActionHistory.push(rollAction)
+    this.state.pushAction('ROLL_DICE', client.sessionId, {die1, die2})
 
     const player = this.state.game.players.get(client.sessionId)!;
     const fromTile = player.position;
     const toTile = (fromTile+roll) % 34
-    const moveAction = new GameAction(
-      'MOVE_PLAYER',
-      client.sessionId,
-      JSON.stringify({fromTile, toTile, tokenId: client.sessionId}),
-      Date.now(),
-      lastActionId + 2
-    )
+
     player.position = toTile
-    this.state.turnActionHistory.push(moveAction)
+    this.state.pushAction('MOVE_PLAYER', client.sessionId, {fromTile, toTile, tokenId: client.sessionId})
 
-    // const IncrMoneyAction = new GameAction(
-    //   'INCR_MONEY',
-    //   client.sessionId,
-    //   JSON.stringify({playerId: client.sessionId, amount: 200}),
-    //   Date.now(),
-    //   lastActionId + 3
-    // )
     // player.money += 200
-    // this.state.turnActionHistory.push(IncrMoneyAction)
+    // this.state.pushAction('INCR_MONEY', client.sessionId, {playerId: client.sessionId, amount: 200})
 
-    const DecrMoneyAction = new GameAction(
-      'DECR_MONEY',
-      client.sessionId,
-      JSON.stringify({playerId: client.sessionId, amount: 200}),
-      Date.now(),
-      lastActionId + 3
-    )
-    player.money -= 200
-    this.state.turnActionHistory.push(DecrMoneyAction)
+    // player.money -= 200
+    // this.state.pushAction('DECR_MONEY', client.sessionId, {playerId: client.sessionId, amount: 200})
+
+    this.state.pushAction('DRAW_3_REWARD_CARDS', client.sessionId, {playerId: client.sessionId, rewardIDs: ['GET_500_CASH','GET_500_CASH','GET_500_CASH']})
 
     player.hasRolled = true;
   }
@@ -145,5 +119,47 @@ export class GameEngine {
     }
     this.state.game.activePlayerId = this.state.game.playerOrder[nextIdx];
     this.state.game.turnPhase = "awaiting-roll";
+  }
+}
+
+// server/logic/EffectHandlers.ts
+export interface EffectContext {
+  state: RoomState;
+  playerId: string;
+}
+
+export const RewardEffects: Record<RewardID, (ctx: EffectContext) => void> = {
+  'GET_500_CASH': (ctx: EffectContext) => {},
+  'GET_2000_CASH': (ctx: EffectContext) => {},
+  'GET_KILL_CARD': (ctx: EffectContext) => {},
+  'GET_SHIELD_CARD': (ctx: EffectContext) => {},
+};
+
+
+// server/logic/TurnProcessor.ts
+export function processStatusEffects(state: RoomState, playerId: string) {
+  const player = state.game.players.get(playerId)!;
+  
+  // Iterate backwards to allow safe removal
+  for (let i = player.statusEffects.length - 1; i >= 0; i--) {
+    const effect = player.statusEffects[i];
+    
+    switch (effect.id as StatusEffectID) {
+      case "DEBT":
+        // Example: Deduct money each turn
+        player.money -= 100; // Deduct 100 as an example
+        break;
+      case "INCOME":
+        // Example: Add money each turn
+        player.money += 100; // Add 100 as an example
+        break;
+      default:
+        break;
+    }
+
+    effect.duration -= 1;
+    if (effect.duration <= 0) {
+      player.statusEffects.splice(i, 1);
+    }
   }
 }

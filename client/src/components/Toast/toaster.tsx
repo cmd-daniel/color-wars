@@ -5,7 +5,7 @@ export default function Toaster() {
   return (
     <>
       <DefaultToaster position="top-right" />
-      <DefaultToaster id="center" position="top-center" />
+      <DefaultToaster richColors id="center" position="top-center" />
     </>
   );
 }

@@ -26,6 +26,7 @@ export interface LOCAL_EVENT {
   ROLL_DICE_TO: {die1: number, die2: number};
   UPDATE_ACTIVE_PLAYER: {playerId: string}
   UPDATE_ROOM_PHASE: {phase: RoomPhase}
+  TOAST: {content:string, type:'success'|'error'|'warning'|'info'}
 }
 
 export type LocalEventType = Extract<keyof LOCAL_EVENT, string>;

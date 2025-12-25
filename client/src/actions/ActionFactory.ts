@@ -17,6 +17,9 @@ export class ActionFactory {
       
       case 'DECR_MONEY':
         return new DecrMoney(data.payload);
+      
+      case 'DRAW_3_REWARD_CARDS':
+        throw new Error("Draw3RewardCards action not implemented yet");
 
       default:
         throw new Error(`Unknown Action Type, unable to create action: ${JSON.stringify(data)}`);

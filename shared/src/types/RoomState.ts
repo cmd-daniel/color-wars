@@ -1,5 +1,5 @@
 import { Schema, type, MapSchema, ArraySchema } from "@colyseus/schema";
-import type { ActionType, TurnActionRegistry } from "./turnActionRegistry";
+import type { ActionType, TURN_ACTION_REGISTRY } from "./turnActionRegistry";
 
 export type RoomPhase = "lobby" | "active" | "finished";
 export type RoomVisibility = "private" | "public";
@@ -169,7 +169,7 @@ export class RoomState extends Schema {
     this.turnCheckpoint = this.game.clone();
   }
 
-  pushAction<T extends ActionType>(type: T, playerId: string, payload: TurnActionRegistry[T]) {
+  pushAction<T extends ActionType>(type: T, playerId: string, payload: typeof TURN_ACTION_REGISTRY[T]) {
     const action = new GameAction(type as string, playerId, JSON.stringify(payload), Date.now(), this._nextActionId++);
     this.turnActionHistory.push(action);
   }
