@@ -97,6 +97,10 @@ class ZustandSyncManager {
 
       GameEventBus.on('UPDATE_ROOM_PHASE', ({phase})=>{
         useStore.getState().updateRoomPhase(phase)
+      }),
+
+      GameEventBus.on('UPDATE_ACTION_STATE', ({state})=>{
+        useStore.getState().setActionState(state)
       })
     );
   }

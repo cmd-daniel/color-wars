@@ -14,6 +14,7 @@ import type { TerritoryId } from "@/types/map";
 import { useNetworkStore } from "./networkStore";
 
 const DEFAULT_PLAYER_NAME = "Commander";
+type ActionState = 'resolving_action' | 'idle'
 
 interface LocalRoom {
   playerName: string;
@@ -26,6 +27,7 @@ interface StoreState {
   currentPlayer: PlainStateOf<PlayerState>;
   state: PlainStateOf<RoomState>;
   isSpectator: boolean;
+  actionState: ActionState
 }
 
 export const useStore = create(
@@ -44,6 +46,7 @@ export const useStore = create(
             state: {
               playersPings: {},
             },
+            actionState:'idle'
           } as StoreState,
           (set, get) => ({
             setPlayerName: (name: string) => {
@@ -51,6 +54,11 @@ export const useStore = create(
                 z.room ??= {};
                 z.room.playerName = name;
               });
+            },
+            setActionState: (state: ActionState) => {
+              set((z)=>{
+                z.actionState = state
+              })
             },
             setPlayerPing: (playerId: string, ping: number) => {
               set((z) => {

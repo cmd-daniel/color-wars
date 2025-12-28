@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { useStore } from "@/stores/sessionStore";
 import Dice from "./BetterDice";
 import { nanoid } from "nanoid";
@@ -21,7 +21,7 @@ const TurnControls = () => {
   const activePlayerId = useStore((z) => z.state.game.activePlayerId);
   const isNOTActivePlayer = currentPlayerID !== activePlayerId;
   const endTurn = useStore((z) => z.endTurn);
-
+  const actionState = useStore((z)=> z.actionState)
   
   const hasRolledDice = useStore((z) => z.state.game.players[currentPlayerID]?.hasRolled ?? false);
 
@@ -74,7 +74,7 @@ const TurnControls = () => {
         <Dice quaternion={diceA.quat} />
         <Dice quaternion={diceB.quat} />
       </div> 
-      <div className={`flex w-full h-full flex-1 justify-center items center flex-col gap-2  ${isNOTActivePlayer ? 'hidden' : ''}`}>
+      <div className={`${(actionState=='idle') ? '' : 'hidden'} flex w-full h-full flex-1 justify-center items center flex-col gap-2  ${isNOTActivePlayer ? 'hidden' : ''}`}>
         <DiceHoldButton hasRolled={hasRolledDice} onHoldStart={holdStart} onHoldEnd={holdEnd} />
         <div className={`${hasRolledDice ? '' : 'hidden'} w-full flex justify-center`}>
           <Button onClick={endTurn}>End Turn</Button>

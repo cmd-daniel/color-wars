@@ -27,6 +27,7 @@ export interface LOCAL_EVENT {
   UPDATE_ACTIVE_PLAYER: {playerId: string}
   UPDATE_ROOM_PHASE: {phase: RoomPhase}
   TOAST: {content:string, type:'success'|'error'|'warning'|'info'}
+  UPDATE_ACTION_STATE: {state: 'resolving_action' | 'idle'}
 }
 
 export type LocalEventType = Extract<keyof LOCAL_EVENT, string>;
