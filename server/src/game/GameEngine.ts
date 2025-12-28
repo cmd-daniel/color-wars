@@ -102,7 +102,7 @@ export class GameEngine {
     // player.money -= 200
     // this.state.pushAction('DECR_MONEY', client.sessionId, {playerId: client.sessionId, amount: 200})
 
-    this.state.pushAction('DRAW_3_REWARD_CARDS', client.sessionId, {playerId: client.sessionId, rewardIDs: ['GET_500_CASH','GET_500_CASH','GET_500_CASH']})
+    this.state.pushAction('DRAW_3_REWARD_CARDS', client.sessionId, {playerId: client.sessionId, cardIds: ['GET_500_CASH','GET_2000_CASH',"GET_KILL_CARD"]})
 
     player.hasRolled = true;
   }

@@ -6,7 +6,9 @@ export const TURN_ACTION_REGISTRY = {
   ROLL_DICE: {} as { die1: number, die2: number },
   INCR_MONEY: {} as { playerId: string, amount: number },
   DECR_MONEY: {} as { playerId: string, amount: number },
-  DRAW_3_REWARD_CARDS: {} as { playerId: string, rewardIDs: RewardID[] },
+  DRAW_3_REWARD_CARDS: {} as { playerId: string, cardIds: RewardID[] },
+  SELECT_CARD: {} as {selectedCardId: string}
+
 } as const;
 
 export type ActionType = keyof typeof TURN_ACTION_REGISTRY;

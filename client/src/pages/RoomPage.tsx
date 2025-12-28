@@ -8,6 +8,7 @@ import { useCountdown } from "@/hooks/useCountdown";
 import LobbyActions from "@/components/LobbyActions";
 import ActionArea from "@/components/ActionArea";
 import { PixiCanvas } from "@/components/NewGameBoard/components/PixiCanvas";
+import { CardSelectionOverlay } from "@/lib/cardOverlay";
 
 const RoomPage = () => {
   const navigate = useNavigate();
@@ -71,6 +72,7 @@ const RoomPage = () => {
           {roomPhase === "active" && <TurnControls />}
           {roomPhase === "lobby" && <LobbyActions />}
         </ActionArea>
+        <CardSelectionOverlay/>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 // src/actions/ActionFactory.ts
 import type { ActionData } from "@color-wars/shared/src/types/turnActionRegistry";
 import type { IExecutable } from "./core";
-import { HexHop, IncrMoney, RollDice, DecrMoney } from "./actions";
+import { HexHop, IncrMoney, RollDice, DecrMoney, DrawCardsAction, ResolveSelectionAction } from "./actions";
 
 export class ActionFactory {
   static create(data: ActionData): IExecutable {
@@ -19,7 +19,10 @@ export class ActionFactory {
         return new DecrMoney(data.payload);
       
       case 'DRAW_3_REWARD_CARDS':
-        throw new Error("Draw3RewardCards action not implemented yet");
+        return new DrawCardsAction(data.payload)
+
+      case 'SELECT_CARD':
+        return new ResolveSelectionAction(data.payload)
 
       default:
         throw new Error(`Unknown Action Type, unable to create action: ${JSON.stringify(data)}`);

@@ -12,6 +12,7 @@ import "hover-tilt/web-component";
 import type { HoverTiltProps } from "hover-tilt/types";
 import { Button } from "@/components/ui/button";
 import { GameEventBus } from "./managers/GameEventBus";
+import { useStore } from "@/stores/sessionStore";
 
 declare class HoverTiltElement extends HTMLElement {
   /**
@@ -40,13 +41,8 @@ declare module "react" {
   }
 }
 
-const Card = ({ id, onClick }: { id: string; onClick: (id: string) => void }) => {
+const Card = ({ id }: { id: string }) => {
   const phase = useCardStore((s) => s.phase);
-  const colors = {
-    a: "bg-red-800",
-    b: "bg-blue-800",
-    c: "bg-green-800",
-  } as {[id:string]:string};
   return (
     <div id={id} className="card-wrapper relative flex h-full w-full justify-center rounded-xl select-none">
       <style>{`
@@ -67,9 +63,8 @@ const Card = ({ id, onClick }: { id: string; onClick: (id: string) => void }) =>
         className="hoverr glare-rounded h-full w-full overflow-visible"
         tilt-factor="1.5"
         scale-factor="1.1"
-        onClick={() => phase === "interacting" && onClick(id)}
       >
-        <div className={`flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-xl ${colors[id]} p-4`}>
+        <div className={`flex h-full w-full flex-col items-center justify-center overflow-hidden rounded-xl bg-gray-600 shadow-2xl p-4`}>
           <h2 className="text-2xl font-bold">Card {id}</h2>
         </div>
       </hover-tilt>
@@ -77,7 +72,7 @@ const Card = ({ id, onClick }: { id: string; onClick: (id: string) => void }) =>
   );
 };
 
-const Thumb = ({ id }: { id: string }) => {
+const Thumb = ({ id, idx }: { id: string, idx:number }) => {
   const selectedCardId = useCardStore((s) => s.selectedCardId);
   const setSelectedCardId = useCardStore((s) => s.setSelectedCardId);
   const handleOnClick = () => {
@@ -86,9 +81,9 @@ const Thumb = ({ id }: { id: string }) => {
   return (
     <div
       onClick={handleOnClick}
-      className={`card-wrapper flex h-16 w-16 cursor-pointer items-center justify-center rounded-md bg-zinc-700 text-white select-none ${selectedCardId == id ? "border-3 border-white" : ""}`}
+      className={`flex h-16 w-16 cursor-pointer items-center justify-center rounded-md bg-zinc-700 text-white select-none ${selectedCardId == id ? "border-3 border-white" : ""}`}
     >
-      {id}
+      {idx}
     </div>
   );
 };
@@ -102,7 +97,8 @@ export const CardSelectionOverlay = () => {
   const swiperRef = useRef<SwiperClass | null>(null);
   const setPhase = useCardStore((s) => s.setPhase);
   const reset = useCardStore((s) => s.reset);
-
+  const isActivePlayer = useStore((z)=>z.currentPlayer?.id == z.state?.game?.activePlayerId)
+  console.log('isActivePlayer', isActivePlayer)
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleCardSelect = () => {
@@ -114,7 +110,7 @@ export const CardSelectionOverlay = () => {
       return
     };
     console.log("action created", selectedCardId);
-    new ResolveSelectionAction({ selectedCardId: "c" }).execute();
+    new ResolveSelectionAction({ selectedCardId }).execute();
     // Example: sendSelectCardOp(id);
   };
 
@@ -224,21 +220,21 @@ export const CardSelectionOverlay = () => {
           slideShadows: false,
         }}
       >
-        {cardIds.map((id) => (
+        {cardIds.map((id, idx) => (
           <SwiperSlide>
-            <Card key={id} id={id} onClick={handleCardSelect} />
+            <Card key={id+idx} id={id} />
           </SwiperSlide>
         ))}
       </Swiper>
 
       <Swiper allowTouchMove={false} slidesPerView={3} watchSlidesProgress spaceBetween={12} className="mt-4 w-72">
-        {cardIds.map((id) => (
-          <SwiperSlide key={id}>
-            <Thumb id={id} />
+        {cardIds.map((id, idx) => (
+          <SwiperSlide key={id+idx}>
+            <Thumb id={id} idx={idx} />
           </SwiperSlide>
         ))}
       </Swiper>
-      <Button className="card-wrapper relative transition-none" onClick={handleCardSelect} size="lg" variant="outline">
+      <Button className={`${!isActivePlayer?'hidden':''} cursor-pointer relative transition-none`} onClick={handleCardSelect} size="lg" variant="outline">
         Confirm Selection
       </Button>
     </div>
